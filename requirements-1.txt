@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+gspread
+google-auth
+cloudinary
+Pillow
+requests
+python-multipart

@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pokémon Collection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Heebo', sans-serif; background: #0a0e1a; color: #fff; min-height: 100vh; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1a0533 0%, #0d1b4b 50%, #1a0533 100%);
+      padding: 14px 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 2px solid #f59e0b44;
+      position: sticky; top: 0; z-index: 100;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+    }
+    .header-title {
+      font-size: 1.3em; font-weight: 800; 
+      background: linear-gradient(to left, #f59e0b, #fbbf24, #f59e0b);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      text-shadow: none; letter-spacing: 0.5px;
+    }
+    .header-stats { font-size: 0.75em; color: #94a3b8; }
+
+    /* Toolbar */
+    .toolbar { background: #111827; padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid #1e293b; }
+    .search-box { flex: 1; display: flex; align-items: center; gap: 6px; background: #1e293b; border-radius: 20px; padding: 8px 14px; border: 1px solid #334155; }
+    .search-box input { border: none; background: none; font-family: inherit; font-size: 0.85em; width: 100%; outline: none; color: #e2e8f0; }
+    .search-box input::placeholder { color: #64748b; }
+
+    .filter-btn { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 8px 14px; font-size: 0.82em; font-weight: 600; cursor: pointer; font-family: inherit; color: #94a3b8; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: all 0.15s; }
+    .filter-btn.has-filters { background: #f59e0b22; color: #f59e0b; border-color: #f59e0b66; }
+
+    .active-filters { display: none; background: #111827; padding: 8px 16px; gap: 6px; overflow-x: auto; border-bottom: 1px solid #1e293b; }
+    .active-filters.show { display: flex; }
+    .active-filters::-webkit-scrollbar { display: none; }
+    .filter-tag { display: flex; align-items: center; gap: 4px; background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b44; border-radius: 16px; padding: 4px 10px; font-size: 0.75em; font-weight: 600; white-space: nowrap; }
+    .filter-tag button { background: none; border: none; color: #f59e0b; cursor: pointer; }
+
+    .cols-control { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+    .cols-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #334155; background: #1e293b; cursor: pointer; font-size: 0.9em; font-weight: 700; color: #94a3b8; }
+    .cols-num { font-size: 0.85em; font-weight: 700; min-width: 14px; text-align: center; color: #e2e8f0; }
+
+    /* Filter Panel */
+    .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 300; display: none; }
+    .panel-overlay.open { display: block; }
+    .filter-panel { position: fixed; top: 0; left: 0; bottom: 0; width: 285px; background: #111827; z-index: 301; transform: translateX(-100%); transition: transform 0.25s ease; overflow-y: auto; border-right: 1px solid #1e293b; }
+    .filter-panel.open { transform: translateX(0); }
+    .panel-head { padding: 16px; border-bottom: 1px solid #1e293b; display: flex; justify-content: space-between; align-items: center; }
+    .panel-head h3 { font-size: 1em; font-weight: 700; color: #f59e0b; }
+    .panel-close { background: #1e293b; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 1em; color: #94a3b8; }
+    .panel-section { padding: 14px 16px; border-bottom: 1px solid #1e293b; }
+    .panel-section h4 { font-size: 0.75em; font-weight: 700; color: #64748b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .p-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .p-chip { padding: 5px 10px; border-radius: 16px; border: 1px solid #334155; background: #1e293b; font-size: 0.78em; font-weight: 600; cursor: pointer; font-family: inherit; color: #94a3b8; transition: all 0.15s; }
+    .p-chip.active { background: #f59e0b22; color: #f59e0b; border-color: #f59e0b66; }
+    .range-row { display: flex; gap: 8px; align-items: center; }
+    .range-row input { flex: 1; padding: 8px 10px; border: 1px solid #334155; border-radius: 8px; font-size: 0.85em; font-family: inherit; text-align: center; background: #1e293b; color: #e2e8f0; }
+    .range-row input:focus { outline: none; border-color: #f59e0b; }
+    .range-sep { color: #64748b; }
+    .reset-btn { margin: 14px 16px; width: calc(100% - 32px); padding: 11px; border: 1px solid #334155; border-radius: 10px; background: #1e293b; font-family: inherit; font-size: 0.88em; font-weight: 700; cursor: pointer; color: #94a3b8; }
+
+    /* Grid */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px; }
+
+    /* Pokemon Card */
+    .poke-card {
+      background: linear-gradient(145deg, #1e293b, #0f172a);
+      border-radius: 12px; overflow: hidden;
+      border: 1px solid #334155;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      transition: transform 0.15s, box-shadow 0.15s;
+      min-width: 0;
+    }
+    .poke-card:active { transform: scale(0.97); }
+
+    /* Rarity glow */
+    .poke-card.holo { border-color: #a78bfa66; box-shadow: 0 4px 20px rgba(167,139,250,0.2); }
+    .poke-card.ultra { border-color: #f59e0b66; box-shadow: 0 4px 20px rgba(245,158,11,0.25); }
+    .poke-card.secret { border-color: #f43f5e66; box-shadow: 0 4px 20px rgba(244,63,94,0.25); }
+
+    .card-img-wrap { width: 100%; aspect-ratio: 2/3; position: relative; overflow: hidden; background: #0f172a; }
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #1e293b, #0f172a); display: flex; align-items: center; justify-content: center; font-size: 2.5em; }
+
+    /* Rarity badge */
+    .rarity-badge { position: absolute; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.62em; font-weight: 800; }
+    .rarity-common { background: #374151; color: #9ca3af; }
+    .rarity-uncommon { background: #064e3b; color: #6ee7b7; }
+    .rarity-rare { background: #1e3a8a; color: #93c5fd; }
+    .rarity-holo { background: #4c1d95; color: #c4b5fd; }
+    .rarity-ultra { background: #78350f; color: #fcd34d; }
+    .rarity-secret { background: #881337; color: #fda4af; }
+
+    /* Comments badge */
+    .comments-badge { position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.7); color: white; border-radius: 10px; padding: 2px 7px; font-size: 0.65em; font-weight: 700; }
+
+    .card-body { padding: 7px 8px 5px; }
+    .card-name { font-weight: 700; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #f1f5f9; margin-bottom: 3px; }
+    .card-set { font-size: 0.68em; color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 4px; }
+    .card-row { display: flex; justify-content: space-between; align-items: center; }
+    .card-value { color: #f59e0b; font-weight: 700; font-size: 0.8em; }
+    .card-cond { font-size: 0.65em; font-weight: 600; padding: 2px 6px; border-radius: 6px; }
+    .cond-mint { background: #064e3b; color: #6ee7b7; }
+    .cond-nm { background: #1e3a8a; color: #93c5fd; }
+    .cond-ex { background: #365314; color: #bef264; }
+    .cond-good { background: #78350f; color: #fcd34d; }
+    .cond-poor { background: #7f1d1d; color: #fca5a5; }
+
+    .card-actions { padding: 5px 8px; border-top: 1px solid #1e293b; display: flex; justify-content: space-between; }
+    .card-btn { font-size: 0.72em; color: #475569; cursor: pointer; background: none; border: none; font-family: inherit; }
+
+    /* Add card */
+    .add-card { background: linear-gradient(145deg, #1e293b, #0f172a); border: 2px dashed #334155; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 80px; padding: 20px 0; transition: all 0.15s; }
+    .add-card:active { border-color: #f59e0b; }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 200; display: none; align-items: flex-end; }
+    .overlay.open { display: flex; }
+    .modal { background: #111827; border-radius: 22px 22px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; border-top: 2px solid #f59e0b44; }
+    .modal-handle { width: 36px; height: 4px; background: #334155; border-radius: 2px; margin: 12px auto 0; }
+    .modal-head { padding: 14px 18px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; }
+    .modal-title { font-size: 1em; font-weight: 700; color: #f59e0b; }
+    .modal-close { background: #1e293b; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 1em; cursor: pointer; color: #94a3b8; }
+    .modal-body { padding: 14px 18px 30px; }
+
+    .fg { margin-bottom: 12px; }
+    .fg label { display: block; font-size: 0.78em; font-weight: 700; color: #64748b; margin-bottom: 5px; }
+    .fg input, .fg select { width: 100%; padding: 10px 14px; border: 1px solid #334155; border-radius: 10px; font-size: 0.9em; font-family: inherit; background: #1e293b; color: #e2e8f0; }
+    .fg input:focus, .fg select:focus { outline: none; border-color: #f59e0b; }
+    .fg select option { background: #1e293b; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+    .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+
+    /* AI Section */
+    .ai-section { background: #1a0a2e; border-radius: 12px; padding: 12px; margin-bottom: 14px; border: 1px solid #7c3aed44; }
+    .ai-head { font-size: 0.82em; font-weight: 700; color: #a78bfa; margin-bottom: 10px; }
+    .ai-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .ai-img-box { border: 1px dashed #7c3aed66; border-radius: 10px; overflow: hidden; background: #0f172a; }
+    .ai-img-preview { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: none; }
+    .ai-result { font-size: 0.8em; background: #0f172a; border-radius: 8px; padding: 8px; margin-top: 8px; border: 1px solid #7c3aed44; color: #a78bfa; display: none; }
+
+    /* Upload */
+    .upload-btns { display: flex; gap: 8px; }
+    .upload-btn { flex: 1; background: #1e293b; border: 1px dashed #334155; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; }
+    .upload-btn input { display: none; }
+    .upload-btn-icon { font-size: 1.3em; display: block; margin-bottom: 3px; }
+    .upload-btn-label { font-size: 0.72em; color: #64748b; font-weight: 600; }
+    .img-preview { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .img-prev-item { position: relative; }
+    .img-prev-item img { width: 60px; height: 84px; object-fit: cover; border-radius: 6px; display: block; }
+    .img-prev-del { position: absolute; top: -4px; left: -4px; background: #ef5350; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65em; cursor: pointer; }
+
+    /* Comments */
+    .comments-section { background: #1e293b; border-radius: 12px; padding: 12px; margin-bottom: 12px; }
+    .comments-title { font-size: 0.8em; font-weight: 700; color: #64748b; margin-bottom: 10px; }
+    .comment-item { background: #0f172a; border-radius: 8px; padding: 8px 28px 8px 10px; margin-bottom: 6px; font-size: 0.8em; position: relative; color: #cbd5e1; }
+    .comment-del { position: absolute; top: 6px; left: 6px; background: none; border: none; color: #475569; cursor: pointer; }
+    .comment-input-row { display: flex; gap: 8px; margin-top: 8px; }
+    .comment-input-row input { flex: 1; padding: 8px 12px; border: 1px solid #334155; border-radius: 20px; font-size: 0.82em; font-family: inherit; background: #0f172a; color: #e2e8f0; }
+    .comment-input-row input:focus { outline: none; border-color: #f59e0b; }
+    .comment-send { background: #f59e0b; color: #0f172a; border: none; border-radius: 20px; padding: 8px 14px; font-size: 0.82em; cursor: pointer; font-weight: 700; }
+
+    .btn { width: 100%; padding: 13px; border: none; border-radius: 12px; font-size: 0.95em; font-weight: 700; cursor: pointer; font-family: inherit; margin-top: 8px; }
+    .btn-gold { background: linear-gradient(135deg, #f59e0b, #d97706); color: #0f172a; }
+    .btn-purple { background: linear-gradient(135deg, #7c3aed, #6d28d9); color: white; }
+    .btn-red { background: #dc2626; color: white; }
+    .btn-gray { background: #1e293b; color: #94a3b8; border: 1px solid #334155; }
+    .btn:active { opacity: 0.8; }
+    .btn:disabled { opacity: 0.5; }
+    .divider { height: 1px; background: #1e293b; margin: 12px 0; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #1e293b; color: #f1f5f9; border: 1px solid #334155; padding: 10px 22px; border-radius: 22px; font-size: 0.85em; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+    .toast.show { opacity: 1; }
+    .loading { text-align: center; padding: 48px 0; color: #475569; grid-column: 1/-1; }
+    .spin { display: inline-block; width: 28px; height: 28px; border: 3px solid #1e293b; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .no-results { grid-column: 1/-1; text-align: center; padding: 40px; color: #475569; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">⚡ Pokémon Collection</div>
+  <div class="header-stats" id="stats">טוען...</div>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <span style="color:#64748b">🔍</span>
+    <input type="text" id="searchInput" placeholder="חיפוש לפי שם..." oninput="render()">
+  </div>
+  <button class="filter-btn" id="filterBtn" onclick="openPanel()">⚙️ סינון</button>
+  <div class="cols-control">
+    <button class="cols-btn" onclick="changeCols(-1)">−</button>
+    <span class="cols-num" id="colsNum">3</span>
+    <button class="cols-btn" onclick="changeCols(1)">+</button>
+  </div>
+</div>
+
+<div class="active-filters" id="activeFilters"></div>
+
+<!-- Filter Panel -->
+<div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
+<div class="filter-panel" id="filterPanel">
+  <div class="panel-head">
+    <h3>⚙️ סינון</h3>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-section">
+    <h4>⭐ נדירות</h4>
+    <div class="p-chips" id="rarityChips"></div>
+  </div>
+  <div class="panel-section">
+    <h4>🏷️ מצב</h4>
+    <div class="p-chips" id="condChips"></div>
+  </div>
+  <div class="panel-section">
+    <h4>🌐 שפה</h4>
+    <div class="p-chips" id="langChips"></div>
+  </div>
+  <div class="panel-section">
+    <h4>💰 טווח ערך ($)</h4>
+    <div class="range-row">
+      <input type="number" id="valueMin" placeholder="מינ'" oninput="updateFilters()">
+      <span class="range-sep">—</span>
+      <input type="number" id="valueMax" placeholder="מקס'" oninput="updateFilters()">
+    </div>
+  </div>
+  <div class="panel-section">
+    <h4>📅 טווח שנים</h4>
+    <div class="range-row">
+      <input type="number" id="yearMin" placeholder="מ-" oninput="updateFilters()">
+      <span class="range-sep">—</span>
+      <input type="number" id="yearMax" placeholder="עד" oninput="updateFilters()">
+    </div>
+  </div>
+  <button class="reset-btn" onclick="resetFilters()">🔄 נקה סינון</button>
+</div>
+
+<div class="grid" id="grid">
+  <div class="loading"><div class="spin"></div><br><br>טוען קלפים...</div>
+</div>
+
+<!-- Modal -->
+<div class="overlay" id="overlay" onclick="overlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <span class="modal-title" id="modalTitle">➕ הוספת קלף</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+
+      <!-- AI -->
+      <div class="ai-section" id="aiSection">
+        <div class="ai-head">🤖 זיהוי אוטומטי עם AI</div>
+        <div class="ai-imgs">
+          <div class="ai-img-box">
+            <div style="padding:8px;text-align:center;">
+              <div style="font-size:0.72em;color:#a78bfa;font-weight:700;margin-bottom:6px;">פנים הקלף</div>
+              <img class="ai-img-preview" id="aiFrontPrev">
+              <div style="display:flex;gap:5px;margin-top:6px;">
+                <label style="flex:1;background:#1e293b;border-radius:8px;padding:6px;text-align:center;cursor:pointer;font-size:0.7em;color:#a78bfa;font-weight:700;">
+                  <input type="file" id="aiFrontFile" accept="image/*" style="display:none" onchange="aiPreview('front',this)">🖼️ גלריה
+                </label>
+                <label style="flex:1;background:#1a0a2e;border-radius:8px;padding:6px;text-align:center;cursor:pointer;font-size:0.7em;color:#c4b5fd;font-weight:700;">
+                  <input type="file" id="aiFrontCam" accept="image/*" capture="environment" style="display:none" onchange="aiPreview('front',this)">📸 צלם
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="ai-img-box">
+            <div style="padding:8px;text-align:center;">
+              <div style="font-size:0.72em;color:#a78bfa;font-weight:700;margin-bottom:6px;">גב (אופציונלי)</div>
+              <img class="ai-img-preview" id="aiBackPrev">
+              <div style="display:flex;gap:5px;margin-top:6px;">
+                <label style="flex:1;background:#1e293b;border-radius:8px;padding:6px;text-align:center;cursor:pointer;font-size:0.7em;color:#a78bfa;font-weight:700;">
+                  <input type="file" id="aiBackFile" accept="image/*" style="display:none" onchange="aiPreview('back',this)">🖼️ גלריה
+                </label>
+                <label style="flex:1;background:#1a0a2e;border-radius:8px;padding:6px;text-align:center;cursor:pointer;font-size:0.7em;color:#c4b5fd;font-weight:700;">
+                  <input type="file" id="aiBackCam" accept="image/*" capture="environment" style="display:none" onchange="aiPreview('back',this)">📸 צלם
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-purple" id="identifyBtn" onclick="identifyCoin()">✨ זהה קלף</button>
+        <div class="ai-result" id="aiResult"></div>
+      </div>
+
+      <div class="fg"><label>שם הקלף</label><input type="text" id="fName" placeholder="שם..."></div>
+      <div class="row2">
+        <div class="fg" style="margin-bottom:0"><label>פוקימון</label><input type="text" id="fPokemon" placeholder="Pikachu..."></div>
+        <div class="fg" style="margin-bottom:0"><label>מספר קלף</label><input type="text" id="fNumber" placeholder="025/102"></div>
+      </div>
+      <div class="fg" style="margin-top:12px"><label>סדרה (Set)</label><input type="text" id="fSet" placeholder="Base Set, Jungle..."></div>
+      <div class="row3">
+        <div class="fg" style="margin-bottom:0">
+          <label>שנה</label>
+          <input type="text" id="fYear" placeholder="1999">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>ערך ($)</label>
+          <input type="number" id="fValue" placeholder="0">
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>שפה</label>
+          <select id="fLanguage">
+            <option>English</option><option>Japanese</option><option>Hebrew</option><option>Other</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2" style="margin-top:12px">
+        <div class="fg" style="margin-bottom:0">
+          <label>מצב</label>
+          <select id="fCondition">
+            <option>Mint</option><option>Near Mint</option><option>Excellent</option><option>Good</option><option>Poor</option>
+          </select>
+        </div>
+        <div class="fg" style="margin-bottom:0">
+          <label>נדירות</label>
+          <select id="fRarity">
+            <option>Common</option><option>Uncommon</option><option>Rare</option>
+            <option>Holo Rare</option><option>Ultra Rare</option><option>Secret Rare</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="fg" style="margin-top:12px">
+        <label>תמונות</label>
+        <div class="upload-btns">
+          <label class="upload-btn">
+            <input type="file" id="fImages" accept="image/*" multiple onchange="previewImgs(this)">
+            <span class="upload-btn-icon">🖼️</span>
+            <span class="upload-btn-label">גלריה</span>
+          </label>
+          <label class="upload-btn">
+            <input type="file" id="fImagesCam" accept="image/*" capture="environment" onchange="previewImgs(this)">
+            <span class="upload-btn-icon">📸</span>
+            <span class="upload-btn-label">צלם</span>
+          </label>
+        </div>
+        <div class="img-preview" id="imgPreview"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="comments-section" id="commentsSection" style="display:none">
+        <div class="comments-title">💬 הערות</div>
+        <div id="commentsList"></div>
+        <div class="comment-input-row">
+          <input type="text" id="commentInput" placeholder="כתוב הערה..." onkeydown="if(event.key==='Enter')addComment()">
+          <button class="comment-send" onclick="addComment()">שלח</button>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+      <button class="btn btn-gold" id="saveBtn" onclick="saveCard()">💾 שמור קלף</button>
+      <button class="btn btn-red" id="deleteBtn" onclick="deleteCard()" style="display:none">🗑️ מחק קלף</button>
+      <button class="btn btn-gray" onclick="closeModal()">ביטול</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const API = 'POKEMON_API_URL';
+let cards=[], cols=3;
+let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
+let comments={};
+
+const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
+const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
+const LANGUAGES = ['English','Japanese','Hebrew','Other'];
+
+let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
+
+function rarityClass(r) {
+  if(!r) return '';
+  const map = {'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};
+  return map[r]||'';
+}
+function rarityBadgeClass(r) {
+  const map = {'Common':'rarity-common','Uncommon':'rarity-uncommon','Rare':'rarity-rare','Holo Rare':'rarity-holo','Ultra Rare':'rarity-ultra','Secret Rare':'rarity-secret'};
+  return map[r]||'rarity-common';
+}
+function condClass(c) {
+  const map = {'Mint':'cond-mint','Near Mint':'cond-nm','Excellent':'cond-ex','Good':'cond-good','Poor':'cond-poor'};
+  return map[c]||'';
+}
+
+function initPanel() {
+  const rc = document.getElementById('rarityChips');
+  RARITIES.forEach(r => {
+    const b=document.createElement('button'); b.className='p-chip'; b.textContent=r; b.dataset.val=r;
+    b.onclick=()=>{if(selRarities.has(r))selRarities.delete(r);else selRarities.add(r);b.classList.toggle('active',selRarities.has(r));updateFilters();};
+    rc.appendChild(b);
+  });
+  const cc = document.getElementById('condChips');
+  CONDITIONS.forEach(c => {
+    const b=document.createElement('button'); b.className='p-chip'; b.textContent=c; b.dataset.val=c;
+    b.onclick=()=>{if(selConditions.has(c))selConditions.delete(c);else selConditions.add(c);b.classList.toggle('active',selConditions.has(c));updateFilters();};
+    cc.appendChild(b);
+  });
+  const lc = document.getElementById('langChips');
+  LANGUAGES.forEach(l => {
+    const b=document.createElement('button'); b.className='p-chip'; b.textContent=l; b.dataset.val=l;
+    b.onclick=()=>{if(selLanguages.has(l))selLanguages.delete(l);else selLanguages.add(l);b.classList.toggle('active',selLanguages.has(l));updateFilters();};
+    lc.appendChild(b);
+  });
+}
+
+function updateFilters() { updateFilterBtn(); render(); }
+
+function updateFilterBtn() {
+  const count = selRarities.size+selConditions.size+selLanguages.size
+    +(document.getElementById('valueMin').value?1:0)+(document.getElementById('valueMax').value?1:0)
+    +(document.getElementById('yearMin').value?1:0)+(document.getElementById('yearMax').value?1:0);
+  const btn=document.getElementById('filterBtn');
+  btn.classList.toggle('has-filters',count>0);
+  btn.textContent=count>0?`⚙️ סינון (${count})`:'⚙️ סינון';
+  renderActiveTags();
+}
+
+function renderActiveTags() {
+  const af=document.getElementById('activeFilters');
+  const tags=[];
+  selRarities.forEach(r=>tags.push({label:'⭐ '+r,remove:()=>{selRarities.delete(r);document.querySelector(`.p-chip[data-val="${r}"]`)?.classList.remove('active');updateFilters();}}));
+  selConditions.forEach(c=>tags.push({label:'🏷️ '+c,remove:()=>{selConditions.delete(c);document.querySelector(`.p-chip[data-val="${c}"]`)?.classList.remove('active');updateFilters();}}));
+  selLanguages.forEach(l=>tags.push({label:'🌐 '+l,remove:()=>{selLanguages.delete(l);document.querySelector(`.p-chip[data-val="${l}"]`)?.classList.remove('active');updateFilters();}}));
+  const vMin=document.getElementById('valueMin').value, vMax=document.getElementById('valueMax').value;
+  if(vMin||vMax) tags.push({label:`💰 $${vMin||0}–$${vMax||'∞'}`,remove:()=>{document.getElementById('valueMin').value='';document.getElementById('valueMax').value='';updateFilters();}});
+  const yMin=document.getElementById('yearMin').value, yMax=document.getElementById('yearMax').value;
+  if(yMin||yMax) tags.push({label:`📅 ${yMin||''}–${yMax||''}`,remove:()=>{document.getElementById('yearMin').value='';document.getElementById('yearMax').value='';updateFilters();}});
+  if(!tags.length){af.classList.remove('show');return;}
+  af.classList.add('show');
+  af.innerHTML=tags.map((t,i)=>`<div class="filter-tag">${t.label}<button onclick="rmtag(${i})">✕</button></div>`).join('');
+  window._ftags=tags;
+}
+window.rmtag=(i)=>window._ftags[i].remove();
+
+function resetFilters() {
+  selRarities.clear();selConditions.clear();selLanguages.clear();
+  document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));
+  ['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('searchInput').value='';
+  updateFilters();
+}
+
+function openPanel(){document.getElementById('filterPanel').classList.add('open');document.getElementById('panelOverlay').classList.add('open');}
+function closePanel(){document.getElementById('filterPanel').classList.remove('open');document.getElementById('panelOverlay').classList.remove('open');}
+
+function initCols(){cols=window.innerWidth>=900?4:window.innerWidth>=600?3:3;document.getElementById('colsNum').textContent=cols;applyGrid();}
+function applyGrid(){document.getElementById('grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;}
+function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementById('colsNum').textContent=cols;applyGrid();}
+
+async function load(){
+  try{
+    const r=await fetch(`${API}/cards`);
+    cards=await r.json();
+    const s=localStorage.getItem('pokeComments');
+    if(s)comments=JSON.parse(s);
+    render();
+  }catch{document.getElementById('grid').innerHTML='<div class="loading">שגיאה בטעינה</div>';}
+}
+
+function getFiltered(){
+  const search=document.getElementById('searchInput').value.trim().toLowerCase();
+  const vMin=parseFloat(document.getElementById('valueMin').value)||0;
+  const vMax=parseFloat(document.getElementById('valueMax').value)||Infinity;
+  const yMin=parseInt(document.getElementById('yearMin').value)||0;
+  const yMax=parseInt(document.getElementById('yearMax').value)||9999;
+  return cards.filter(c=>{
+    if(search&&!(c.name||'').toLowerCase().includes(search)&&!(c.pokemon||'').toLowerCase().includes(search))return false;
+    if(selRarities.size&&!selRarities.has(c.rarity))return false;
+    if(selConditions.size&&!selConditions.has(c.condition))return false;
+    if(selLanguages.size&&!selLanguages.has(c.language))return false;
+    const val=parseFloat(c.value)||0;
+    if(val<vMin||val>vMax)return false;
+    const yr=parseInt(c.year)||0;
+    if(yr&&(yr<yMin||yr>yMax))return false;
+    return true;
+  });
+}
+
+function render(){
+  const list=getFiltered();
+  const total=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
+  document.getElementById('stats').textContent=`${cards.length} קלפים | $${total.toFixed(0)}`;
+  applyGrid();
+  const grid=document.getElementById('grid');
+  grid.innerHTML='';
+  if(!list.length&&cards.length){grid.innerHTML='<div class="no-results">😕 לא נמצאו קלפים</div>';}
+  list.forEach(c=>{
+    const imgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));
+    const cc=comments[String(c.id)]||[];
+    const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
+    const imgHtml=imgs.length
+      ?`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity||''}</div>${badge}</div>`
+      :`<div class="card-no-img">🃏${badge}</div>`;
+    const div=document.createElement('div');
+    div.className=`poke-card ${rarityClass(c.rarity)}`;
+    div.innerHTML=`${imgHtml}
+      <div class="card-body">
+        <div class="card-name">${c.name||c.pokemon||''}</div>
+        <div class="card-set">${c.set||''} ${c.number?'#'+c.number:''}</div>
+        <div class="card-row">
+          <span class="card-value">${c.value?'$'+c.value:''}</span>
+          <span class="card-cond ${condClass(c.condition)}">${c.condition||''}</span>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="card-btn" onclick="openEdit('${c.id}')">✏️ עריכה</button>
+        <button class="card-btn" onclick="shareCard('${c.id}')">🔗 שתף</button>
+      </div>`;
+    grid.appendChild(div);
+  });
+  const add=document.createElement('div');
+  add.className='add-card';add.onclick=openAdd;
+  add.innerHTML='<div style="font-size:1.8em;color:#f59e0b">＋</div><div style="font-size:0.75em;color:#64748b;font-weight:700;margin-top:5px">הוסף קלף</div>';
+  grid.appendChild(add);
+}
+
+function shareCard(id){
+  const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  const text=`⚡ ${c.name||c.pokemon}\n📦 ${c.set||''} ${c.number?'#'+c.number:''}\n⭐ ${c.rarity||''} | 🏷️ ${c.condition||''}\n💰 $${c.value||'0'}`;
+  if(navigator.share)navigator.share({title:c.name||c.pokemon,text});
+  else navigator.clipboard.writeText(text).then(()=>toast('📋 הועתק!'));
+}
+
+function saveComments(){localStorage.setItem('pokeComments',JSON.stringify(comments));}
+
+function openAdd(){
+  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;
+  document.getElementById('modalTitle').textContent='➕ הוספת קלף';
+  ['fName','fPokemon','fNumber','fSet','fYear','fValue'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fCondition').value='Mint';
+  document.getElementById('fRarity').value='Common';
+  document.getElementById('fLanguage').value='English';
+  document.getElementById('fImages').value='';
+  document.getElementById('imgPreview').innerHTML='';
+  document.getElementById('aiSection').style.display='';
+  document.getElementById('deleteBtn').style.display='none';
+  document.getElementById('commentsSection').style.display='none';
+  document.getElementById('aiFrontPrev').style.display='none';
+  document.getElementById('aiBackPrev').style.display='none';
+  document.getElementById('aiResult').style.display='none';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function openEdit(id){
+  const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  editId=id;existImgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));newFiles=[];aiFront=null;aiBack=null;
+  document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
+  document.getElementById('fName').value=c.name||'';
+  document.getElementById('fPokemon').value=c.pokemon||'';
+  document.getElementById('fNumber').value=c.number||'';
+  document.getElementById('fSet').value=c.set||'';
+  document.getElementById('fYear').value=c.year||'';
+  document.getElementById('fValue').value=c.value||'';
+  document.getElementById('fCondition').value=c.condition||'Mint';
+  document.getElementById('fRarity').value=c.rarity||'Common';
+  document.getElementById('fLanguage').value=c.language||'English';
+  document.getElementById('fImages').value='';
+  document.getElementById('aiSection').style.display='none';
+  document.getElementById('deleteBtn').style.display='';
+  renderPreview();renderComments(id);
+  document.getElementById('commentsSection').style.display='';
+  document.getElementById('overlay').classList.add('open');
+}
+
+function renderPreview(){
+  document.getElementById('imgPreview').innerHTML=
+    existImgs.map((u,i)=>`<div class="img-prev-item"><img src="${u}"><button class="img-prev-del" onclick="removeExist(${i})">✕</button></div>`).join('')+
+    newFiles.map((f,i)=>`<div class="img-prev-item"><img src="${URL.createObjectURL(f)}"><button class="img-prev-del" onclick="removeNew(${i})">✕</button></div>`).join('');
+}
+function removeExist(i){existImgs.splice(i,1);renderPreview();}
+function removeNew(i){newFiles.splice(i,1);renderPreview();}
+function previewImgs(input){newFiles=[...newFiles,...Array.from(input.files)];input.value='';renderPreview();}
+
+function renderComments(id){
+  const list=comments[String(id)]||[];
+  document.getElementById('commentsList').innerHTML=list.map((t,i)=>`<div class="comment-item">${t}<button class="comment-del" onclick="delComment('${id}',${i})">✕</button></div>`).join('')||'<div style="font-size:0.78em;color:#475569;margin-bottom:6px">אין הערות עדיין</div>';
+  document.getElementById('commentInput').value='';
+}
+function addComment(){const t=document.getElementById('commentInput').value.trim();if(!t||!editId)return;if(!comments[String(editId)])comments[String(editId)]=[];comments[String(editId)].push(t);saveComments();renderComments(editId);render();}
+function delComment(id,i){comments[String(id)].splice(i,1);saveComments();renderComments(id);render();}
+
+function aiPreview(side,input){const f=input.files[0];if(!f)return;if(side==='front'){aiFront=f;const img=document.getElementById('aiFrontPrev');img.src=URL.createObjectURL(f);img.style.display='block';}else{aiBack=f;const img=document.getElementById('aiBackPrev');img.src=URL.createObjectURL(f);img.style.display='block';}}
+
+async function identifyCoin(){
+  if(!aiFront){toast('העלה תמונת פנים של הקלף');return;}
+  const btn=document.getElementById('identifyBtn');btn.textContent='🔍 מזהה...';btn.disabled=true;
+  try{
+    const fd=new FormData();fd.append('front',aiFront);if(aiBack)fd.append('back',aiBack);
+    const r=await fetch(`${API}/identify`,{method:'POST',body:fd});
+    const d=await r.json();
+    if(d.error){toast('שגיאה: '+d.error);return;}
+    document.getElementById('fName').value=d.name||'';
+    document.getElementById('fPokemon').value=d.pokemon||'';
+    document.getElementById('fNumber').value=d.number||'';
+    document.getElementById('fSet').value=d.set||'';
+    document.getElementById('fYear').value=d.year||'';
+    document.getElementById('fValue').value=d.value||'';
+    if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
+    if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
+    if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
+    const res=document.getElementById('aiResult');res.style.display='block';
+    res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''} | $${d.value||'?'}`;
+    if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
+  }catch(e){toast('שגיאת זיהוי');}
+  finally{btn.textContent='✨ זהה קלף';btn.disabled=false;}
+}
+
+async function uploadFile(f){const fd=new FormData();fd.append('file',f);const r=await fetch(`${API}/upload`,{method:'POST',body:fd});return(await r.json()).url;}
+
+async function saveCard(){
+  const name=document.getElementById('fName').value.trim()||document.getElementById('fPokemon').value.trim();
+  if(!name){toast('נא להזין שם');return;}
+  const btn=document.getElementById('saveBtn');btn.textContent='⏳ שומר...';btn.disabled=true;
+  try{
+    const urls=[];for(const f of newFiles){const u=await uploadFile(f);if(u)urls.push(u);}
+    const data={id:editId||String(Date.now()),name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:[...existImgs,...urls].join('|'),comments:''};
+    if(editId)await fetch(`${API}/cards/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    else await fetch(`${API}/cards`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    closeModal();toast('✅ נשמר!');await load();
+  }catch{toast('שגיאה בשמירה');}
+  finally{btn.textContent='💾 שמור קלף';btn.disabled=false;}
+}
+
+async function deleteCard(){
+  if(!confirm('למחוק את הקלף?'))return;
+  await fetch(`${API}/cards/${editId}`,{method:'DELETE'});
+  if(comments[String(editId)]){delete comments[String(editId)];saveComments();}
+  closeModal();toast('נמחק');await load();
+}
+
+function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function overlayClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+window.addEventListener('resize',()=>{const n=window.innerWidth>=900?4:3;if(n!==cols){cols=n;document.getElementById('colsNum').textContent=cols;applyGrid();}});
+
+initCols();
+initPanel();
+load();
+</script>
+</body>
+</html>
