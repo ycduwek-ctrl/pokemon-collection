@@ -369,7 +369,7 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const API = 'POKEMON_API_URL';
+const API = 'https://coins-api-xi.vercel.app';
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
 let comments={};
@@ -397,19 +397,19 @@ function condClass(c) {
 function initPanel() {
   const rc = document.getElementById('rarityChips');
   RARITIES.forEach(r => {
-    const b=document.createElement('button'); b.className='p-chip'; b.textContent=r; b.dataset.val=r;
+    const b=document.('button'); b.className='p-chip'; b.textContent=r; b.dataset.val=r;
     b.onclick=()=>{if(selRarities.has(r))selRarities.delete(r);else selRarities.add(r);b.classList.toggle('active',selRarities.has(r));updateFilters();};
     rc.appendChild(b);
   });
   const cc = document.getElementById('condChips');
   CONDITIONS.forEach(c => {
-    const b=document.createElement('button'); b.className='p-chip'; b.textContent=c; b.dataset.val=c;
+    const b=document.('button'); b.className='p-chip'; b.textContent=c; b.dataset.val=c;
     b.onclick=()=>{if(selConditions.has(c))selConditions.delete(c);else selConditions.add(c);b.classList.toggle('active',selConditions.has(c));updateFilters();};
     cc.appendChild(b);
   });
   const lc = document.getElementById('langChips');
   LANGUAGES.forEach(l => {
-    const b=document.createElement('button'); b.className='p-chip'; b.textContent=l; b.dataset.val=l;
+    const b=document.('button'); b.className='p-chip'; b.textContent=l; b.dataset.val=l;
     b.onclick=()=>{if(selLanguages.has(l))selLanguages.delete(l);else selLanguages.add(l);b.classList.toggle('active',selLanguages.has(l));updateFilters();};
     lc.appendChild(b);
   });
@@ -503,7 +503,7 @@ function render(){
     const imgHtml=imgs.length
       ?`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity||''}</div>${badge}</div>`
       :`<div class="card-no-img">🃏${badge}</div>`;
-    const div=document.createElement('div');
+    const div=document.('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
     div.innerHTML=`${imgHtml}
       <div class="card-body">
@@ -520,7 +520,7 @@ function render(){
       </div>`;
     grid.appendChild(div);
   });
-  const add=document.createElement('div');
+  const add=document.('div');
   add.className='add-card';add.onclick=openAdd;
   add.innerHTML='<div style="font-size:1.8em;color:#f59e0b">＋</div><div style="font-size:0.75em;color:#64748b;font-weight:700;margin-top:5px">הוסף קלף</div>';
   grid.appendChild(add);
