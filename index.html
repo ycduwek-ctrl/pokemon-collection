@@ -518,7 +518,7 @@ window.rmtag=(i)=>window._ftags[i].remove();
 function resetFilters(){selRarities.clear();selConditions.clear();selLanguages.clear();document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchInput').value='';updateFilters();}
 function openPanel(){document.getElementById('filterPanel').classList.add('open');document.getElementById('panelOverlay').classList.add('open');}
 function closePanel(){document.getElementById('filterPanel').classList.remove('open');document.getElementById('panelOverlay').classList.remove('open');}
-function initCols(){cols=window.innerWidth>=900?4:3;document.getElementById('colsNum').textContent=cols;applyGrid();}
+function initCols(){cols=window.innerWidth>=600?3:2;document.getElementById('colsNum').textContent=cols;applyGrid();}
 function applyGrid(){document.getElementById('grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;}
 function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementById('colsNum').textContent=cols;applyGrid();}
 
@@ -678,7 +678,7 @@ async function deleteCard(){
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
 function overlayClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
-window.addEventListener('resize',()=>{const n=window.innerWidth>=900?4:3;if(n!==cols){cols=n;document.getElementById('colsNum').textContent=cols;applyGrid();}});
+// resize listener removed — user controls cols manually
 
 initCols();initPanel();load();
 </script>
