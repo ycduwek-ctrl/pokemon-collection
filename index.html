@@ -9,54 +9,73 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Heebo', sans-serif; background: #050a18; color: #fff; min-height: 100vh; overflow-x: hidden; }
 
-    /* ===== HEADER ===== */
+    /* ===== HEADER HERO ===== */
     .header {
-      background: linear-gradient(160deg, #0a0f2e 0%, #12063a 40%, #0a1a3d 100%);
-      padding: 0 16px;
+      background: linear-gradient(160deg, #0a0f2e 0%, #12063a 50%, #1a0a4a 100%);
       position: sticky; top: 0; z-index: 100;
       border-bottom: 2px solid #f59e0b55;
       box-shadow: 0 4px 30px rgba(0,0,0,0.7);
       overflow: hidden;
+      min-height: 130px;
     }
     .header::before {
       content: '';
       position: absolute; inset: 0;
-      background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.12) 0%, transparent 70%);
+      background: radial-gradient(ellipse at 30% 50%, rgba(245,158,11,0.18) 0%, transparent 60%),
+                  radial-gradient(ellipse at 100% 50%, rgba(120,58,237,0.15) 0%, transparent 50%);
       pointer-events: none;
     }
     .header-inner {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 0; position: relative;
+      display: flex; align-items: stretch; justify-content: space-between;
+      position: relative; z-index: 2; min-height: 130px;
+    }
+    .header-left {
+      display: flex; flex-direction: column; justify-content: center;
+      padding: 14px 0 14px 16px; flex: 1; gap: 8px;
     }
     .header-logo { display: flex; flex-direction: column; align-items: flex-end; }
     .header-title {
-      font-size: 1.55em; font-weight: 900; line-height: 1;
+      font-size: 1.65em; font-weight: 900; line-height: 1;
       background: linear-gradient(to left, #fbbf24, #fef08a, #f59e0b, #fbbf24);
       background-size: 200% auto;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       animation: shine 3s linear infinite;
       letter-spacing: 1px;
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
+      text-align: right;
     }
     @keyframes shine { to { background-position: 200% center; } }
-    .header-sub { font-size: 0.68em; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; margin-top: 1px; }
-    .header-right { display: flex; align-items: center; gap: 10px; }
+    .header-sub { font-size: 0.68em; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px; text-align: right; }
+    .header-stats-row { display: flex; gap: 8px; justify-content: flex-end; }
     .header-stats-box {
-      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25);
-      border-radius: 12px; padding: 6px 12px; text-align: center;
+      background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 10px; padding: 5px 10px; text-align: center; min-width: 52px;
     }
-    .stats-num { font-size: 1.1em; font-weight: 900; color: #fbbf24; line-height: 1; }
-    .stats-label { font-size: 0.6em; color: #94a3b8; font-weight: 600; }
-    .header-bolt {
-      width: 36px; height: 36px; background: linear-gradient(135deg, #f59e0b, #fbbf24);
-      border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 1.2em; box-shadow: 0 0 12px rgba(245,158,11,0.5);
-      animation: pulse-bolt 2s ease-in-out infinite;
+    .stats-num { font-size: 1em; font-weight: 900; color: #fbbf24; line-height: 1; }
+    .stats-label { font-size: 0.58em; color: #94a3b8; font-weight: 600; margin-top: 1px; }
+    .header-hero-img {
+      width: 130px; flex-shrink: 0;
+      position: relative; overflow: visible;
+      display: flex; align-items: flex-end; justify-content: center;
     }
-    @keyframes pulse-bolt { 0%,100%{box-shadow:0 0 12px rgba(245,158,11,0.5)} 50%{box-shadow:0 0 22px rgba(245,158,11,0.9)} }
+    .header-hero-img img {
+      height: 155px; width: auto;
+      object-fit: contain; object-position: bottom center;
+      position: relative; z-index: 2;
+      filter: drop-shadow(0 0 18px rgba(245,158,11,0.5)) drop-shadow(-4px 0 12px rgba(120,58,237,0.3));
+    }
+    .header-hero-glow {
+      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 110px; height: 50px;
+      background: radial-gradient(ellipse, rgba(245,158,11,0.4) 0%, transparent 70%);
+      pointer-events: none; z-index: 1;
+    }
+    .header-bolt { display: none; }
+    .header-right { display: none; }
     .header-stars {
       position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
       background: linear-gradient(to right, transparent, #f59e0b, #fbbf24, #f59e0b, transparent);
+      z-index: 3;
     }
 
     /* ===== VALUE BAR ===== */
@@ -243,16 +262,30 @@
 
 <div class="header">
   <div class="header-inner">
-    <div class="header-logo">
-      <div class="header-title">⚡ האוסף של בר</div>
-      <div class="header-sub">אוסף קלפי פוקימון</div>
-    </div>
-    <div class="header-right">
-      <div class="header-stats-box">
-        <div class="stats-num" id="statsCards">—</div>
-        <div class="stats-label">קלפים</div>
+    <div class="header-left">
+      <div class="header-logo">
+        <div class="header-title">⚡ האוסף של בר</div>
+        <div class="header-sub">אוסף קלפי פוקימון</div>
       </div>
-      <div class="header-bolt">🔥</div>
+      <div class="header-stats-row">
+        <div class="header-stats-box">
+          <div class="stats-num" id="statsCards">—</div>
+          <div class="stats-label">קלפים</div>
+        </div>
+        <div class="header-stats-box">
+          <div class="stats-num" id="statsRareHeader">—</div>
+          <div class="stats-label">נדירים</div>
+        </div>
+        <div class="header-stats-box">
+          <div class="stats-num" id="statsTotalHeader">—</div>
+          <div class="stats-label">שווי כולל</div>
+        </div>
+      </div>
+    </div>
+    <div class="header-hero-img">
+      <div class="header-hero-glow"></div>
+      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/v1782740131/3456476_1_daex59.png" alt="trainer"
+           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22155%22><text y=%2280%22 font-size=%2270%22>⚡</text></svg>'">
     </div>
   </div>
   <div class="header-stars"></div>
@@ -517,6 +550,10 @@ function render(){
   const rareCount=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
   const topVal=cards.reduce((m,c)=>Math.max(m,parseFloat(c.value)||0),0);
   document.getElementById('statsCards').textContent=cards.length;
+  const totalVal=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
+  const rareCount=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
+  if(document.getElementById('statsTotalHeader'))document.getElementById('statsTotalHeader').textContent='$'+Math.round(totalVal);
+  if(document.getElementById('statsRareHeader'))document.getElementById('statsRareHeader').textContent=rareCount;
   document.getElementById('statsTotal').textContent='$'+total.toFixed(0);
   document.getElementById('statsRare').textContent=rareCount;
   document.getElementById('statsTop').textContent=topVal?'$'+topVal:'—';
