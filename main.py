@@ -17,6 +17,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
+allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -112,7 +113,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     res = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
-        json={"model":"openrouter/auto","messages":[{"role":"user","content":content}]},
+        json={"model":"google/gemini-2.0-flash-001":[{"role":"user","content":content}]},
         timeout=30
     )
     result = res.json()
