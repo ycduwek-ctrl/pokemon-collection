@@ -284,7 +284,7 @@
     </div>
     <div class="header-hero-img">
       <div class="header-hero-glow"></div>
-      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/v1782740529/3456476_1_daex59.png" alt="trainer"
+      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/v1782740131/3456476_1_daex59.png" alt="trainer"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22155%22><text y=%2280%22 font-size=%2270%22>⚡</text></svg>'">
     </div>
   </div>
@@ -550,10 +550,10 @@ function render(){
   const rareCount=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
   const topVal=cards.reduce((m,c)=>Math.max(m,parseFloat(c.value)||0),0);
   document.getElementById('statsCards').textContent=cards.length;
-  const totalVal=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
-  const rareCount=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
-  if(document.getElementById('statsTotalHeader'))document.getElementById('statsTotalHeader').textContent='$'+Math.round(totalVal);
-  if(document.getElementById('statsRareHeader'))document.getElementById('statsRareHeader').textContent=rareCount;
+  const totalValH=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
+  const rareCountH=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
+  if(document.getElementById('statsTotalHeader'))document.getElementById('statsTotalHeader').textContent='$'+Math.round(totalValH);
+  if(document.getElementById('statsRareHeader'))document.getElementById('statsRareHeader').textContent=rareCountH;
   document.getElementById('statsTotal').textContent='$'+total.toFixed(0);
   document.getElementById('statsRare').textContent=rareCount;
   document.getElementById('statsTop').textContent=topVal?'$'+topVal:'—';
