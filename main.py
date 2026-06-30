@@ -4,7 +4,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 import cloudinary
 import cloudinary.uploader
-from PIL import Image
+from PIL import Image, ImageOps
 import io
 import os
 import json
@@ -78,7 +78,7 @@ def delete_card(card_id: str):
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     data = await file.read()
-    img = Image.open(io.BytesIO(data)).convert("RGB")
+    img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
     # חיתוך יחס 2:3 כמו קלף פוקימון
     w, h = img.size
     target_ratio = 2/3
@@ -94,7 +94,7 @@ async def upload_image(file: UploadFile = File(...)):
 @app.post("/identify")
 async def identify(front: UploadFile = File(...), back: UploadFile = File(None)):
     def compress(f):
-        img = Image.open(io.BytesIO(f)).convert("RGB")
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(f))).convert("RGB")
         img.thumbnail((600,600), Image.LANCZOS)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=75)
