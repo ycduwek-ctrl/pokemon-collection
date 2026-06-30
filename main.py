@@ -140,18 +140,16 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 
     front_b64 = compress(await front.read())
     content = [
-        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). בדוק בעיון את התמונה/ות שצורפו וקרא את הפרטים ישירות מהקלף עצמו - אל תנחש.
+        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). תפקידך לקרוא מהתמונה רק את הפרטים שניתן לראות בבירור.
 
-הנחיות לקריאה מדויקת:
-- השם: קרא את שם הפוקימון בדיוק כפי שכתוב בכותרת הקלף (למשל "Charizard", "Sliggoo")
-- המספר והסדרה: בפינה התחתונה של הקלף יש קוד כמו "095/086" או "4/102" - זה number/total בסדרה. גם ליד זה לרוב יש אייקון/קיצור של שם הסדרה
-- הנדירות: מסומנת בסמל קטן ליד המספר (כוכב=Rare, כוכב מוצק=Holo/Ultra, יהלום=Common/Uncommon) - אם רואים "Holo"/בוהק מיוחד בתמונה, ציין Holo Rare
-- HP ומהלכים: אם רלוונטי לזיהוי הקלף הספציפי
-- שפה: זהה לפי שפת הטקסט על הקלף עצמו (לא לפי האפליקציה)
-- אם לא ניתן לקרוא פרט מסוים בבירור - השאר אותו ריק במקום לנחש
+קרא מהקלף:
+1. pokemon - שם הפוקימון בדיוק כפי שכתוב בכותרת הקלף באנגלית (למשל "Charizard", "Sliggoo", "Pikachu")
+2. number - המספר בפינה התחתונה בפורמט המדויק כפי שמופיע (למשל "095/086", "4/102", "025")
+3. language - שפת הטקסט הראשי על הקלף: English/Japanese/Hebrew/Other
+4. condition - הערכת המצב הפיזי של הקלף עצמו שרואים בתמונה: Mint/Near Mint/Excellent/Good/Poor
 
-החזר JSON בלבד (ללא טקסט נוסף):
-{"name":"שם הקלף המדויק כפי שכתוב","pokemon":"שם הפוקימון","set":"שם הסדרה אם ידוע","number":"המספר בפורמט כפי שמופיע על הקלף, למשל 095/086","year":"שנת הוצאה אם ידועה מהסדרה","condition":"הערכת מצב פיזי: Mint/Near Mint/Excellent/Good/Poor","language":"שפת הטקסט בקלף: English/Japanese/Hebrew/Other","rarity":"לפי הסמל בקלף: Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","value":"הערכת שווי גסה בדולרים, מספר בלבד"}"""},
+אל תנחש שום פרט שלא ניתן לקרוא בבירור - השאר ריק.
+החזר JSON בלבד: {"pokemon":"","number":"","language":"","condition":""}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
@@ -172,18 +170,29 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     match = re.search(r'\{.*\}', text, re.DOTALL)
     parsed = json.loads(match.group()) if match else json.loads(text)
 
-    # העשרה ממאגר Pokemon TCG API אמיתי - שם/מספר/שנה/מחיר מדויקים יותר
-    search_name = parsed.get("pokemon") or parsed.get("name")
-    if search_name:
-        api_data = lookup_tcg_api(search_name, parsed.get("number"))
-        if api_data:
-            if api_data.get("set"):
-                parsed["set"] = api_data["set"]
-            if api_data.get("number") and "/" in api_data["number"]:
-                parsed["number"] = api_data["number"]
-            if api_data.get("year"):
-                parsed["year"] = api_data["year"]
-            if api_data.get("value"):
-                parsed["value"] = api_data["value"]
+    # ה-AI נתן שם + מספר + מצב + שפה
+    # עכשיו מחפשים ב-Pokemon TCG API את כל שאר הנתונים
+    search_name = parsed.get("pokemon","").strip()
+    if not search_name:
+        return parsed  # לא הצלחנו לזהות שם — מחזירים מה שיש
 
-    return parsed
+    api_data = lookup_tcg_api(search_name, parsed.get("number",""))
+
+    result_final = {
+        "name":      search_name,
+        "pokemon":   search_name,
+        "number":    parsed.get("number",""),
+        "language":  parsed.get("language",""),
+        "condition": parsed.get("condition",""),
+        # שדות מה-API (אמינים) — fallback לריק אם לא נמצא
+        "set":    api_data.get("set","")    if api_data else "",
+        "year":   api_data.get("year","")   if api_data else "",
+        "rarity": api_data.get("rarity_api","") if api_data else "",
+        "value":  str(api_data["value"])    if api_data and api_data.get("value") else "",
+    }
+
+    # אם ה-API מצא מספר מדויק יותר (עם סך הכל), נעדיף אותו
+    if api_data and api_data.get("number") and "/" in api_data["number"]:
+        result_final["number"] = api_data["number"]
+
+    return result_final
