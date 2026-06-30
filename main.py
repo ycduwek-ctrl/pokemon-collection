@@ -176,6 +176,27 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     if not search_name:
         return parsed  # לא הצלחנו לזהות שם — מחזירים מה שיש
 
+    # בקשה שנייה ל-AI — הערכת מחיר ונדירות (גיבוי אם ה-API לא יחזיר)
+    content_price = [
+        {"type":"text","text":f"""קלף פוקימון: {search_name}, מספר {parsed.get("number","")}.
+החזר JSON בלבד עם הערכה גסה: {{"value":"מחיר בדולרים מספר בלבד","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare"}}"""},
+        {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
+    ]
+    ai_price_res = requests.post(
+        "https://openrouter.ai/api/v1/chat/completions",
+        headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
+        json={"model":"openrouter/auto","messages":[{"role":"user","content":content_price}]},
+        timeout=20
+    )
+    ai_price = {}
+    try:
+        pt = ai_price_res.json()["choices"][0]["message"]["content"].strip()
+        pt = re.sub(r'```json|```','',pt).strip()
+        m = re.search(r'\{.*\}', pt, re.DOTALL)
+        ai_price = json.loads(m.group()) if m else {}
+    except Exception:
+        pass
+
     api_data = lookup_tcg_api(search_name, parsed.get("number",""))
 
     result_final = {
@@ -184,11 +205,13 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
         "number":    parsed.get("number",""),
         "language":  parsed.get("language",""),
         "condition": parsed.get("condition",""),
-        # שדות מה-API (אמינים) — fallback לריק אם לא נמצא
-        "set":    api_data.get("set","")    if api_data else "",
-        "year":   api_data.get("year","")   if api_data else "",
-        "rarity": api_data.get("rarity_api","") if api_data else "",
-        "value":  str(api_data["value"])    if api_data and api_data.get("value") else "",
+        # סדרה ושנה — מה-API בלבד (אמין)
+        "set":    api_data.get("set","")   if api_data else "",
+        "year":   api_data.get("year","")  if api_data else "",
+        # נדירות — מה-API אם נמצא, אחרת מה-AI
+        "rarity": (api_data.get("rarity_api","") if api_data and api_data.get("rarity_api") else ai_price.get("rarity","")),
+        # מחיר — מה-API אם נמצא, אחרת הערכת AI
+        "value":  (str(api_data["value"]) if api_data and api_data.get("value") else ai_price.get("value","")),
     }
 
     # אם ה-API מצא מספר מדויק יותר (עם סך הכל), נעדיף אותו
