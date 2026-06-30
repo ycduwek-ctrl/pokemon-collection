@@ -167,6 +167,23 @@
     .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; }
     .carousel-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4); }
     .carousel-dot.active { background: #fbbf24; width: 14px; border-radius: 3px; }
+
+    /* ===== DETAIL MODAL ===== */
+    .detail-modal { max-width: 480px; margin: 0 auto; }
+    .detail-carousel { width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
+    .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
+    .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
+    .detail-set { font-size: 0.85em; color: #7891c8; margin-bottom: 14px; }
+    .detail-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    .detail-badge { font-size: 0.78em; font-weight: 700; padding: 5px 12px; border-radius: 16px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+    .detail-stat { background: #0f1730; border: 1px solid #1e2d5a; border-radius: 10px; padding: 10px 12px; }
+    .detail-stat-label { font-size: 0.65em; color: #3d4f7a; font-weight: 600; margin-bottom: 3px; }
+    .detail-stat-val { font-size: 1em; font-weight: 800; color: #e2e8f0; }
+    .detail-actions { display: flex; gap: 8px; }
+    .detail-actions .card-btn { flex: 1; padding: 12px; font-size: 0.9em; border-radius: 10px; background: #0f1730; border: 1px solid #1e2d5a; color: #e2e8f0; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .detail-comments { margin-top: 16px; }
+    .detail-comments-title { font-size: 0.85em; font-weight: 800; color: #f59e0b; margin-bottom: 8px; }
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
@@ -367,6 +384,17 @@
 
 <div class="grid" id="grid">
   <div class="loading"><div class="spin"></div><div class="loading-text">טוען את האוסף של בר...</div></div>
+</div>
+
+<div class="overlay" id="detailOverlay" onclick="detailOverlayClick(event)">
+  <div class="modal detail-modal">
+    <div class="modal-handle"></div>
+    <div class="modal-head">
+      <span class="modal-title">פרטי קלף</span>
+      <button class="modal-close" onclick="closeDetail()">✕</button>
+    </div>
+    <div class="modal-body" id="detailBody"></div>
+  </div>
 </div>
 
 <div class="overlay" id="overlay" onclick="overlayClick(event)">
@@ -576,23 +604,18 @@ function render(){
     const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
     const imgHtml=imgs.length
       ?(imgs.length>1
-        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}" loading="lazy"></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
+        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}" loading="lazy"></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
         :`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}</div>`)
       :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
     const div=document.createElement('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
+    div.onclick=()=>openDetail(c.id);
     div.innerHTML=`${imgHtml}
       <div class="card-body">
         <div class="card-name">${c.name||c.pokemon||'—'}</div>
-        <div class="card-set">${c.set||''}${c.number?' #'+c.number:''}</div>
         <div class="card-row">
           <span class="card-value">${c.value?'$'+c.value:''}</span>
-          <span class="card-cond ${condClass(c.condition)}">${c.condition?c.condition+' ('+(CONDITION_HE[c.condition]||'')+')':''}</span>
         </div>
-      </div>
-      <div class="card-actions">
-        <button class="card-btn" onclick="openEdit('${c.id}')">✏️ עריכה</button>
-        <button class="card-btn" onclick="shareCard('${c.id}')">🔗 שתף</button>
       </div>`;
     grid.appendChild(div);
   });
@@ -600,6 +623,40 @@ function render(){
   add.innerHTML='<div class="add-icon">＋</div><div class="add-label">הוסף קלף</div>';
   grid.appendChild(add);
 }
+
+function openDetail(id){
+  const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  const imgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));
+  const imgHtml=imgs.length
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}"></div>`).join('')}</div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
+  const cc=comments[String(c.id)]||[];
+  const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${t}</div>`).join(''):'';
+  document.getElementById('detailBody').innerHTML=`
+    ${imgHtml}
+    <div class="detail-name">${c.name||c.pokemon||'—'}</div>
+    <div class="detail-set">${c.set||''}${c.number?' #'+c.number:''}</div>
+    <div class="detail-badges">
+      ${c.rarity?`<span class="detail-badge">⭐ ${RARITY_HE[c.rarity]||c.rarity}</span>`:''}
+      ${c.condition?`<span class="detail-badge">🏷️ ${CONDITION_HE[c.condition]||c.condition}</span>`:''}
+      ${c.language?`<span class="detail-badge">🌐 ${LANGUAGE_HE[c.language]||c.language}</span>`:''}
+    </div>
+    <div class="detail-grid">
+      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val">${c.value?'$'+c.value:'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${c.year||'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${c.pokemon||'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${c.set||'—'}</div></div>
+    </div>
+    <div class="detail-actions">
+      <button class="card-btn" onclick="closeDetail();openEdit('${c.id}')">✏️ עריכה</button>
+      <button class="card-btn" onclick="shareCard('${c.id}')">🔗 שתף</button>
+    </div>
+    ${commentsHtml?`<div class="detail-comments"><div class="detail-comments-title">💬 הערות</div>${commentsHtml}</div>`:''}
+  `;
+  document.getElementById('detailOverlay').classList.add('open');
+}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
+function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
   const idx=Math.round(track.scrollLeft/track.offsetWidth);
