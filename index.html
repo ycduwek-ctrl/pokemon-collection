@@ -62,7 +62,8 @@
       height: 155px; width: auto;
       object-fit: cover; object-position: top center;
       position: relative; z-index: 2;
-      filter: drop-shadow(0 0 18px rgba(245,158,11,0.5)) drop-shadow(-4px 0 12px rgba(120,58,237,0.3));
+      transform: scaleX(-1);
+      filter: drop-shadow(0 0 18px rgba(245,158,11,0.5)) drop-shadow(4px 0 12px rgba(120,58,237,0.3));
     }
     .header-hero-glow {
       position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -158,12 +159,12 @@
     @keyframes shimmer { 0%,100%{opacity:0} 50%{opacity:1} }
 
     .card-img-wrap { width: 100%; aspect-ratio: 2/3; position: relative; overflow: hidden; background: #050a18; }
-    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.3s; }
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: contain; background: #050a18; display: block; transition: transform 0.3s; }
     .poke-card:active .card-img-wrap img { transform: scale(1.03); }
     .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
     .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
-    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: contain; background: #050a18; display: block; }
     .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; }
     .carousel-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4); }
     .carousel-dot.active { background: #fbbf24; width: 14px; border-radius: 3px; }
