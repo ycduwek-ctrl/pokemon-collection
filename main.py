@@ -91,43 +91,56 @@ async def upload_image(file: UploadFile = File(...)):
     res = cloudinary.uploader.upload(buf.getvalue(), format="webp")
     return {"url": res["secure_url"]}
 
-def lookup_tcg_api(name, number=None):
-    """חיפוש במאגר Pokemon TCG API האמיתי לפי שם (ואופציונלית מספר) להשלמת/תיקון פרטים ומחיר שוק אמיתי"""
+def lookup_tcg_api(name, number=None, set_hint=None):
+    """חיפוש מדויק ב-Pokemon TCG API לפי שם + מספר + רמז סדרה"""
     try:
-        query = f'name:"{name}"'
-        r = requests.get(
-            "https://api.pokemontcg.io/v2/cards",
-            params={"q": query, "pageSize": 10, "orderBy": "-set.releaseDate"},
-            timeout=10
-        )
-        data = r.json().get("data", [])
-        if not data:
-            return None
-        # אם יש מספר - ננסה להתאים בדיוק
-        card = None
-        if number:
-            num_only = str(number).split("/")[0].lstrip("0") or "0"
-            for c in data:
-                if c.get("number","").lstrip("0") == num_only:
-                    card = c
-                    break
-        if not card:
-            card = data[0]
-        price = None
-        prices = card.get("tcgplayer", {}).get("prices", {})
-        for variant in ["holofoil","normal","reverseHolofoil","1stEditionHolofoil","unlimitedHolofoil"]:
-            if variant in prices and prices[variant].get("market"):
-                price = prices[variant]["market"]
-                break
-        return {
-            "set": card.get("set",{}).get("name"),
-            "number": f'{card.get("number")}/{card.get("set",{}).get("printedTotal","")}',
-            "year": (card.get("set",{}).get("releaseDate") or "")[:4],
-            "value": round(price,2) if price else None,
-            "rarity_api": card.get("rarity")
-        }
+        num_only = str(number).split("/")[0].lstrip("0") or "0" if number else None
+
+        # ניסיון 1: שם + מספר + סדרה (הכי מדויק)
+        if num_only and set_hint:
+            q = f'name:"{name}" number:{num_only} set.name:"{set_hint}"'
+            r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":5}, timeout=10)
+            data = r.json().get("data",[])
+            if data:
+                return _extract_card(data[0])
+
+        # ניסיון 2: שם + מספר בלי סדרה
+        if num_only:
+            q = f'name:"{name}" number:{num_only}'
+            r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":10,"orderBy":"set.releaseDate"}, timeout=10)
+            data = r.json().get("data",[])
+            if data:
+                # מחפשים התאמה מדויקת של מספר
+                for c in data:
+                    if c.get("number","").lstrip("0") == num_only:
+                        return _extract_card(c)
+                return _extract_card(data[0])
+
+        # ניסיון 3: שם בלבד — מחזיר הכי ישן (סביר יותר לקלפים קלאסיים)
+        q = f'name:"{name}"'
+        r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":20,"orderBy":"set.releaseDate"}, timeout=10)
+        data = r.json().get("data",[])
+        if data:
+            return _extract_card(data[0])  # הכי ישן
+
+        return None
     except Exception:
         return None
+
+def _extract_card(card):
+    price = None
+    prices = card.get("tcgplayer",{}).get("prices",{})
+    for variant in ["1stEditionHolofoil","holofoil","unlimitedHolofoil","normal","reverseHolofoil"]:
+        if variant in prices and prices[variant].get("market"):
+            price = prices[variant]["market"]
+            break
+    return {
+        "set":        card.get("set",{}).get("name",""),
+        "number":     f'{card.get("number")}/{card.get("set",{}).get("printedTotal","")}',
+        "year":       (card.get("set",{}).get("releaseDate") or "")[:4],
+        "value":      round(price,2) if price else None,
+        "rarity_api": card.get("rarity",""),
+    }
 
 @app.post("/identify")
 async def identify(front: UploadFile = File(...), back: UploadFile = File(None)):
@@ -140,16 +153,16 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 
     front_b64 = compress(await front.read())
     content = [
-        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). תפקידך לקרוא מהתמונה רק את הפרטים שניתן לראות בבירור.
+        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). קרא מהתמונה בדיוק:
 
-קרא מהקלף:
-1. pokemon - שם הפוקימון בדיוק כפי שכתוב בכותרת הקלף באנגלית (למשל "Charizard", "Sliggoo", "Pikachu")
-2. number - המספר בפינה התחתונה בפורמט המדויק כפי שמופיע (למשל "095/086", "4/102", "025")
-3. language - שפת הטקסט הראשי על הקלף: English/Japanese/Hebrew/Other
-4. condition - הערכת המצב הפיזי של הקלף עצמו שרואים בתמונה: Mint/Near Mint/Excellent/Good/Poor
+1. pokemon - שם הפוקימון באנגלית כפי שכתוב בכותרת (למשל "Charizard")
+2. number - המספר בפינה התחתונה כפי שמופיע (למשל "4/102", "095/086")
+3. set_hint - שם הסדרה או קיצורה אם רואים (למשל "Base Set", "SWSH", "CRI"). אם לא רואים — ריק
+4. language - שפת הטקסט: English/Japanese/Hebrew/Other
+5. condition - מצב פיזי: Mint/Near Mint/Excellent/Good/Poor
 
-אל תנחש שום פרט שלא ניתן לקרוא בבירור - השאר ריק.
-החזר JSON בלבד: {"pokemon":"","number":"","language":"","condition":""}"""},
+אל תנחש — השאר ריק אם לא בטוח.
+החזר JSON בלבד: {"pokemon":"","number":"","set_hint":"","language":"","condition":""}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
@@ -197,7 +210,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     except Exception:
         pass
 
-    api_data = lookup_tcg_api(search_name, parsed.get("number",""))
+    api_data = lookup_tcg_api(search_name, parsed.get("number",""), parsed.get("set_hint",""))
 
     result_final = {
         "name":      search_name,
