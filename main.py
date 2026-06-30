@@ -17,7 +17,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-allow_credentials=False,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -79,7 +79,6 @@ def delete_card(card_id: str):
 async def upload_image(file: UploadFile = File(...)):
     data = await file.read()
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
-    # חיתוך יחס 2:3 כמו קלף פוקימון
     w, h = img.size
     target_ratio = 2/3
     if w/h > target_ratio:
@@ -91,78 +90,31 @@ async def upload_image(file: UploadFile = File(...)):
     res = cloudinary.uploader.upload(buf.getvalue(), format="webp")
     return {"url": res["secure_url"]}
 
-def lookup_tcg_api(name, number=None, set_hint=None):
-    """חיפוש מדויק ב-Pokemon TCG API לפי שם + מספר + רמז סדרה"""
-    try:
-        num_only = str(number).split("/")[0].lstrip("0") or "0" if number else None
-
-        # ניסיון 1: שם + מספר + סדרה (הכי מדויק)
-        if num_only and set_hint:
-            q = f'name:"{name}" number:{num_only} set.name:"{set_hint}"'
-            r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":5}, timeout=10)
-            data = r.json().get("data",[])
-            if data:
-                return _extract_card(data[0])
-
-        # ניסיון 2: שם + מספר בלי סדרה
-        if num_only:
-            q = f'name:"{name}" number:{num_only}'
-            r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":10,"orderBy":"set.releaseDate"}, timeout=10)
-            data = r.json().get("data",[])
-            if data:
-                # מחפשים התאמה מדויקת של מספר
-                for c in data:
-                    if c.get("number","").lstrip("0") == num_only:
-                        return _extract_card(c)
-                return _extract_card(data[0])
-
-        # ניסיון 3: שם בלבד — מחזיר הכי ישן (סביר יותר לקלפים קלאסיים)
-        q = f'name:"{name}"'
-        r = requests.get("https://api.pokemontcg.io/v2/cards", params={"q":q,"pageSize":20,"orderBy":"set.releaseDate"}, timeout=10)
-        data = r.json().get("data",[])
-        if data:
-            return _extract_card(data[0])  # הכי ישן
-
-        return None
-    except Exception:
-        return None
-
-def _extract_card(card):
-    price = None
-    prices = card.get("tcgplayer",{}).get("prices",{})
-    for variant in ["1stEditionHolofoil","holofoil","unlimitedHolofoil","normal","reverseHolofoil"]:
-        if variant in prices and prices[variant].get("market"):
-            price = prices[variant]["market"]
-            break
-    return {
-        "set":        card.get("set",{}).get("name",""),
-        "number":     f'{card.get("number")}/{card.get("set",{}).get("printedTotal","")}',
-        "year":       (card.get("set",{}).get("releaseDate") or "")[:4],
-        "value":      round(price,2) if price else None,
-        "rarity_api": card.get("rarity",""),
-    }
-
 @app.post("/identify")
 async def identify(front: UploadFile = File(...), back: UploadFile = File(None)):
     def compress(f):
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(f))).convert("RGB")
-        img.thumbnail((600,600), Image.LANCZOS)
+        img.thumbnail((800, 800), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=75)
+        img.save(buf, format="JPEG", quality=85)
         return base64.b64encode(buf.getvalue()).decode()
 
     front_b64 = compress(await front.read())
     content = [
-        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). קרא מהתמונה בדיוק:
+        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). זהה את הקלף בתמונה בדייקנות ובדוק היטב את כל הפרטים הנראים על הקלף עצמו.
 
-1. pokemon - שם הפוקימון באנגלית כפי שכתוב בכותרת (למשל "Charizard")
-2. number - המספר בפינה התחתונה כפי שמופיע (למשל "4/102", "095/086")
-3. set_hint - שם הסדרה או קיצורה אם רואים (למשל "Base Set", "SWSH", "CRI"). אם לא רואים — ריק
-4. language - שפת הטקסט: English/Japanese/Hebrew/Other
-5. condition - מצב פיזי: Mint/Near Mint/Excellent/Good/Poor
+קרא ישירות מהקלף:
+- שם הפוקימון בדיוק כפי שכתוב
+- מספר הקלף ומספר הסדרה בפינה התחתונה (למשל 4/102)
+- שם הסדרה (Base Set, Jungle, Fossil, Team Rocket וכו׳)
+- שנת ההוצאה אם מופיעה
+- נדירות לפי הסמל (♦=Common, ♦♦=Uncommon, ★=Rare, ★H=Holo Rare)
+- שפת הטקסט
+- מצב פיזי של הקלף
+- ערך שוק משוער בדולרים לפי הידע שלך על קלפי פוקימון
 
-אל תנחש — השאר ריק אם לא בטוח.
-החזר JSON בלבד: {"pokemon":"","number":"","set_hint":"","language":"","condition":""}"""},
+החזר JSON בלבד:
+{"name":"","pokemon":"","set":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","value":""}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
@@ -172,7 +124,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     res = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
-        json={"model": "openrouter/auto","messages":[{"role":"user","content":content}]},
+        json={"model":"openrouter/auto","messages":[{"role":"user","content":content}]},
         timeout=30
     )
     result = res.json()
@@ -181,54 +133,6 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     text = result["choices"][0]["message"]["content"].strip()
     text = re.sub(r'```json|```','',text).strip()
     match = re.search(r'\{.*\}', text, re.DOTALL)
-    parsed = json.loads(match.group()) if match else json.loads(text)
-
-    # ה-AI נתן שם + מספר + מצב + שפה
-    # עכשיו מחפשים ב-Pokemon TCG API את כל שאר הנתונים
-    search_name = parsed.get("pokemon","").strip()
-    if not search_name:
-        return parsed  # לא הצלחנו לזהות שם — מחזירים מה שיש
-
-    # בקשה שנייה ל-AI — הערכת מחיר ונדירות (גיבוי אם ה-API לא יחזיר)
-    content_price = [
-        {"type":"text","text":f"""קלף פוקימון: {search_name}, מספר {parsed.get("number","")}.
-החזר JSON בלבד עם הערכה גסה: {{"value":"מחיר בדולרים מספר בלבד","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare"}}"""},
-        {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
-    ]
-    ai_price_res = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
-        json={"model":"openrouter/auto","messages":[{"role":"user","content":content_price}]},
-        timeout=20
-    )
-    ai_price = {}
-    try:
-        pt = ai_price_res.json()["choices"][0]["message"]["content"].strip()
-        pt = re.sub(r'```json|```','',pt).strip()
-        m = re.search(r'\{.*\}', pt, re.DOTALL)
-        ai_price = json.loads(m.group()) if m else {}
-    except Exception:
-        pass
-
-    api_data = lookup_tcg_api(search_name, parsed.get("number",""), parsed.get("set_hint",""))
-
-    result_final = {
-        "name":      search_name,
-        "pokemon":   search_name,
-        "number":    parsed.get("number",""),
-        "language":  parsed.get("language",""),
-        "condition": parsed.get("condition",""),
-        # סדרה ושנה — מה-API בלבד (אמין)
-        "set":    api_data.get("set","")   if api_data else "",
-        "year":   api_data.get("year","")  if api_data else "",
-        # נדירות — מה-API אם נמצא, אחרת מה-AI
-        "rarity": (api_data.get("rarity_api","") if api_data and api_data.get("rarity_api") else ai_price.get("rarity","")),
-        # מחיר — מה-API אם נמצא, אחרת הערכת AI
-        "value":  (str(api_data["value"]) if api_data and api_data.get("value") else ai_price.get("value","")),
-    }
-
-    # אם ה-API מצא מספר מדויק יותר (עם סך הכל), נעדיף אותו
-    if api_data and api_data.get("number") and "/" in api_data["number"]:
-        result_final["number"] = api_data["number"]
-
-    return result_final
+    if match:
+        return json.loads(match.group())
+    return json.loads(text)
