@@ -417,17 +417,17 @@
         <div class="fg" style="margin-bottom:0"><label>ערך ($)</label><input type="number" id="fValue" placeholder="0"></div>
         <div class="fg" style="margin-bottom:0">
           <label>שפה</label>
-          <select id="fLanguage"><option>English</option><option>Japanese</option><option>Hebrew</option><option>Other</option></select>
+          <select id="fLanguage"><option value="English">English (אנגלית)</option><option value="Japanese">Japanese (יפנית)</option><option value="Hebrew">Hebrew (עברית)</option><option value="Other">Other (אחר)</option></select>
         </div>
       </div>
       <div class="row2" style="margin-top:12px">
         <div class="fg" style="margin-bottom:0">
           <label>מצב</label>
-          <select id="fCondition"><option>Mint</option><option>Near Mint</option><option>Excellent</option><option>Good</option><option>Poor</option></select>
+          <select id="fCondition"><option value="Mint">Mint (מושלם)</option><option value="Near Mint">Near Mint (כמעט מושלם)</option><option value="Excellent">Excellent (מצוין)</option><option value="Good">Good (טוב)</option><option value="Poor">Poor (גרוע)</option></select>
         </div>
         <div class="fg" style="margin-bottom:0">
           <label>נדירות</label>
-          <select id="fRarity"><option>Common</option><option>Uncommon</option><option>Rare</option><option>Holo Rare</option><option>Ultra Rare</option><option>Secret Rare</option></select>
+          <select id="fRarity"><option value="Common">Common (רגיל)</option><option value="Uncommon">Uncommon (לא נפוץ)</option><option value="Rare">Rare (נדיר)</option><option value="Holo Rare">Holo Rare (נדיר מבריק)</option><option value="Ultra Rare">Ultra Rare (נדיר במיוחד)</option><option value="Secret Rare">Secret Rare (נדיר סודי)</option></select>
         </div>
       </div>
 
@@ -477,6 +477,9 @@ let comments={};
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
 const LANGUAGES = ['English','Japanese','Hebrew','Other'];
+const RARITY_HE = {'Common':'רגיל','Uncommon':'לא נפוץ','Rare':'נדיר','Holo Rare':'נדיר מבריק','Ultra Rare':'נדיר במיוחד','Secret Rare':'נדיר סודי'};
+const CONDITION_HE = {'Mint':'מושלם','Near Mint':'כמעט מושלם','Excellent':'מצוין','Good':'טוב','Poor':'גרוע'};
+const LANGUAGE_HE = {'English':'אנגלית','Japanese':'יפנית','Hebrew':'עברית','Other':'אחר'};
 let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
 
 function rarityClass(r){const map={'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};return map[r]||'';}
@@ -485,11 +488,11 @@ function condClass(c){const map={'Mint':'cond-mint','Near Mint':'cond-nm','Excel
 
 function initPanel(){
   const rc=document.getElementById('rarityChips');
-  RARITIES.forEach(r=>{const b=document.createElement('button');b.className='p-chip';b.textContent=r;b.dataset.val=r;b.onclick=()=>{if(selRarities.has(r))selRarities.delete(r);else selRarities.add(r);b.classList.toggle('active',selRarities.has(r));updateFilters();};rc.appendChild(b);});
+  RARITIES.forEach(r=>{const b=document.createElement('button');b.className='p-chip';b.textContent=r+' ('+RARITY_HE[r]+')';b.dataset.val=r;b.onclick=()=>{if(selRarities.has(r))selRarities.delete(r);else selRarities.add(r);b.classList.toggle('active',selRarities.has(r));updateFilters();};rc.appendChild(b);});
   const cc=document.getElementById('condChips');
-  CONDITIONS.forEach(c=>{const b=document.createElement('button');b.className='p-chip';b.textContent=c;b.dataset.val=c;b.onclick=()=>{if(selConditions.has(c))selConditions.delete(c);else selConditions.add(c);b.classList.toggle('active',selConditions.has(c));updateFilters();};cc.appendChild(b);});
+  CONDITIONS.forEach(c=>{const b=document.createElement('button');b.className='p-chip';b.textContent=c+' ('+CONDITION_HE[c]+')';b.dataset.val=c;b.onclick=()=>{if(selConditions.has(c))selConditions.delete(c);else selConditions.add(c);b.classList.toggle('active',selConditions.has(c));updateFilters();};cc.appendChild(b);});
   const lc=document.getElementById('langChips');
-  LANGUAGES.forEach(l=>{const b=document.createElement('button');b.className='p-chip';b.textContent=l;b.dataset.val=l;b.onclick=()=>{if(selLanguages.has(l))selLanguages.delete(l);else selLanguages.add(l);b.classList.toggle('active',selLanguages.has(l));updateFilters();};lc.appendChild(b);});
+  LANGUAGES.forEach(l=>{const b=document.createElement('button');b.className='p-chip';b.textContent=l+' ('+LANGUAGE_HE[l]+')';b.dataset.val=l;b.onclick=()=>{if(selLanguages.has(l))selLanguages.delete(l);else selLanguages.add(l);b.classList.toggle('active',selLanguages.has(l));updateFilters();};lc.appendChild(b);});
 }
 
 function updateFilters(){updateFilterBtn();render();}
@@ -565,7 +568,7 @@ function render(){
     const cc=comments[String(c.id)]||[];
     const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
     const imgHtml=imgs.length
-      ?`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity||''}</div>${badge}</div>`
+      ?`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}</div>`
       :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
     const div=document.createElement('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
@@ -575,7 +578,7 @@ function render(){
         <div class="card-set">${c.set||''}${c.number?' #'+c.number:''}</div>
         <div class="card-row">
           <span class="card-value">${c.value?'$'+c.value:''}</span>
-          <span class="card-cond ${condClass(c.condition)}">${c.condition||''}</span>
+          <span class="card-cond ${condClass(c.condition)}">${c.condition?c.condition+' ('+(CONDITION_HE[c.condition]||'')+')':''}</span>
         </div>
       </div>
       <div class="card-actions">
