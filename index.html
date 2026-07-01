@@ -562,7 +562,25 @@ function applyGrid(){document.getElementById('grid').style.gridTemplateColumns=`
 function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementById('colsNum').textContent=cols;applyGrid();}
 
 async function load(){
-  try{const r=await fetch(`${API}/cards`);cards=await r.json();const s=localStorage.getItem('pokeComments');if(s)comments=JSON.parse(s);render();}
+  try{
+    // הצג מיד מה-cache אם יש
+    const cached=localStorage.getItem('pokeCards');
+    if(cached){
+      cards=JSON.parse(cached);
+      const s=localStorage.getItem('pokeComments');if(s)comments=JSON.parse(s);
+      render();
+    }
+    // טען מהשרת ברקע (או ראשון אם אין cache)
+    const r=await fetch(`${API}/cards`);
+    const fresh=await r.json();
+    // עדכן רק אם השתנה
+    if(JSON.stringify(fresh)!==JSON.stringify(cards)){
+      cards=fresh;
+      localStorage.setItem('pokeCards',JSON.stringify(cards));
+      const s=localStorage.getItem('pokeComments');if(s)comments=JSON.parse(s);
+      render();
+    }
+  }
   catch{document.getElementById('grid').innerHTML='<div class="loading" style="color:#ef5350">שגיאה בטעינה</div>';}
 }
 
