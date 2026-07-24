@@ -16,7 +16,7 @@
       border-bottom: 2px solid #f59e0b55;
       box-shadow: 0 4px 30px rgba(0,0,0,0.7);
       overflow: hidden;
-      min-height: 130px;
+      min-height: 140px;
     }
     .header::before {
       content: '';
@@ -27,7 +27,7 @@
     }
     .header-inner {
       display: flex; align-items: stretch; justify-content: space-between;
-      position: relative; z-index: 2; min-height: 130px;
+      position: relative; z-index: 2; min-height: 140px;
     }
     .header-left {
       display: flex; flex-direction: column; justify-content: center;
@@ -54,13 +54,13 @@
     .stats-num { font-size: 1em; font-weight: 900; color: #fbbf24; line-height: 1; }
     .stats-label { font-size: 0.58em; color: #94a3b8; font-weight: 600; margin-top: 1px; }
     .header-hero-img {
-      width: 130px; flex-shrink: 0;
+      width: 170px; flex-shrink: 0;
       position: relative; overflow: visible;
       display: flex; align-items: flex-end; justify-content: center;
     }
     .header-hero-img img {
-      height: 155px; width: auto;
-      object-fit: cover; object-position: top center;
+      width: 170px; height: auto; max-height: 140px;
+      object-fit: contain; object-position: bottom center;
       position: relative; z-index: 2;
       transform: scaleX(-1);
       filter: drop-shadow(0 0 18px rgba(245,158,11,0.5)) drop-shadow(4px 0 12px rgba(120,58,237,0.3));
@@ -309,7 +309,7 @@
     </div>
     <div class="header-hero-img">
       <div class="header-hero-glow"></div>
-      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/v1782740131/3456476_1_daex59.png" alt="trainer"
+      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/hero-complete_drofpi" alt="trainer"
            onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22155%22><text y=%2280%22 font-size=%2270%22>⚡</text></svg>'">
     </div>
   </div>
