@@ -322,6 +322,56 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { margin-top: 14px; font-size: 0.85em; font-weight: 700; }
     .no-results { grid-column: 1/-1; text-align: center; padding: 50px; color: #3d4f7a; font-weight: 700; }
+
+    /* ===== AI IDENTIFY LOADING ===== */
+    .ai-loading {
+      position: fixed; inset: 0; z-index: 1000;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(5,10,24,0.88);
+      backdrop-filter: blur(8px);
+    }
+    .ai-loading.show { display: flex; }
+    .ai-loading-box { text-align: center; padding: 28px; }
+    .pokeball-loader {
+      position: relative; width: 88px; height: 88px; margin: 0 auto 22px;
+      border: 5px solid #080d1f; border-radius: 50%;
+      background: linear-gradient(to bottom, #ef4444 0 44%, #080d1f 44% 56%, #f8fafc 56% 100%);
+      box-shadow: 0 0 0 5px rgba(245,158,11,0.15), 0 0 34px rgba(245,158,11,0.45);
+      animation: pokeWobble 1.05s ease-in-out infinite;
+    }
+    .pokeball-loader::before {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 27px; height: 27px; border-radius: 50%;
+      transform: translate(-50%,-50%);
+      background: #f8fafc; border: 5px solid #080d1f;
+      box-shadow: inset 0 0 0 5px #cbd5e1, 0 0 14px rgba(251,191,36,0.75);
+      animation: pokePulse 1.05s ease-in-out infinite;
+    }
+    .pokeball-loader::after {
+      content: ''; position: absolute; inset: -14px;
+      border: 2px solid rgba(251,191,36,0.28); border-radius: 50%;
+      animation: pokeRing 1.05s ease-out infinite;
+    }
+    .ai-loading-title { font-size: 1.05em; font-weight: 900; color: #fbbf24; }
+    .ai-loading-sub { margin-top: 5px; font-size: 0.78em; color: #94a3b8; }
+    @keyframes pokeWobble {
+      0%,100% { transform: rotate(0deg) translateY(0); }
+      25% { transform: rotate(-14deg) translateY(-4px); }
+      55% { transform: rotate(12deg) translateY(0); }
+      75% { transform: rotate(-6deg) translateY(-2px); }
+    }
+    @keyframes pokePulse {
+      0%,100% { filter: brightness(1); }
+      50% { filter: brightness(1.55); }
+    }
+    @keyframes pokeRing {
+      0% { transform: scale(0.78); opacity: 0; }
+      35% { opacity: 1; }
+      100% { transform: scale(1.25); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .pokeball-loader, .pokeball-loader::before, .pokeball-loader::after { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -544,6 +594,13 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="ai-loading" id="aiLoading" role="status" aria-live="polite">
+  <div class="ai-loading-box">
+    <div class="pokeball-loader"></div>
+    <div class="ai-loading-title">מזהה את הקלף...</div>
+    <div class="ai-loading-sub">בודק שם, סדרה ומחיר שוק</div>
+  </div>
+</div>
 
 <script>
 const API = 'https://pokemon-collection-f4wv.onrender.com';
@@ -770,6 +827,7 @@ function aiPreview(side,input){const f=input.files[0];if(!f)return;if(side==='fr
 async function identifyCoin(){
   if(!aiFront){toast('העלה תמונת פנים של הקלף');return;}
   const btn=document.getElementById('identifyBtn');btn.textContent='🔍 מזהה...';btn.disabled=true;
+  document.getElementById('aiLoading').classList.add('show');
   try{
     const fd=new FormData();fd.append('front',aiFront);if(aiBack)fd.append('back',aiBack);
     const r=await fetch(`${API}/identify`,{method:'POST',body:fd});const d=await r.json();
@@ -787,7 +845,10 @@ async function identifyCoin(){
     res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''}<br>${priceText}`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
   }catch(e){toast('שגיאת זיהוי');}
-  finally{btn.textContent='✨ זהה קלף';btn.disabled=false;}
+  finally{
+    document.getElementById('aiLoading').classList.remove('show');
+    btn.textContent='✨ זהה קלף';btn.disabled=false;
+  }
 }
 
 async function uploadFile(f){const fd=new FormData();fd.append('file',f);const r=await fetch(`${API}/upload`,{method:'POST',body:fd});return(await r.json()).url;}
