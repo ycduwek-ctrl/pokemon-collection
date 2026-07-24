@@ -11,6 +11,7 @@ import json
 import re
 import base64
 import requests
+from difflib import SequenceMatcher
 
 app = FastAPI()
 
@@ -36,6 +37,124 @@ def get_sheet():
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open_by_url(SHEET_URL).worksheet("cards")
+
+def _clean_card_number(value):
+    value = str(value or "").split("/")[0].strip().upper()
+    if value.isdigit():
+        return str(int(value))
+    return re.sub(r"[^A-Z0-9]", "", value)
+
+def _english_card_name(value):
+    return re.sub(r"\s*\([^)]*[\u0590-\u05FF][^)]*\)\s*$", "", str(value or "")).strip()
+
+def _market_price_for_card(card_info):
+    """Find an exact TCGdex card and return a stable TCGplayer market price."""
+    english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
+    card_number = _clean_card_number(card_info.get("number"))
+    set_name = str(card_info.get("set") or "").strip()
+
+    if not english_name or not card_number:
+        return {"value": "", "priceStatus": "missing-identifiers"}
+
+    try:
+        search = requests.get(
+            "https://api.tcgdex.net/v2/en/cards",
+            params={"name": english_name},
+            timeout=12
+        )
+        search.raise_for_status()
+        candidates = [
+            c for c in search.json()
+            if _clean_card_number(c.get("localId")) == card_number
+            and str(c.get("name") or "").lower() == english_name.lower()
+        ]
+
+        if not candidates:
+            return {"value": "", "priceStatus": "not-found"}
+
+        details = []
+        for candidate in candidates[:8]:
+            response = requests.get(
+                f"https://api.tcgdex.net/v2/en/cards/{candidate['id']}",
+                timeout=12
+            )
+            if response.ok:
+                details.append(response.json())
+
+        if not details:
+            return {"value": "", "priceStatus": "not-found"}
+
+        # A card name and local number can exist in several sets. Use the set
+        # name only to disambiguate; never guess when the match remains unclear.
+        if len(details) > 1:
+            if not set_name:
+                return {"value": "", "priceStatus": "ambiguous"}
+            scored = sorted([
+                (
+                    SequenceMatcher(
+                        None,
+                        set_name.lower(),
+                        str((d.get("set") or {}).get("name") or "").lower()
+                    ).ratio(),
+                    d
+                )
+                for d in details
+            ], key=lambda item: item[0], reverse=True)
+            best_score, best_card = scored[0]
+            second_score = scored[1][0] if len(scored) > 1 else 0
+            if best_score < 0.55 or best_score - second_score < 0.10:
+                return {"value": "", "priceStatus": "ambiguous"}
+            card = best_card
+        else:
+            card = details[0]
+
+        tcgplayer = (card.get("pricing") or {}).get("tcgplayer") or {}
+        price_variants = {
+            key: value for key, value in tcgplayer.items()
+            if isinstance(value, dict) and value.get("marketPrice") is not None
+        }
+        if not price_variants:
+            return {
+                "value": "",
+                "priceStatus": "price-unavailable",
+                "marketCardId": card.get("id", "")
+            }
+
+        finish = str(card_info.get("finish") or "").lower()
+        rarity = str(card_info.get("rarity") or "").lower()
+        preferred = []
+        if "reverse" in finish:
+            preferred = ["reverse-holofoil", "reverse"]
+        elif "holo" in finish or "holo" in rarity:
+            preferred = ["holofoil", "holo"]
+        elif "first" in finish:
+            preferred = ["1st-edition", "1st-edition-holofoil"]
+        else:
+            preferred = ["normal", "unlimited"]
+
+        chosen_key = next((key for key in preferred if key in price_variants), None)
+        if not chosen_key and len(price_variants) == 1:
+            chosen_key = next(iter(price_variants))
+        if not chosen_key:
+            return {
+                "value": "",
+                "priceStatus": "variant-ambiguous",
+                "marketCardId": card.get("id", "")
+            }
+
+        price = float(price_variants[chosen_key]["marketPrice"])
+        return {
+            "value": f"{price:.2f}".rstrip("0").rstrip("."),
+            "priceStatus": "matched",
+            "priceSource": "TCGplayer",
+            "priceVariant": chosen_key,
+            "priceUpdatedAt": tcgplayer.get("updated", ""),
+            "marketCardId": card.get("id", "")
+        }
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        # Identification must keep working even when the free price service is
+        # unavailable. A blank value is safer than an invented price.
+        return {"value": "", "priceStatus": "service-unavailable"}
 
 @app.get("/cards")
 def get_cards():
@@ -113,15 +232,17 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 קרא ישירות מהקלף:
 - שם הפוקימון הרשמי באנגלית, גם אם הוא מודפס על הקלף בשפה אחרת
 - מספר הקלף ומספר הסדרה בפינה התחתונה (למשל 4/102)
-- שם הסדרה (Base Set, Jungle, Fossil, Team Rocket וכו׳)
+- שם הסדרה הרשמי באנגלית (Base Set, Jungle, Fossil, Team Rocket וכו׳), גם אם הקלף בשפה אחרת
 - שנת ההוצאה אם מופיעה
 - נדירות לפי הסמל (♦=Common, ♦♦=Uncommon, ★=Rare, ★H=Holo Rare)
+- גימור הקלף: normal / holofoil / reverse-holofoil / first-edition
 - שפת הטקסט
 - מצב פיזי של הקלף
-- ערך שוק משוער בדולרים לפי הידע שלך על קלפי פוקימון
+
+אל תנחש מחיר ואל תחזיר הערכת שווי. המחיר יילקח לאחר הזיהוי ממאגר מחירי שוק.
 
 החזר JSON בלבד:
-{"name":"","pokemon":"","set":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","value":""}"""},
+{"name":"","pokemon":"","set":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
@@ -140,6 +261,6 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     text = result["choices"][0]["message"]["content"].strip()
     text = re.sub(r'```json|```','',text).strip()
     match = re.search(r'\{.*\}', text, re.DOTALL)
-    if match:
-        return json.loads(match.group())
-    return json.loads(text)
+    identified = json.loads(match.group() if match else text)
+    identified.update(_market_price_for_card(identified))
+    return identified
