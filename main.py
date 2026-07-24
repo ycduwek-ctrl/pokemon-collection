@@ -210,6 +210,10 @@ def delete_card(card_id: str):
             return {"ok": True}
     return {"ok": False}
 
+@app.post("/price")
+def refresh_market_price(data: dict):
+    return _market_price_for_card(data)
+
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...)):
     data = await file.read()
