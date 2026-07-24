@@ -372,6 +372,92 @@
     @media (prefers-reduced-motion: reduce) {
       .pokeball-loader, .pokeball-loader::before, .pokeball-loader::after { animation: none; }
     }
+
+    /* ===== IDENTIFY SUCCESS ===== */
+    .capture-success {
+      position: fixed; inset: 0; z-index: 1001; pointer-events: none;
+      display: none; align-items: center; justify-content: center;
+      background: radial-gradient(circle, rgba(124,58,237,0.22), transparent 58%);
+    }
+    .capture-success.show { display: flex; }
+    .capture-core {
+      position: relative; width: 84px; height: 84px; border-radius: 50%;
+      border: 5px solid #080d1f;
+      background: linear-gradient(to bottom, #ef4444 0 44%, #080d1f 44% 56%, #f8fafc 56%);
+      box-shadow: 0 0 45px rgba(251,191,36,0.8);
+      animation: capturePop 0.85s cubic-bezier(.16,1.3,.3,1) both;
+    }
+    .capture-core::before {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 25px; height: 25px; border-radius: 50%;
+      transform: translate(-50%,-50%); background: #fbbf24;
+      border: 5px solid #080d1f; box-shadow: 0 0 24px #fbbf24;
+    }
+    .capture-orb {
+      --angle: 0deg; --distance: 112px; --orb: #fbbf24;
+      position: absolute; left: 50%; top: 50%; width: 12px; height: 12px;
+      border-radius: 50%; background: var(--orb); box-shadow: 0 0 15px var(--orb);
+      animation: energyBurst 0.9s ease-out both;
+    }
+    .capture-orb:nth-child(2) { --angle: 45deg; --orb: #60a5fa; }
+    .capture-orb:nth-child(3) { --angle: 90deg; --orb: #f472b6; }
+    .capture-orb:nth-child(4) { --angle: 135deg; --orb: #a78bfa; }
+    .capture-orb:nth-child(5) { --angle: 180deg; --orb: #fbbf24; }
+    .capture-orb:nth-child(6) { --angle: 225deg; --orb: #34d399; }
+    .capture-orb:nth-child(7) { --angle: 270deg; --orb: #fb7185; }
+    .capture-orb:nth-child(8) { --angle: 315deg; --orb: #38bdf8; }
+    .capture-success-text {
+      position: absolute; top: calc(50% + 72px); left: 50%; transform: translateX(-50%);
+      color: #fbbf24; font-weight: 900; white-space: nowrap;
+      text-shadow: 0 0 18px rgba(251,191,36,0.75);
+      animation: successText 0.85s ease both;
+    }
+    @keyframes capturePop {
+      0% { transform: scale(0.25) rotate(-35deg); opacity: 0; }
+      55% { transform: scale(1.18) rotate(8deg); opacity: 1; }
+      100% { transform: scale(1) rotate(0); opacity: 1; }
+    }
+    @keyframes energyBurst {
+      0% { transform: translate(-50%,-50%) scale(0); opacity: 0; }
+      25% { opacity: 1; }
+      100% { transform: translate(-50%,-50%) rotate(var(--angle)) translateX(var(--distance)) scale(0.35); opacity: 0; }
+    }
+    @keyframes successText {
+      0%,30% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+      100% { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* ===== ASYNC CARD SAVE ===== */
+    .saving-card {
+      min-height: 210px; border-radius: 14px;
+      border: 1px solid rgba(245,158,11,0.5);
+      background: linear-gradient(160deg, #0f1730, #080d1f);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; color: #fbbf24; font-size: 0.72em; font-weight: 800;
+      box-shadow: 0 0 24px rgba(245,158,11,0.16);
+    }
+    .saving-mini-ball {
+      width: 46px; height: 46px; border: 3px solid #050a18; border-radius: 50%;
+      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
+      animation: pokeWobble 1s ease-in-out infinite;
+      box-shadow: 0 0 17px rgba(251,191,36,0.55);
+    }
+    .save-flyer {
+      position: fixed; z-index: 1200; pointer-events: none;
+      overflow: hidden; border-radius: 14px; border: 2px solid #f59e0b;
+      background: #080d1f; box-shadow: 0 10px 40px rgba(0,0,0,0.75);
+    }
+    .save-flyer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .refresh-price-btn {
+      width: 100%; margin-top: 5px; padding: 5px 4px;
+      border-radius: 7px; border: 1px solid #1e2d5a;
+      background: #080d1f; color: #7891c8; font-family: inherit;
+      font-size: 0.65em; font-weight: 700; cursor: pointer;
+    }
+    .refresh-price-btn:disabled { opacity: 0.55; }
+    @media (prefers-reduced-motion: reduce) {
+      .capture-core, .capture-orb, .capture-success-text, .saving-mini-ball { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -541,7 +627,10 @@
       <div class="fg" style="margin-top:12px"><label>סדרה (Set)</label><input type="text" id="fSet" placeholder="Base Set, Jungle..."></div>
       <div class="row3">
         <div class="fg" style="margin-bottom:0"><label>שנה</label><input type="text" id="fYear" placeholder="1999"></div>
-        <div class="fg" style="margin-bottom:0"><label>ערך ($)</label><input type="number" id="fValue" placeholder="0"></div>
+        <div class="fg" style="margin-bottom:0">
+          <label>ערך ($)</label><input type="number" id="fValue" placeholder="0">
+          <button type="button" class="refresh-price-btn" onclick="refreshFormPrice(this)">🔄 רענן מחיר</button>
+        </div>
         <div class="fg" style="margin-bottom:0">
           <label>שפה</label>
           <select id="fLanguage"><option value="English">English (אנגלית)</option><option value="Japanese">Japanese (יפנית)</option><option value="Hebrew">Hebrew (עברית)</option><option value="Other">Other (אחר)</option></select>
@@ -601,12 +690,21 @@
     <div class="ai-loading-sub">בודק שם, סדרה ומחיר שוק</div>
   </div>
 </div>
+<div class="capture-success" id="captureSuccess" aria-hidden="true">
+  <div class="capture-core"></div>
+  <span class="capture-orb"></span><span class="capture-orb"></span>
+  <span class="capture-orb"></span><span class="capture-orb"></span>
+  <span class="capture-orb"></span><span class="capture-orb"></span>
+  <span class="capture-orb"></span><span class="capture-orb"></span>
+  <div class="capture-success-text">הקלף זוהה! ⚡</div>
+</div>
 
 <script>
 const API = 'https://pokemon-collection-f4wv.onrender.com';
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
 let comments={};
+let pendingSave=null;
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
@@ -736,6 +834,12 @@ function render(){
       </div>`;
     grid.appendChild(div);
   });
+  if(pendingSave){
+    const saving=document.createElement('div');
+    saving.className='saving-card';saving.id='savingCard';
+    saving.innerHTML='<div class="saving-mini-ball"></div><div>שומר את הקלף...</div>';
+    grid.appendChild(saving);
+  }
   const add=document.createElement('div');add.className='add-card';add.onclick=openAdd;
   add.innerHTML='<div class="add-icon">＋</div><div class="add-label">הוסף קלף</div>';
   grid.appendChild(add);
@@ -766,6 +870,7 @@ function openDetail(id){
     </div>
     <div class="detail-actions">
       <button class="card-btn" onclick="closeDetail();openEdit('${c.id}')">✏️ עריכה</button>
+      <button class="card-btn" onclick="refreshSavedPrice('${c.id}',this)">🔄 רענן מחיר</button>
       <button class="card-btn" onclick="shareCard('${c.id}')">🔗 שתף</button>
     </div>
     ${commentsHtml?`<div class="detail-comments"><div class="detail-comments-title">💬 הערות</div>${commentsHtml}</div>`:''}
@@ -824,10 +929,19 @@ function addComment(){const t=document.getElementById('commentInput').value.trim
 function delComment(id,i){comments[String(id)].splice(i,1);saveComments();renderComments(id);render();}
 function aiPreview(side,input){const f=input.files[0];if(!f)return;if(side==='front'){aiFront=f;const img=document.getElementById('aiFrontPrev');img.src=URL.createObjectURL(f);img.style.display='block';}else{aiBack=f;const img=document.getElementById('aiBackPrev');img.src=URL.createObjectURL(f);img.style.display='block';}}
 
+function showCaptureSuccess(){
+  return new Promise(resolve=>{
+    const el=document.getElementById('captureSuccess');
+    el.classList.remove('show');void el.offsetWidth;el.classList.add('show');
+    setTimeout(()=>{el.classList.remove('show');resolve();},1050);
+  });
+}
+
 async function identifyCoin(){
   if(!aiFront){toast('העלה תמונת פנים של הקלף');return;}
   const btn=document.getElementById('identifyBtn');btn.textContent='🔍 מזהה...';btn.disabled=true;
   document.getElementById('aiLoading').classList.add('show');
+  let identifiedOk=false;
   try{
     const fd=new FormData();fd.append('front',aiFront);if(aiBack)fd.append('back',aiBack);
     const r=await fetch(`${API}/identify`,{method:'POST',body:fd});const d=await r.json();
@@ -844,26 +958,102 @@ async function identifyCoin(){
       :'💰 לא נמצא מחיר ודאי — אפשר להזין ידנית';
     res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''}<br>${priceText}`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
+    identifiedOk=true;
   }catch(e){toast('שגיאת זיהוי');}
   finally{
     document.getElementById('aiLoading').classList.remove('show');
+    if(identifiedOk)await showCaptureSuccess();
     btn.textContent='✨ זהה קלף';btn.disabled=false;
   }
 }
 
 async function uploadFile(f){const fd=new FormData();fd.append('file',f);const r=await fetch(`${API}/upload`,{method:'POST',body:fd});return(await r.json()).url;}
 
+async function requestMarketPrice(cardData){
+  const r=await fetch(`${API}/price`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cardData)});
+  if(!r.ok)throw new Error('price');
+  return await r.json();
+}
+
+function formCardData(){
+  return {
+    name:document.getElementById('fName').value.trim(),
+    pokemon:document.getElementById('fPokemon').value.trim(),
+    set:document.getElementById('fSet').value.trim(),
+    number:document.getElementById('fNumber').value.trim(),
+    rarity:document.getElementById('fRarity').value
+  };
+}
+
+async function refreshFormPrice(btn){
+  btn.disabled=true;btn.textContent='⏳ בודק...';
+  try{
+    const d=await requestMarketPrice(formCardData());
+    if(d.priceStatus==='matched'){
+      document.getElementById('fValue').value=d.value;
+      toast(`✅ המחיר עודכן ל-$${d.value}`);
+    }else toast('לא נמצא מחיר ודאי לקלף הזה');
+  }catch{toast('לא ניתן לבדוק מחיר כרגע');}
+  finally{btn.disabled=false;btn.textContent='🔄 רענן מחיר';}
+}
+
+async function refreshSavedPrice(id,btn){
+  const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  btn.disabled=true;btn.textContent='⏳ בודק...';
+  try{
+    const d=await requestMarketPrice(c);
+    if(d.priceStatus!=='matched'){toast('לא נמצא מחיר ודאי לקלף הזה');return;}
+    const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:d.value})});
+    if(!r.ok)throw new Error('save');
+    c.value=d.value;localStorage.setItem('pokeCards',JSON.stringify(cards));
+    render();openDetail(id);toast(`✅ המחיר עודכן ל-$${d.value}`);
+  }catch{toast('לא ניתן לעדכן מחיר כרגע');}
+  finally{btn.disabled=false;btn.textContent='🔄 רענן מחיר';}
+}
+
+function animateCardToGallery(imageUrl){
+  requestAnimationFrame(()=>{
+    const target=document.getElementById('savingCard');if(!target)return;
+    const end=target.getBoundingClientRect();
+    const flyer=document.createElement('div');flyer.className='save-flyer';
+    const startWidth=Math.min(190,window.innerWidth*0.44),startHeight=startWidth*1.4;
+    flyer.style.cssText=`left:${(window.innerWidth-startWidth)/2}px;top:${(window.innerHeight-startHeight)/2}px;width:${startWidth}px;height:${startHeight}px;`;
+    if(imageUrl)flyer.innerHTML=`<img src="${imageUrl}">`;
+    else flyer.innerHTML='<div class="saving-mini-ball" style="margin:55px auto"></div>';
+    document.body.appendChild(flyer);
+    const animation=flyer.animate([
+      {left:flyer.style.left,top:flyer.style.top,width:`${startWidth}px`,height:`${startHeight}px`,opacity:1,transform:'rotate(0deg)'},
+      {left:`${end.left}px`,top:`${end.top}px`,width:`${end.width}px`,height:`${end.height}px`,opacity:0.45,transform:'rotate(-5deg)'}
+    ],{duration:720,easing:'cubic-bezier(.2,.8,.2,1)',fill:'forwards'});
+    animation.onfinish=()=>flyer.remove();
+  });
+}
+
 async function saveCard(){
   const name=document.getElementById('fName').value.trim()||document.getElementById('fPokemon').value.trim();
   if(!name){toast('נא להזין שם');return;}
   const btn=document.getElementById('saveBtn');btn.textContent='⏳ שומר...';btn.disabled=true;
+  const saveEditId=editId;
+  const cardId=saveEditId||String(Date.now());
+  const previewUrl=newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||'');
+  const baseData={id:cardId,name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:'',comments:''};
+  if(!saveEditId){
+    pendingSave=baseData;
+    closeModal();render();animateCardToGallery(previewUrl);
+  }
   try{
     const urls=[];for(const f of newFiles){const u=await uploadFile(f);if(u)urls.push(u);}
-    const data={id:editId||String(Date.now()),name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:[...existImgs,...urls].join('|'),comments:''};
-    if(editId)await fetch(`${API}/cards/${editId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    else await fetch(`${API}/cards`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    closeModal();toast('✅ נשמר!');await load();
-  }catch{toast('שגיאה בשמירה');}
+    const data={...baseData,images:[...existImgs,...urls].join('|')};
+    const saveResponse=saveEditId
+      ?await fetch(`${API}/cards/${saveEditId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+      :await fetch(`${API}/cards`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    if(!saveResponse.ok)throw new Error('save');
+    if(saveEditId)closeModal();
+    await load();pendingSave=null;render();toast(saveEditId?'✅ השינויים נשמרו!':'✅ הקלף נוסף לאוסף!');
+  }catch{
+    pendingSave=null;render();toast('שגיאה בשמירה');
+    if(!saveEditId)document.getElementById('overlay').classList.add('open');
+  }
   finally{btn.textContent='💾 שמור קלף';btn.disabled=false;}
 }
 
