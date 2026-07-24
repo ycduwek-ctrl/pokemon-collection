@@ -78,6 +78,32 @@
       background: linear-gradient(to right, transparent, #f59e0b, #fbbf24, #f59e0b, transparent);
       z-index: 3;
     }
+    @media (max-width: 480px) {
+      .header-inner { position: relative; }
+      .header-left {
+        position: relative; z-index: 4;
+        width: 100%; padding-left: 105px;
+      }
+      .header-title {
+        font-size: 1.55em;
+        white-space: nowrap;
+        text-shadow: 0 2px 12px #12063a, 0 0 18px #12063a;
+      }
+      .header-hero-img {
+        position: absolute; left: -4px; bottom: 0;
+        width: 175px; height: 140px; z-index: 2;
+      }
+      .header-hero-img img {
+        width: 175px; max-height: 140px;
+      }
+      .header-hero-img::after {
+        content: '';
+        position: absolute; top: 0; right: -42px; bottom: 0;
+        width: 90px; z-index: 3; pointer-events: none;
+        background: linear-gradient(to right, transparent 0%, rgba(18,6,58,0.72) 58%, rgba(18,6,58,0.96) 100%);
+      }
+      .header-stats-row { position: relative; z-index: 4; }
+    }
 
     /* ===== VALUE BAR ===== */
     .value-bar {
