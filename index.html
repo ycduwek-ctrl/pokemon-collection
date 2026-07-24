@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>האוסף של בר ⚡</title>
+  <title>האוסף של בר</title>
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,22 +31,43 @@
     }
     .header-left {
       display: flex; flex-direction: column; justify-content: center;
-      padding: 14px 0 14px 16px; flex: 1; gap: 8px;
+      align-items: center; padding: 12px 0 12px 16px; flex: 1; gap: 5px;
     }
-    .header-logo { display: flex; flex-direction: column; align-items: flex-end; }
+    .header-logo { display: flex; flex-direction: column; align-items: center; width: 100%; }
     .header-title {
-      font-size: 1.65em; font-weight: 900; line-height: 1;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      width: 100%; font-size: 1.65em; font-weight: 900; line-height: 1;
+      text-align: center;
+    }
+    .header-title-text {
       background: linear-gradient(to left, #fbbf24, #fef08a, #f59e0b, #fbbf24);
       background-size: 200% auto;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
       animation: shine 3s linear infinite;
       letter-spacing: 1px;
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
-      text-align: right;
+    }
+    .header-title-ball {
+      position: relative; width: 25px; height: 25px; flex: 0 0 25px;
+      border: 2px solid #050a18; border-radius: 50%;
+      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
+      box-shadow: 0 0 10px rgba(251,191,36,0.55);
+      animation: titleBall 2.2s ease-in-out infinite;
+    }
+    .header-title-ball::after {
+      content: ''; position: absolute; left: 50%; top: 50%;
+      width: 7px; height: 7px; border-radius: 50%;
+      transform: translate(-50%,-50%); background: #f8fafc;
+      border: 2px solid #050a18;
     }
     @keyframes shine { to { background-position: 200% center; } }
-    .header-sub { font-size: 0.68em; color: #94a3b8; font-weight: 600; letter-spacing: 0.5px; margin-top: 2px; text-align: right; }
-    .header-stats-row { display: flex; gap: 8px; justify-content: flex-end; }
+    @keyframes titleBall {
+      0%,100% { transform: translateY(0) rotate(0); }
+      25% { transform: translateY(-2px) rotate(-12deg); }
+      55% { transform: translateY(0) rotate(10deg); }
+      75% { transform: translateY(-1px) rotate(-5deg); }
+    }
+    .header-stats-row { display: flex; gap: 8px; justify-content: center; width: 100%; }
     .header-stats-box {
       background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3);
       border-radius: 10px; padding: 5px 10px; text-align: center; min-width: 52px;
@@ -534,7 +555,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-ball, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
   </style>
@@ -545,8 +566,10 @@
   <div class="header-inner">
     <div class="header-left">
       <div class="header-logo">
-        <div class="header-title">⚡ האוסף של בר</div>
-        <div class="header-sub">אוסף קלפי פוקימון</div>
+        <div class="header-title">
+          <span class="header-title-ball" aria-hidden="true"></span>
+          <span class="header-title-text">האוסף של בר</span>
+        </div>
       </div>
       <div class="header-stats-row">
         <div class="header-stats-box">
