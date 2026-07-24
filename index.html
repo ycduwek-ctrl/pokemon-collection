@@ -458,6 +458,85 @@
     @media (prefers-reduced-motion: reduce) {
       .capture-core, .capture-orb, .capture-success-text, .saving-mini-ball { animation: none; }
     }
+
+    /* ===== PLAYFUL INTERACTIONS ===== */
+    .poke-card { animation: cardEnter 0.42s cubic-bezier(.2,.9,.25,1) both; }
+    .poke-card:nth-child(2n) { animation-delay: 0.035s; }
+    .poke-card:nth-child(3n) { animation-delay: 0.07s; }
+    .poke-card.deleting {
+      z-index: 20; pointer-events: none;
+      animation: cardEscape 0.62s cubic-bezier(.4,0,.8,.2) forwards;
+    }
+    .modal { animation: modalRise 0.3s cubic-bezier(.2,.9,.25,1); }
+    .btn, .card-btn, .filter-btn, .cols-btn, .refresh-price-btn {
+      transform: translateZ(0); transition: transform 0.16s ease, filter 0.16s ease, opacity 0.16s ease;
+    }
+    .btn:active, .card-btn:active, .filter-btn:active, .cols-btn:active, .refresh-price-btn:active {
+      transform: scale(0.94); filter: brightness(1.18);
+    }
+    .delete-particle {
+      --dx: 0px; --dy: 0px; --particle: #f59e0b;
+      position: fixed; z-index: 1300; width: 9px; height: 9px;
+      border-radius: 3px; background: var(--particle);
+      box-shadow: 0 0 12px var(--particle); pointer-events: none;
+      animation: deleteParticle 0.72s ease-out forwards;
+    }
+    .money-burst {
+      position: fixed; z-index: 1350; width: 1px; height: 1px; pointer-events: none;
+    }
+    .money-coin {
+      --mx: 0px; --my: -80px; --delay: 0ms; --coin: #fbbf24;
+      position: absolute; font-size: 1.25em; font-weight: 900; color: var(--coin);
+      text-shadow: 0 0 12px var(--coin);
+      animation: coinFly 0.9s cubic-bezier(.15,.75,.3,1) var(--delay) both;
+    }
+    .price-up { animation: priceUp 0.85s ease both; }
+    .price-down { animation: priceDown 0.7s ease both; }
+    .price-same { animation: priceSame 0.55s ease both; }
+    .toast.show { animation: toastPop 0.3s cubic-bezier(.2,1.3,.3,1); }
+    @keyframes cardEnter {
+      from { opacity: 0; transform: translateY(14px) scale(0.96); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes modalRise {
+      from { opacity: 0; transform: translateY(34px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes cardEscape {
+      0% { opacity: 1; transform: scale(1) rotate(0); filter: brightness(1); }
+      35% { transform: scale(1.06) rotate(-4deg); filter: brightness(1.45) saturate(1.4); }
+      100% { opacity: 0; transform: scale(0.12) rotate(18deg) translateY(-70px); filter: brightness(2); }
+    }
+    @keyframes deleteParticle {
+      from { opacity: 1; transform: translate(0,0) scale(1) rotate(0); }
+      to { opacity: 0; transform: translate(var(--dx),var(--dy)) scale(0.15) rotate(240deg); }
+    }
+    @keyframes coinFly {
+      0% { opacity: 0; transform: translate(-50%,-50%) scale(0.25) rotate(-25deg); }
+      20% { opacity: 1; }
+      75% { opacity: 1; }
+      100% { opacity: 0; transform: translate(calc(-50% + var(--mx)),calc(-50% + var(--my))) scale(1.2) rotate(22deg); }
+    }
+    @keyframes priceUp {
+      0%,100% { transform: scale(1); box-shadow: none; }
+      35% { transform: scale(1.13); color: #6ee7b7; box-shadow: 0 0 26px rgba(52,211,153,0.65); }
+    }
+    @keyframes priceDown {
+      0%,100% { transform: scale(1); }
+      40% { transform: scale(0.94); color: #93c5fd; box-shadow: 0 0 18px rgba(96,165,250,0.45); }
+    }
+    @keyframes priceSame {
+      0%,100% { transform: scale(1); }
+      50% { transform: scale(1.05); box-shadow: 0 0 18px rgba(251,191,36,0.45); }
+    }
+    @keyframes toastPop {
+      from { transform: translateX(-50%) translateY(12px) scale(0.88); }
+      to { transform: translateX(-50%) translateY(0) scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .price-up, .price-down, .price-same { animation: none; }
+    }
   </style>
 </head>
 <body>
@@ -824,6 +903,7 @@ function render(){
       :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
     const div=document.createElement('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
+    div.dataset.cardId=String(c.id);
     div.onclick=()=>openDetail(c.id);
     div.innerHTML=`${imgHtml}
       <div class="card-body">
@@ -863,7 +943,7 @@ function openDetail(id){
       ${c.language?`<span class="detail-badge">🌐 ${LANGUAGE_HE[c.language]||c.language}</span>`:''}
     </div>
     <div class="detail-grid">
-      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val">${c.value?'$'+c.value:'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+c.value:'—'}</div></div>
       <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${c.year||'—'}</div></div>
       <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${c.pokemon||'—'}</div></div>
       <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${c.set||'—'}</div></div>
@@ -975,6 +1055,50 @@ async function requestMarketPrice(cardData){
   return await r.json();
 }
 
+function replayEffect(el,className){
+  if(!el)return;el.classList.remove('price-up','price-down','price-same');
+  void el.offsetWidth;el.classList.add(className);
+  setTimeout(()=>el.classList.remove(className),950);
+}
+
+function showMoneyBurst(anchor,trend='same'){
+  if(!anchor)return;
+  const rect=anchor.getBoundingClientRect();
+  const burst=document.createElement('div');burst.className='money-burst';
+  burst.style.left=`${rect.left+rect.width/2}px`;burst.style.top=`${rect.top+rect.height/2}px`;
+  const symbols=trend==='up'?['$','↑','●','$','↑','●','$','↑','●','$']:trend==='down'?['$','↓','●','$','↓','●','$','↓']:['$','●','$','●','$','●','$','●'];
+  symbols.forEach((symbol,i)=>{
+    const coin=document.createElement('span');coin.className='money-coin';coin.textContent=symbol;
+    const angle=(Math.PI*2*i/symbols.length)-Math.PI/2;
+    const distance=58+(i%3)*18;
+    coin.style.setProperty('--mx',`${Math.cos(angle)*distance}px`);
+    coin.style.setProperty('--my',`${Math.sin(angle)*distance}px`);
+    coin.style.setProperty('--delay',`${i*24}ms`);
+    coin.style.setProperty('--coin',trend==='up'?'#34d399':trend==='down'?'#60a5fa':i%2?'#fbbf24':'#a78bfa');
+    burst.appendChild(coin);
+  });
+  document.body.appendChild(burst);setTimeout(()=>burst.remove(),1250);
+}
+
+function animateDeleteCard(id){
+  return new Promise(resolve=>{
+    const card=document.querySelector(`.poke-card[data-card-id="${id}"]`);
+    if(!card){resolve();return;}
+    const rect=card.getBoundingClientRect();
+    const colors=['#f59e0b','#fbbf24','#ef4444','#a78bfa','#60a5fa'];
+    for(let i=0;i<14;i++){
+      const p=document.createElement('span');p.className='delete-particle';
+      p.style.left=`${rect.left+rect.width*(0.25+Math.random()*0.5)}px`;
+      p.style.top=`${rect.top+rect.height*(0.25+Math.random()*0.5)}px`;
+      p.style.setProperty('--dx',`${(Math.random()-.5)*150}px`);
+      p.style.setProperty('--dy',`${-35-Math.random()*125}px`);
+      p.style.setProperty('--particle',colors[i%colors.length]);
+      document.body.appendChild(p);setTimeout(()=>p.remove(),850);
+    }
+    card.classList.add('deleting');setTimeout(resolve,640);
+  });
+}
+
 function formCardData(){
   return {
     name:document.getElementById('fName').value.trim(),
@@ -986,12 +1110,17 @@ function formCardData(){
 }
 
 async function refreshFormPrice(btn){
+  const priceEl=document.getElementById('fValue');
+  const oldPrice=parseFloat(priceEl.value);
+  showMoneyBurst(priceEl,'same');
   btn.disabled=true;btn.textContent='⏳ בודק...';
   try{
     const d=await requestMarketPrice(formCardData());
     if(d.priceStatus==='matched'){
-      document.getElementById('fValue').value=d.value;
-      toast(`✅ המחיר עודכן ל-$${d.value}`);
+      const newPrice=parseFloat(d.value);priceEl.value=d.value;
+      const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
+      replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);
+      toast(trend==='up'?`📈 המחיר עלה ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
     }else toast('לא נמצא מחיר ודאי לקלף הזה');
   }catch{toast('לא ניתן לבדוק מחיר כרגע');}
   finally{btn.disabled=false;btn.textContent='🔄 רענן מחיר';}
@@ -999,14 +1128,21 @@ async function refreshFormPrice(btn){
 
 async function refreshSavedPrice(id,btn){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  const oldPrice=parseFloat(c.value);
+  const priceEl=document.getElementById('detailPriceValue');
+  showMoneyBurst(priceEl,'same');
   btn.disabled=true;btn.textContent='⏳ בודק...';
   try{
     const d=await requestMarketPrice(c);
     if(d.priceStatus!=='matched'){toast('לא נמצא מחיר ודאי לקלף הזה');return;}
     const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:d.value})});
     if(!r.ok)throw new Error('save');
+    const newPrice=parseFloat(d.value);
+    const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
     c.value=d.value;localStorage.setItem('pokeCards',JSON.stringify(cards));
-    render();openDetail(id);toast(`✅ המחיר עודכן ל-$${d.value}`);
+    if(priceEl){priceEl.textContent=`$${d.value}`;replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);}
+    render();
+    toast(trend==='up'?`📈 המחיר עלה מ-$${oldPrice} ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד מ-$${oldPrice} ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
   }catch{toast('לא ניתן לעדכן מחיר כרגע');}
   finally{btn.disabled=false;btn.textContent='🔄 רענן מחיר';}
 }
@@ -1059,9 +1195,30 @@ async function saveCard(){
 
 async function deleteCard(){
   if(!confirm('למחוק את הקלף?'))return;
-  await fetch(`${API}/cards/${editId}`,{method:'DELETE'});
-  if(comments[String(editId)]){delete comments[String(editId)];saveComments();}
-  closeModal();toast('נמחק');await load();
+  const deletingId=editId;
+  const deletedIndex=cards.findIndex(c=>String(c.id)===String(deletingId));
+  const deletedCard=deletedIndex>=0?cards[deletedIndex]:null;
+  closeModal();closeDetail();
+  const deleteRequest=fetch(`${API}/cards/${deletingId}`,{method:'DELETE'});
+  await animateDeleteCard(deletingId);
+  if(deletedIndex>=0){
+    cards.splice(deletedIndex,1);
+    localStorage.setItem('pokeCards',JSON.stringify(cards));
+    render();
+  }
+  toast('✨ הקלף יצא מהאוסף');
+  try{
+    const response=await deleteRequest;
+    if(!response.ok)throw new Error('delete');
+    if(comments[String(deletingId)]){delete comments[String(deletingId)];saveComments();}
+    await load();
+  }catch{
+    if(deletedCard){
+      cards.splice(Math.max(0,deletedIndex),0,deletedCard);
+      localStorage.setItem('pokeCards',JSON.stringify(cards));render();
+    }
+    toast('המחיקה לא הצליחה — הקלף הוחזר');
+  }
 }
 
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
