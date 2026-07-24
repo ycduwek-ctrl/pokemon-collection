@@ -781,7 +781,10 @@ async function identifyCoin(){
     if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
     if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
     const res=document.getElementById('aiResult');res.style.display='block';
-    res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''} | $${d.value||'?'}`;
+    const priceText=d.priceStatus==='matched'
+      ?`💰 $${d.value} לפי ${d.priceSource||'מחיר שוק'}`
+      :'💰 לא נמצא מחיר ודאי — אפשר להזין ידנית';
+    res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''}<br>${priceText}`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
   }catch(e){toast('שגיאת זיהוי');}
   finally{btn.textContent='✨ זהה קלף';btn.disabled=false;}
