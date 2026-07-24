@@ -39,10 +39,16 @@ def get_sheet():
     return client.open_by_url(SHEET_URL).worksheet("cards")
 
 def _clean_card_number(value):
-    value = str(value or "").split("/")[0].strip().upper()
+    value = str(value or "").strip().upper()
     if value.isdigit():
         return str(int(value))
     return re.sub(r"[^A-Z0-9]", "", value)
+
+def _card_number_parts(value):
+    parts = str(value or "").split("/", 1)
+    local_id = _clean_card_number(parts[0])
+    set_count = _clean_card_number(parts[1]) if len(parts) > 1 else ""
+    return local_id, set_count
 
 def _english_card_name(value):
     return re.sub(r"\s*\([^)]*[\u0590-\u05FF][^)]*\)\s*$", "", str(value or "")).strip()
@@ -50,7 +56,7 @@ def _english_card_name(value):
 def _market_price_for_card(card_info):
     """Find an exact TCGdex card and return a stable TCGplayer market price."""
     english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
-    card_number = _clean_card_number(card_info.get("number"))
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
     set_name = str(card_info.get("set") or "").strip()
 
     if not english_name or not card_number:
@@ -83,6 +89,16 @@ def _market_price_for_card(card_info):
 
         if not details:
             return {"value": "", "priceStatus": "not-found"}
+
+        # The denominator printed on cards (for example 095/086) is often a
+        # stronger set identifier than a translated or AI-read set name.
+        if printed_set_count.isdigit():
+            count_matches = [
+                d for d in details
+                if str(((d.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
+            ]
+            if count_matches:
+                details = count_matches
 
         # A card name and local number can exist in several sets. Use the set
         # name only to disambiguate; never guess when the match remains unclear.
