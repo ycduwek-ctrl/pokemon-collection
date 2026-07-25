@@ -218,12 +218,21 @@ def refresh_market_price(data: dict):
 async def upload_image(file: UploadFile = File(...)):
     data = await file.read()
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
+    # Pokemon cards are portrait. Phone cameras sometimes save a landscape
+    # frame without a useful EXIF orientation, so normalize it before cropping.
+    if img.width > img.height:
+        img = img.rotate(90, expand=True)
     w, h = img.size
-    target_ratio = 2/3
+    # Keep one consistent 5:7 card frame. The previous 2:3 crop was resized
+    # to 5:7 afterwards, which visibly stretched some uploads.
+    target_ratio = 5/7
     if w/h > target_ratio:
         new_w = int(h * target_ratio)
         img = img.crop(((w-new_w)//2, 0, (w+new_w)//2, h))
-    img = img.resize((400, 560), Image.LANCZOS)
+    else:
+        new_h = int(w / target_ratio)
+        img = img.crop((0, (h-new_h)//2, w, (h+new_h)//2))
+    img = img.resize((500, 700), Image.LANCZOS)
     buf = io.BytesIO()
     img.save(buf, format="WEBP", quality=85)
     res = cloudinary.uploader.upload(buf.getvalue(), format="webp")
