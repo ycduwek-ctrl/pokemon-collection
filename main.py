@@ -59,20 +59,21 @@ def _market_price_for_card(card_info):
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
     set_name = str(card_info.get("set") or "").strip()
 
-    if not english_name or not card_number:
-        return {"value": "", "priceStatus": "missing-identifiers"}
+    # The printed collector number is the primary identifier. Names and set
+    # text are supporting signals only, since AI can translate or misread them.
+    if not card_number:
+        return {"value": "", "priceStatus": "missing-collector-number"}
 
     try:
         search = requests.get(
             "https://api.tcgdex.net/v2/en/cards",
-            params={"name": english_name},
+            params={"localId": card_number},
             timeout=12
         )
         search.raise_for_status()
         candidates = [
             c for c in search.json()
             if _clean_card_number(c.get("localId")) == card_number
-            and str(c.get("name") or "").lower() == english_name.lower()
         ]
 
         if not candidates:
@@ -100,25 +101,25 @@ def _market_price_for_card(card_info):
             if count_matches:
                 details = count_matches
 
-        # A card name and local number can exist in several sets. Use the set
-        # name only to disambiguate; never guess when the match remains unclear.
+        # If the collector number still maps to several sets, use the English
+        # name and set as supporting signals. Never choose on name alone.
         if len(details) > 1:
-            if not set_name:
-                return {"value": "", "priceStatus": "ambiguous"}
-            scored = sorted([
-                (
-                    SequenceMatcher(
-                        None,
-                        set_name.lower(),
-                        str((d.get("set") or {}).get("name") or "").lower()
-                    ).ratio(),
-                    d
-                )
-                for d in details
-            ], key=lambda item: item[0], reverse=True)
+            scored = []
+            for detail in details:
+                detail_name = str(detail.get("name") or "")
+                detail_set = str((detail.get("set") or {}).get("name") or "")
+                name_score = SequenceMatcher(
+                    None, english_name.lower(), detail_name.lower()
+                ).ratio() if english_name else 0
+                set_score = SequenceMatcher(
+                    None, set_name.lower(), detail_set.lower()
+                ).ratio() if set_name else 0
+                score = (name_score * 0.65) + (set_score * 0.35)
+                scored.append((score, detail))
+            scored.sort(key=lambda item: item[0], reverse=True)
             best_score, best_card = scored[0]
             second_score = scored[1][0] if len(scored) > 1 else 0
-            if best_score < 0.55 or best_score - second_score < 0.10:
+            if best_score < 0.58 or best_score - second_score < 0.08:
                 return {"value": "", "priceStatus": "ambiguous"}
             card = best_card
         else:
@@ -258,9 +259,15 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 - תרגם או תעתק לעברית רק את שם הקלף. אל תתרגם לעברית סדרה, מצב, שפה, נדירות או פרטים אחרים
 - שמור סימוני קלף כמו V, VMAX, VSTAR, GX, EX ו-ex כפי שהם
 
+הזיהוי חייב להתחיל ממספר האספן (Collector Number):
+- חפש בפינה התחתונה של הקלף את המספר המודפס בפורמט מספר/גודל-סדרה, למשל 025/102
+- העתק את שני חלקי המספר בדיוק, כולל אפסים מובילים ואותיות אם קיימות
+- אל תשתמש במספר מדוגמה ואל תנחש. אם המספר אינו קריא, החזר number ריק
+- השתמש במספר האספן כנתון הראשי לזיהוי הקלף והסדרה; השם והסמל הם אימות נוסף
+
 קרא ישירות מהקלף:
 - שם הפוקימון הרשמי באנגלית, גם אם הוא מודפס על הקלף בשפה אחרת
-- מספר הקלף ומספר הסדרה בפינה התחתונה (למשל 4/102)
+- מספר האספן המלא בפינה התחתונה
 - שם הסדרה הרשמי באנגלית (Base Set, Jungle, Fossil, Team Rocket וכו׳), גם אם הקלף בשפה אחרת
 - שנת ההוצאה אם מופיעה
 - נדירות לפי הסמל (♦=Common, ♦♦=Uncommon, ★=Rare, ★H=Holo Rare)
@@ -281,7 +288,11 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     res = requests.post(
         "https://openrouter.ai/api/v1/chat/completions",
         headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
-        json={"model":"openrouter/auto","messages":[{"role":"user","content":content}]},
+        json={
+            "model": "openrouter/auto",
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 900
+        },
         timeout=30
     )
     result = res.json()
