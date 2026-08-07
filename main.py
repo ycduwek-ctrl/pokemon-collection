@@ -53,8 +53,118 @@ def _card_number_parts(value):
 def _english_card_name(value):
     return re.sub(r"\s*\([^)]*[\u0590-\u05FF][^)]*\)\s*$", "", str(value or "")).strip()
 
+def _pokemon_tcg_api_price(card_info):
+    """Primary free price lookup using Pokémon TCG API / TCGplayer data."""
+    english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
+    set_name = str(card_info.get("set") or "").strip()
+    if not english_name or not card_number:
+        return {"value": "", "priceStatus": "missing-identifiers"}
+
+    try:
+        query_name = english_name.replace("\\", " ").replace('"', " ")
+        headers = {}
+        api_key = os.environ.get("POKEMON_TCG_API_KEY")
+        if api_key:
+            headers["X-Api-Key"] = api_key
+        response = requests.get(
+            "https://api.pokemontcg.io/v2/cards",
+            params={
+                "q": f'name:"{query_name}"',
+                "pageSize": 250,
+                "select": "id,name,number,set,rarity,tcgplayer"
+            },
+            headers=headers,
+            timeout=15
+        )
+        response.raise_for_status()
+        candidates = [
+            card for card in (response.json().get("data") or [])
+            if _clean_card_number(card.get("number")) == card_number
+        ]
+        if not candidates:
+            return {"value": "", "priceStatus": "not-found"}
+
+        if printed_set_count.isdigit():
+            exact_set = [
+                card for card in candidates
+                if str((card.get("set") or {}).get("printedTotal", "")) == printed_set_count
+                or str((card.get("set") or {}).get("total", "")) == printed_set_count
+            ]
+            if exact_set:
+                candidates = exact_set
+
+        if len(candidates) > 1:
+            scored = []
+            for card in candidates:
+                name_score = SequenceMatcher(
+                    None, english_name.lower(), str(card.get("name") or "").lower()
+                ).ratio()
+                candidate_set = str((card.get("set") or {}).get("name") or "")
+                set_score = SequenceMatcher(
+                    None, set_name.lower(), candidate_set.lower()
+                ).ratio() if set_name else 0
+                scored.append(((name_score * 0.70) + (set_score * 0.30), card))
+            scored.sort(key=lambda item: item[0], reverse=True)
+            best_score, card = scored[0]
+            second_score = scored[1][0] if len(scored) > 1 else 0
+            if best_score < 0.62 or best_score - second_score < 0.06:
+                return {"value": "", "priceStatus": "ambiguous"}
+        else:
+            card = candidates[0]
+
+        tcgplayer = card.get("tcgplayer") or {}
+        variants = {
+            key: value for key, value in (tcgplayer.get("prices") or {}).items()
+            if isinstance(value, dict) and value.get("market") is not None
+        }
+        if not variants:
+            return {
+                "value": "",
+                "priceStatus": "price-unavailable",
+                "marketCardId": card.get("id", "")
+            }
+
+        finish = str(card_info.get("finish") or "").lower()
+        rarity = str(card_info.get("rarity") or "").lower()
+        if "first" in finish:
+            preferred = ["1stEditionHolofoil", "1stEditionNormal"]
+        elif "reverse" in finish:
+            preferred = ["reverseHolofoil"]
+        elif "holo" in finish or "holo" in rarity:
+            preferred = ["holofoil", "unlimitedHolofoil"]
+        else:
+            preferred = ["normal", "unlimited", "holofoil"]
+
+        chosen_key = next((key for key in preferred if key in variants), None)
+        if not chosen_key and len(variants) == 1:
+            chosen_key = next(iter(variants))
+        if not chosen_key:
+            return {
+                "value": "",
+                "priceStatus": "variant-ambiguous",
+                "marketCardId": card.get("id", "")
+            }
+
+        price = float(variants[chosen_key]["market"])
+        return {
+            "value": f"{price:.2f}".rstrip("0").rstrip("."),
+            "priceStatus": "matched",
+            "priceSource": "TCGplayer",
+            "priceVariant": chosen_key,
+            "priceUpdatedAt": tcgplayer.get("updatedAt", ""),
+            "marketCardId": card.get("id", "")
+        }
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        return {"value": "", "priceStatus": "service-unavailable"}
+
+
 def _market_price_for_card(card_info):
-    """Find an exact TCGdex card and return a stable TCGplayer market price."""
+    """Find a verified market price, with a second free source as fallback."""
+    primary = _pokemon_tcg_api_price(card_info)
+    if primary.get("priceStatus") == "matched":
+        return primary
+
     english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
     set_name = str(card_info.get("set") or "").strip()
