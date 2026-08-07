@@ -177,13 +177,18 @@ def _market_price_for_card(card_info):
     try:
         search = requests.get(
             "https://api.tcgdex.net/v2/en/cards",
-            params={"localId": card_number},
+            params={"name": english_name},
             timeout=12
         )
         search.raise_for_status()
         candidates = [
             c for c in search.json()
             if _clean_card_number(c.get("localId")) == card_number
+            and SequenceMatcher(
+                None,
+                str(c.get("name") or "").lower(),
+                english_name.lower()
+            ).ratio() >= 0.88
         ]
 
         if not candidates:
