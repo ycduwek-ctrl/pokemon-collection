@@ -954,6 +954,7 @@
 const API = 'https://pokemon-collection-f4wv.onrender.com';
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
+let aiMeta={};
 let quickScans=[], quickProcessing=false, quickSessionToken=0;
 let comments={};
 let pendingSave=null;
@@ -1287,7 +1288,7 @@ async function shareCard(id){
 function saveComments(){localStorage.setItem('pokeComments',JSON.stringify(comments));}
 
 function openAdd(){
-  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;
+  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};
   document.getElementById('modalTitle').textContent='➕ הוספת קלף';
   ['fName','fPokemon','fNumber','fSet','fYear','fValue'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fCondition').value='Mint';document.getElementById('fRarity').value='Common';document.getElementById('fLanguage').value='English';
@@ -1301,6 +1302,7 @@ function openAdd(){
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   editId=id;existImgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));newFiles=[];aiFront=null;aiBack=null;
+  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
   document.getElementById('fNumber').value=c.number||'';document.getElementById('fSet').value=c.set||'';
@@ -1349,6 +1351,7 @@ async function identifyCoin(){
     if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
     if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
     if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
+    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
     const res=document.getElementById('aiResult');res.style.display='block';
     const priceText=d.priceStatus==='matched'
       ?`💰 $${d.value} לפי ${d.priceSource||'מחיר שוק'}`
@@ -1422,7 +1425,9 @@ function formCardData(){
     pokemon:document.getElementById('fPokemon').value.trim(),
     set:document.getElementById('fSet').value.trim(),
     number:document.getElementById('fNumber').value.trim(),
-    rarity:document.getElementById('fRarity').value
+    rarity:document.getElementById('fRarity').value,
+    language:document.getElementById('fLanguage').value,
+    ...aiMeta
   };
 }
 
@@ -1435,6 +1440,7 @@ async function refreshFormPrice(btn){
     const d=await requestMarketPrice(formCardData());
     if(d.priceStatus==='matched'){
       const newPrice=parseFloat(d.value);priceEl.value=d.value;
+      aiMeta={...aiMeta,catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
       const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
       replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);
       toast(trend==='up'?`📈 המחיר עלה ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
@@ -1452,11 +1458,12 @@ async function refreshSavedPrice(id,btn){
   try{
     const d=await requestMarketPrice(c);
     if(d.priceStatus!=='matched'){toast('לא נמצא מחיר ודאי לקלף הזה');return;}
-    const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({value:d.value})});
+    const priceMeta={value:d.value,catalogCardId:d.catalogCardId||c.catalogCardId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+    const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(priceMeta)});
     if(!r.ok)throw new Error('save');
     const newPrice=parseFloat(d.value);
     const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
-    c.value=d.value;localStorage.setItem('pokeCards',JSON.stringify(cards));
+    Object.assign(c,priceMeta);localStorage.setItem('pokeCards',JSON.stringify(cards));
     if(priceEl){priceEl.textContent=`$${d.value}`;replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);}
     render();
     toast(trend==='up'?`📈 המחיר עלה מ-$${oldPrice} ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד מ-$${oldPrice} ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
@@ -1489,7 +1496,7 @@ async function saveCard(){
   const saveEditId=editId;
   const cardId=saveEditId||String(Date.now());
   const previewUrl=newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||'');
-  const baseData={id:cardId,name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:'',comments:''};
+  const baseData={id:cardId,name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:'',comments:'',...aiMeta};
   if(!saveEditId){
     pendingSave=baseData;
     closeModal();render();animateCardToGallery(previewUrl);
@@ -1543,6 +1550,12 @@ function overlayClick(e){if(e.target===document.getElementById('overlay'))closeM
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 // resize listener removed — user controls cols manually
 
+['fNumber','fLanguage'].forEach(id=>{
+  const field=document.getElementById(id);
+  const clearExactMatch=()=>{aiMeta={...aiMeta,catalogCardId:'',priceCheckedAt:''};};
+  field.addEventListener('input',clearExactMatch);
+  field.addEventListener('change',clearExactMatch);
+});
 initCols();initPanel();load();
 </script>
 </body>
