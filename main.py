@@ -159,8 +159,146 @@ def _pokemon_tcg_api_price(card_info):
         return {"value": "", "priceStatus": "service-unavailable"}
 
 
+def _localized_tcgdex_price(card_info):
+    """Look up the exact non-English printing and normalize its price to USD."""
+    language = str(card_info.get("language") or "").strip().lower()
+    language_codes = {
+        "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
+        "french": "fr", "german": "de", "spanish": "es",
+        "italian": "it", "portuguese": "pt", "thai": "th",
+        "indonesian": "id"
+    }
+    lang = language_codes.get(language)
+    if not lang:
+        return {"value": "", "priceStatus": "language-not-supported"}
+
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
+    set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
+    if not card_number:
+        return {"value": "", "priceStatus": "missing-collector-number"}
+
+    try:
+        search = requests.get(
+            f"https://api.tcgdex.net/v2/{lang}/cards",
+            params={"localId": card_number},
+            timeout=12
+        )
+        search.raise_for_status()
+        candidates = [
+            card for card in search.json()
+            if _clean_card_number(card.get("localId")) == card_number
+        ]
+        if set_code:
+            code_matches = [
+                card for card in candidates
+                if re.sub(
+                    r"[^A-Z0-9]", "",
+                    str(card.get("id") or "").rsplit("-", 1)[0].upper()
+                ) == set_code
+            ]
+            if code_matches:
+                candidates = code_matches
+
+        details = []
+        for candidate in candidates[:24]:
+            response = requests.get(
+                f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
+                timeout=12
+            )
+            if response.ok:
+                details.append(response.json())
+
+        if printed_set_count.isdigit():
+            count_matches = [
+                card for card in details
+                if str(((card.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
+            ]
+            if count_matches:
+                details = count_matches
+
+        if len(details) != 1:
+            return {
+                "value": "",
+                "priceStatus": "not-found" if not details else "ambiguous"
+            }
+        card = details[0]
+        pricing = card.get("pricing") or {}
+
+        tcgplayer = pricing.get("tcgplayer") or {}
+        variants = {
+            key: value for key, value in tcgplayer.items()
+            if isinstance(value, dict) and value.get("marketPrice") is not None
+        }
+        finish = str(card_info.get("finish") or "").lower()
+        rarity = str(card_info.get("rarity") or "").lower()
+        if "reverse" in finish:
+            preferred = ["reverse-holofoil", "reverse"]
+        elif "holo" in finish or "holo" in rarity:
+            preferred = ["holofoil", "holo"]
+        elif "first" in finish:
+            preferred = ["1st-edition-holofoil", "1st-edition"]
+        else:
+            preferred = ["normal", "unlimited"]
+
+        chosen = next((key for key in preferred if key in variants), None)
+        if not chosen and len(variants) == 1:
+            chosen = next(iter(variants))
+        if chosen:
+            price = float(variants[chosen]["marketPrice"])
+            return {
+                "value": f"{price:.2f}".rstrip("0").rstrip("."),
+                "priceStatus": "matched",
+                "priceSource": "TCGplayer",
+                "priceVariant": chosen,
+                "priceUpdatedAt": tcgplayer.get("updated", ""),
+                "marketCardId": card.get("id", "")
+            }
+
+        cardmarket = pricing.get("cardmarket") or {}
+        if "holo" in finish or "holo" in rarity:
+            euro_price = (
+                cardmarket.get("trend-holo")
+                or cardmarket.get("avg7-holo")
+                or cardmarket.get("avg-holo")
+            )
+            variant = "holo"
+        else:
+            euro_price = (
+                cardmarket.get("trend")
+                or cardmarket.get("avg7")
+                or cardmarket.get("avg")
+            )
+            variant = "normal"
+        if euro_price is None:
+            return {"value": "", "priceStatus": "price-unavailable"}
+
+        fx_response = requests.get(
+            "https://api.frankfurter.dev/v2/rate/EUR/USD",
+            timeout=8
+        )
+        fx_response.raise_for_status()
+        usd_rate = float(fx_response.json()["rate"])
+        usd_price = float(euro_price) * usd_rate
+        return {
+            "value": f"{usd_price:.2f}".rstrip("0").rstrip("."),
+            "priceStatus": "matched",
+            "priceSource": "Cardmarket",
+            "priceVariant": variant,
+            "priceUpdatedAt": cardmarket.get("updated", ""),
+            "marketCardId": card.get("id", ""),
+            "originalPrice": euro_price,
+            "originalCurrency": "EUR"
+        }
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        return {"value": "", "priceStatus": "service-unavailable"}
+
+
 def _market_price_for_card(card_info):
-    """Find a verified market price, with a second free source as fallback."""
+    """Find a verified market price across localized and English catalogs."""
+    localized = _localized_tcgdex_price(card_info)
+    if localized.get("priceStatus") == "matched":
+        return localized
+
     primary = _pokemon_tcg_api_price(card_info)
     if primary.get("priceStatus") == "matched":
         return primary
@@ -383,6 +521,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 קרא ישירות מהקלף:
 - שם הפוקימון הרשמי באנגלית, גם אם הוא מודפס על הקלף בשפה אחרת
 - מספר האספן המלא בפינה התחתונה
+- קוד הסדרה הקצר שמודפס ליד מספר האספן, למשל SV11W, SV2a, S12a או SM10. החזר אותו בשדה setCode; אם אינו קריא החזר מחרוזת ריקה
 - שם הסדרה הרשמי באנגלית (Base Set, Jungle, Fossil, Team Rocket וכו׳), גם אם הקלף בשפה אחרת
 - שנת ההוצאה אם מופיעה
 - נדירות לפי הסמל (♦=Common, ♦♦=Uncommon, ★=Rare, ★H=Holo Rare)
@@ -393,7 +532,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 אל תנחש מחיר ואל תחזיר הערכת שווי. המחיר יילקח לאחר הזיהוי ממאגר מחירי שוק.
 
 החזר JSON בלבד:
-{"name":"","pokemon":"","set":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
+{"name":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
