@@ -11,7 +11,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Wake the free backend
         run: |
@@ -21,12 +21,12 @@ jobs:
 
       - name: Refresh every gallery card
         run: |
-          for batch in $(seq 1 20); do
+          for batch in $(seq 1 100); do
             response=$(curl --fail --silent --show-error \
               --max-time 120 \
               --retry 3 --retry-all-errors --retry-delay 10 \
               -X POST \
-              "https://pokemon-collection-f4wv.onrender.com/maintenance/refresh-prices?limit=2")
+              "https://pokemon-collection-f4wv.onrender.com/maintenance/refresh-prices?limit=4")
             echo "$response"
             if echo "$response" | grep -q '"ok":false'; then
               exit 1
