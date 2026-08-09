@@ -14,7 +14,6 @@ import requests
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
-import threading
 
 app = FastAPI()
 
@@ -655,12 +654,12 @@ def delete_card(card_id: str):
             return {"ok": True}
     return {"ok": False}
 
-_price_refresh_lock = threading.Lock()
 _price_refresh_status = {
     "running": False,
     "checked": 0,
     "updated": 0,
     "matched": 0,
+    "remaining": 0,
     "lastRun": "",
     "error": ""
 }
@@ -675,9 +674,7 @@ def _refresh_one_card(card):
             "error": str(exc)
         }
 
-def _refresh_all_prices_job():
-    if not _price_refresh_lock.acquire(blocking=False):
-        return
+def _refresh_price_batch(limit=2):
     _price_refresh_status.update({
         "running": True,
         "checked": 0,
@@ -693,14 +690,32 @@ def _refresh_all_prices_job():
             column: index + 1 for index, column in enumerate(headers)
         }
         today = datetime.now(timezone.utc).date().isoformat()
-        due = [
+        all_due = [
             (row_index, card)
             for row_index, card in enumerate(records, start=2)
             if not str(card.get("priceCheckedAt") or "").startswith(today)
         ]
+        batch_size = max(1, min(int(limit or 2), 4))
+        due = all_due[:batch_size]
+        checked_at = datetime.now(timezone.utc).isoformat()
+
+        if not due:
+            _price_refresh_status.update({
+                "running": False,
+                "remaining": 0,
+                "lastRun": checked_at
+            })
+            return {
+                "ok": True,
+                "checked": 0,
+                "matched": 0,
+                "updated": 0,
+                "remaining": 0,
+                "checkedAt": checked_at
+            }
 
         results = []
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        with ThreadPoolExecutor(max_workers=min(2, len(due))) as executor:
             futures = {
                 executor.submit(_refresh_one_card, card): row_index
                 for row_index, card in due
@@ -709,10 +724,10 @@ def _refresh_all_prices_job():
                 row_index = futures[future]
                 card, price_result = future.result()
                 results.append((row_index, card, price_result))
-                _price_refresh_status["checked"] += 1
 
         cells = []
-        checked_at = datetime.now(timezone.utc).isoformat()
+        matched = 0
+        updated = 0
         for row_index, card, result in results:
             cells.append(gspread.Cell(
                 row_index,
@@ -721,11 +736,18 @@ def _refresh_all_prices_job():
             ))
             catalog_card_id = result.get("catalogCardId")
             if catalog_card_id:
-                cells.append(gspread.Cell(
-                    row_index,
-                    column_indexes["catalogCardId"],
-                    catalog_card_id
-                ))
+                cells.extend([
+                    gspread.Cell(
+                        row_index,
+                        column_indexes["catalogCardId"],
+                        catalog_card_id
+                    ),
+                    gspread.Cell(
+                        row_index,
+                        column_indexes["setCode"],
+                        str(catalog_card_id).rsplit("-", 1)[0]
+                    )
+                ])
             if result.get("priceStatus") != "matched":
                 continue
             cells.extend([
@@ -745,27 +767,44 @@ def _refresh_all_prices_job():
                     result.get("priceUpdatedAt", "")
                 )
             ])
-            _price_refresh_status["matched"] += 1
+            matched += 1
             if str(card.get("value") or "") != str(result.get("value") or ""):
-                _price_refresh_status["updated"] += 1
+                updated += 1
 
         if cells:
             ws.update_cells(cells, value_input_option="USER_ENTERED")
-        _price_refresh_status["lastRun"] = checked_at
+
+        remaining = max(0, len(all_due) - len(due))
+        _price_refresh_status.update({
+            "running": False,
+            "checked": len(results),
+            "matched": matched,
+            "updated": updated,
+            "remaining": remaining,
+            "lastRun": checked_at
+        })
+        return {
+            "ok": True,
+            "checked": len(results),
+            "matched": matched,
+            "updated": updated,
+            "remaining": remaining,
+            "checkedAt": checked_at
+        }
     except Exception as exc:
-        _price_refresh_status["error"] = str(exc)
-    finally:
-        _price_refresh_status["running"] = False
-        _price_refresh_lock.release()
+        _price_refresh_status.update({
+            "running": False,
+            "error": str(exc)
+        })
+        return {
+            "ok": False,
+            "error": str(exc),
+            "remaining": _price_refresh_status.get("remaining", 0)
+        }
 
 @app.post("/maintenance/refresh-prices")
-def refresh_all_prices():
-    if _price_refresh_status["running"] or _price_refresh_lock.locked():
-        return {"ok": True, "status": "already-running"}
-    _price_refresh_status["running"] = True
-    worker = threading.Thread(target=_refresh_all_prices_job, daemon=True)
-    worker.start()
-    return {"ok": True, "status": "started"}
+def refresh_all_prices(limit: int = 2):
+    return _refresh_price_batch(limit)
 
 @app.get("/maintenance/refresh-prices/status")
 def refresh_all_prices_status():
