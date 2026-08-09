@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 import gspread
 from google.oauth2.service_account import Credentials
@@ -12,6 +12,9 @@ import re
 import base64
 import requests
 from difflib import SequenceMatcher
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
+import threading
 
 app = FastAPI()
 
@@ -32,11 +35,29 @@ cloudinary.config(
     api_secret=os.environ["CLOUDINARY_API_SECRET"]
 )
 
+CARD_COLUMNS = [
+    "id", "name", "pokemon", "set", "number", "year", "condition",
+    "language", "rarity", "value", "images", "comments", "setCode",
+    "catalogCardId", "finish", "priceSource", "priceUpdatedAt",
+    "priceCheckedAt"
+]
+
 def get_sheet():
     info = json.loads(os.environ["GOOGLE_SERVICE_ACCOUNT"])
     creds = Credentials.from_service_account_info(info, scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open_by_url(SHEET_URL).worksheet("cards")
+
+def _ensure_columns(ws):
+    headers = ws.row_values(1)
+    if not headers:
+        ws.append_row(CARD_COLUMNS)
+        return list(CARD_COLUMNS)
+    for column in CARD_COLUMNS:
+        if column not in headers:
+            headers.append(column)
+            ws.update_cell(1, len(headers), column)
+    return headers
 
 def _clean_card_number(value):
     value = str(value or "").strip().upper()
@@ -273,49 +294,100 @@ def _localized_tcgdex_price(card_info):
     if not lang:
         return {"value": "", "priceStatus": "language-not-supported"}
 
+    raw_number = str(card_info.get("number") or "").split("/", 1)[0].strip()
+    raw_local_id = re.sub(r"[^A-Za-z0-9]", "", raw_number)
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
     set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
+    catalog_card_id = str(card_info.get("catalogCardId") or "").strip()
     if not card_number:
         return {"value": "", "priceStatus": "missing-collector-number"}
 
     try:
-        search = requests.get(
-            f"https://api.tcgdex.net/v2/{lang}/cards",
-            params={"localId": card_number},
-            timeout=12
-        )
-        search.raise_for_status()
-        candidates = [
-            card for card in search.json()
-            if _clean_card_number(card.get("localId")) == card_number
-        ]
-        if set_code:
-            code_matches = [
-                card for card in candidates
-                if re.sub(
-                    r"[^A-Z0-9]", "",
-                    str(card.get("id") or "").rsplit("-", 1)[0].upper()
-                ) == set_code
-            ]
-            if code_matches:
-                candidates = code_matches
-
         details = []
-        for candidate in candidates[:24]:
+        direct_ids = []
+        if catalog_card_id:
+            direct_ids.append(catalog_card_id)
+        if set_code and raw_local_id:
+            direct_ids.append(f"{set_code.lower()}-{raw_local_id}")
+        for direct_id in dict.fromkeys(direct_ids):
             response = requests.get(
-                f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
+                f"https://api.tcgdex.net/v2/{lang}/cards/{direct_id}",
                 timeout=12
             )
             if response.ok:
-                details.append(response.json())
+                detail = response.json()
+                if catalog_card_id or _clean_card_number(detail.get("localId")) == card_number:
+                    details = [detail]
+                    break
 
-        if printed_set_count.isdigit():
+        if not details:
+            candidates = []
+            query_ids = list(dict.fromkeys(
+                value for value in [raw_local_id, card_number] if value
+            ))
+            for query_id in query_ids:
+                search = requests.get(
+                    f"https://api.tcgdex.net/v2/{lang}/cards",
+                    params={"localId": query_id},
+                    timeout=12
+                )
+                search.raise_for_status()
+                candidates = [
+                    card for card in search.json()
+                    if _clean_card_number(card.get("localId")) == card_number
+                ]
+                if candidates:
+                    break
+
+            if set_code:
+                code_matches = [
+                    card for card in candidates
+                    if re.sub(
+                        r"[^A-Z0-9]", "",
+                        str(card.get("id") or "").rsplit("-", 1)[0].upper()
+                    ) == set_code
+                ]
+                if code_matches:
+                    candidates = code_matches
+
+            for candidate in candidates[:24]:
+                response = requests.get(
+                    f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
+                    timeout=12
+                )
+                if response.ok:
+                    details.append(response.json())
+
+        if printed_set_count.isdigit() and not catalog_card_id:
             count_matches = [
                 card for card in details
                 if str(((card.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
             ]
             if count_matches:
                 details = count_matches
+
+        if len(details) > 1:
+            printed_name = str(card_info.get("printedName") or "").strip()
+            if printed_name:
+                scored = sorted(
+                    [
+                        (
+                            SequenceMatcher(
+                                None,
+                                printed_name.casefold(),
+                                str(card.get("name") or "").casefold()
+                            ).ratio(),
+                            card
+                        )
+                        for card in details
+                    ],
+                    key=lambda item: item[0],
+                    reverse=True
+                )
+                if scored[0][0] >= 0.72 and (
+                    len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.10
+                ):
+                    details = [scored[0][1]]
 
         if len(details) != 1:
             return {
@@ -352,7 +424,8 @@ def _localized_tcgdex_price(card_info):
                 "priceSource": "TCGplayer",
                 "priceVariant": chosen,
                 "priceUpdatedAt": tcgplayer.get("updated", ""),
-                "marketCardId": card.get("id", "")
+                "marketCardId": card.get("id", ""),
+                "catalogCardId": card.get("id", "")
             }
 
         cardmarket = pricing.get("cardmarket") or {}
@@ -363,9 +436,6 @@ def _localized_tcgdex_price(card_info):
                 or cardmarket.get("avg-holo")
             )
             variant = "holo"
-            # Some Asian catalog entries expose only one ungraded market row
-            # even when the artwork looks holographic. Use that exact card's
-            # normal market row instead of returning no price.
             if not euro_price:
                 euro_price = (
                     cardmarket.get("trend")
@@ -381,7 +451,11 @@ def _localized_tcgdex_price(card_info):
             )
             variant = "normal"
         if euro_price is None:
-            return {"value": "", "priceStatus": "price-unavailable"}
+            return {
+                "value": "",
+                "priceStatus": "price-unavailable",
+                "catalogCardId": card.get("id", "")
+            }
 
         fx_response = requests.get(
             "https://api.frankfurter.dev/v2/rate/EUR/USD",
@@ -397,6 +471,7 @@ def _localized_tcgdex_price(card_info):
             "priceVariant": variant,
             "priceUpdatedAt": cardmarket.get("updated", ""),
             "marketCardId": card.get("id", ""),
+            "catalogCardId": card.get("id", ""),
             "originalPrice": euro_price,
             "originalCurrency": "EUR"
         }
@@ -540,28 +615,33 @@ def _market_price_for_card(card_info):
 @app.get("/cards")
 def get_cards():
     ws = get_sheet()
+    _ensure_columns(ws)
     return ws.get_all_records()
 
 @app.post("/cards")
 def add_card(data: dict):
     ws = get_sheet()
-    rows = ws.get_all_records()
-    cols = ["id","name","pokemon","set","number","year","condition","language","rarity","value","images","comments"]
-    if not rows:
-        ws.append_row(cols)
-    ws.append_row([data.get(c,"") for c in cols])
+    headers = _ensure_columns(ws)
+    ws.append_row([data.get(column, "") for column in headers])
     return {"ok": True}
 
 @app.put("/cards/{card_id}")
 def update_card(card_id: str, data: dict):
     ws = get_sheet()
+    headers = _ensure_columns(ws)
     records = ws.get_all_records()
-    cols = ["id","name","pokemon","set","number","year","condition","language","rarity","value","images","comments"]
-    for i, row in enumerate(records):
+    column_indexes = {
+        column: index + 1 for index, column in enumerate(headers)
+    }
+    for row_index, row in enumerate(records, start=2):
         if str(row["id"]) == card_id:
-            for j, col in enumerate(cols):
-                if col in data:
-                    ws.update_cell(i + 2, j + 1, data[col])
+            updates = [
+                gspread.Cell(row_index, column_indexes[column], data[column])
+                for column in CARD_COLUMNS
+                if column in data and column in column_indexes
+            ]
+            if updates:
+                ws.update_cells(updates, value_input_option="USER_ENTERED")
             return {"ok": True}
     return {"ok": False}
 
@@ -574,6 +654,120 @@ def delete_card(card_id: str):
             ws.delete_rows(i + 2)
             return {"ok": True}
     return {"ok": False}
+
+_price_refresh_lock = threading.Lock()
+_price_refresh_status = {
+    "running": False,
+    "checked": 0,
+    "updated": 0,
+    "matched": 0,
+    "lastRun": "",
+    "error": ""
+}
+
+def _refresh_one_card(card):
+    try:
+        return card, _market_price_for_card(card)
+    except Exception as exc:
+        return card, {
+            "value": "",
+            "priceStatus": "error",
+            "error": str(exc)
+        }
+
+def _refresh_all_prices_job():
+    if not _price_refresh_lock.acquire(blocking=False):
+        return
+    _price_refresh_status.update({
+        "running": True,
+        "checked": 0,
+        "updated": 0,
+        "matched": 0,
+        "error": ""
+    })
+    try:
+        ws = get_sheet()
+        headers = _ensure_columns(ws)
+        records = ws.get_all_records()
+        column_indexes = {
+            column: index + 1 for index, column in enumerate(headers)
+        }
+        today = datetime.now(timezone.utc).date().isoformat()
+        due = [
+            (row_index, card)
+            for row_index, card in enumerate(records, start=2)
+            if not str(card.get("priceCheckedAt") or "").startswith(today)
+        ]
+
+        results = []
+        with ThreadPoolExecutor(max_workers=3) as executor:
+            futures = {
+                executor.submit(_refresh_one_card, card): row_index
+                for row_index, card in due
+            }
+            for future in as_completed(futures):
+                row_index = futures[future]
+                card, price_result = future.result()
+                results.append((row_index, card, price_result))
+                _price_refresh_status["checked"] += 1
+
+        cells = []
+        checked_at = datetime.now(timezone.utc).isoformat()
+        for row_index, card, result in results:
+            cells.append(gspread.Cell(
+                row_index,
+                column_indexes["priceCheckedAt"],
+                checked_at
+            ))
+            catalog_card_id = result.get("catalogCardId")
+            if catalog_card_id:
+                cells.append(gspread.Cell(
+                    row_index,
+                    column_indexes["catalogCardId"],
+                    catalog_card_id
+                ))
+            if result.get("priceStatus") != "matched":
+                continue
+            cells.extend([
+                gspread.Cell(
+                    row_index,
+                    column_indexes["value"],
+                    result.get("value", "")
+                ),
+                gspread.Cell(
+                    row_index,
+                    column_indexes["priceSource"],
+                    result.get("priceSource", "")
+                ),
+                gspread.Cell(
+                    row_index,
+                    column_indexes["priceUpdatedAt"],
+                    result.get("priceUpdatedAt", "")
+                )
+            ])
+            _price_refresh_status["matched"] += 1
+            if str(card.get("value") or "") != str(result.get("value") or ""):
+                _price_refresh_status["updated"] += 1
+
+        if cells:
+            ws.update_cells(cells, value_input_option="USER_ENTERED")
+        _price_refresh_status["lastRun"] = checked_at
+    except Exception as exc:
+        _price_refresh_status["error"] = str(exc)
+    finally:
+        _price_refresh_status["running"] = False
+        _price_refresh_lock.release()
+
+@app.post("/maintenance/refresh-prices")
+def refresh_all_prices(background_tasks: BackgroundTasks):
+    if _price_refresh_status["running"]:
+        return {"ok": True, "status": "already-running"}
+    background_tasks.add_task(_refresh_all_prices_job)
+    return {"ok": True, "status": "started"}
+
+@app.get("/maintenance/refresh-prices/status")
+def refresh_all_prices_status():
+    return _price_refresh_status
 
 @app.post("/price")
 def refresh_market_price(data: dict):
