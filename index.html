@@ -325,26 +325,76 @@
     .ai-img-box { border: 1px dashed #7c3aed55; border-radius: 10px; overflow: hidden; background: #050a18; }
     .ai-img-preview { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: none; }
     .ai-result { font-size: 0.8em; background: #050a18; border-radius: 8px; padding: 8px; margin-top: 8px; border: 1px solid #7c3aed44; color: #a78bfa; display: none; }
-    .quick-result {
-      display: none; margin-top: 14px; border-radius: 14px; overflow: hidden;
-      border: 1px solid rgba(167,139,250,0.35);
-      background: linear-gradient(150deg, rgba(76,29,149,0.35), rgba(15,23,48,0.95));
+    /* ===== QUICK MULTI-SCAN SESSION ===== */
+    .quick-scan-modal { max-height: 94vh; }
+    .quick-scan-modal .modal-body { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .quick-session-summary {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; padding: 11px 13px; border-radius: 13px;
+      background: linear-gradient(135deg, rgba(20,184,166,.13), rgba(124,58,237,.15));
+      border: 1px solid rgba(45,212,191,.25); margin-bottom: 11px;
     }
-    .quick-result.show { display: block; }
-    .quick-result-title { padding: 13px 14px 6px; color: #fff; font-size: 1.05em; font-weight: 900; }
-    .quick-result-set { padding: 0 14px 11px; color: #94a3b8; font-size: 0.76em; }
-    .quick-result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: rgba(167,139,250,0.16); }
-    .quick-result-item { padding: 10px 12px; background: #0f1730; }
-    .quick-result-label { color: #64748b; font-size: 0.62em; font-weight: 700; }
-    .quick-result-value { color: #e2e8f0; font-size: 0.86em; font-weight: 800; margin-top: 2px; }
-    .quick-result-price {
-      margin: 12px; padding: 11px; border-radius: 11px; text-align: center;
-      color: #fbbf24; font-size: 1.18em; font-weight: 900;
-      background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3);
+    .quick-summary-count { color: #94a3b8; font-size: .76em; font-weight: 700; }
+    .quick-summary-total { color: #5eead4; font-size: 1.18em; font-weight: 900; white-space: nowrap; }
+    .quick-scan-list { display: flex; flex-direction: column; gap: 9px; min-height: 90px; }
+    .quick-scan-empty {
+      min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      color: #52658f; border: 1px dashed #293765; border-radius: 14px;
+      background: rgba(15,23,48,.42); text-align: center; padding: 18px;
+    }
+    .quick-scan-empty-icon { font-size: 2em; margin-bottom: 5px; }
+    .quick-scan-empty-title { color: #94a3b8; font-size: .84em; font-weight: 800; }
+    .quick-scan-empty-sub { font-size: .68em; margin-top: 3px; }
+    .quick-scan-row {
+      display: grid; grid-template-columns: 58px minmax(0,1fr) 30px;
+      gap: 10px; align-items: center; padding: 8px;
+      border-radius: 13px; background: #0f1730; border: 1px solid #1e2d5a;
+      animation: cardEnter .28s ease both;
+    }
+    .quick-scan-thumb {
+      width: 58px; height: 78px; border-radius: 9px; object-fit: cover;
+      background: #050a18; border: 1px solid #293765;
+    }
+    .quick-scan-info { min-width: 0; }
+    .quick-scan-name {
+      color: #f8fafc; font-size: .86em; font-weight: 900;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .quick-scan-price { color: #fbbf24; font-size: .88em; font-weight: 900; margin-top: 3px; }
+    .quick-scan-status { color: #7891c8; font-size: .7em; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .quick-scan-status.error { color: #fda4af; }
+    .quick-mini-ball {
+      width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%; border: 2px solid #050a18;
+      background: linear-gradient(to bottom,#ef4444 0 42%,#050a18 42% 58%,#f8fafc 58%);
+      animation: pokeWobble .8s ease-in-out infinite;
+    }
+    .quick-remove {
+      width: 28px; height: 28px; border: 0; border-radius: 50%;
+      background: #182443; color: #64748b; cursor: pointer; font-size: .8em;
+    }
+    .quick-capture-actions {
+      display: grid; grid-template-columns: .8fr 1.2fr; gap: 9px; margin-top: 13px;
+      position: sticky; bottom: 0; padding: 9px 0 2px;
+      background: linear-gradient(to top,#080d1f 72%,transparent);
+    }
+    .quick-capture-btn, .quick-gallery-btn {
+      min-height: 52px; border-radius: 26px; border: 1px solid rgba(255,255,255,.13);
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      font-family: inherit; font-weight: 900; font-size: .88em; cursor: pointer;
+    }
+    .quick-capture-btn {
+      color: #fff; background: linear-gradient(135deg,#7c3aed,#4f46e5);
+      box-shadow: 0 7px 24px rgba(124,58,237,.36);
+    }
+    .quick-gallery-btn { color: #a5b4fc; background: #0f1730; border-color: #293765; }
+    .quick-gallery-btn input { display: none; }
+    .quick-session-tools { display: flex; justify-content: center; margin-top: 8px; }
+    .quick-clear-btn {
+      border: 0; background: none; color: #64748b; font-family: inherit;
+      font-size: .72em; font-weight: 700; padding: 6px 10px; cursor: pointer;
     }
     .quick-privacy {
-      color: #64748b; font-size: 0.67em; line-height: 1.45; text-align: center;
-      margin: 9px 0 12px;
+      color: #52658f; font-size: .65em; line-height: 1.4; text-align: center; margin-top: 7px;
     }
 
     .upload-btns { display: flex; gap: 8px; }
@@ -624,7 +674,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-ball, .floating-action, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-ball, .floating-action, .quick-mini-ball, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
   </style>
@@ -734,50 +784,33 @@
 </div>
 
 <div class="overlay" id="quickIdentifyOverlay" onclick="quickOverlayClick(event)">
-  <div class="modal">
+  <div class="modal quick-scan-modal">
     <div class="modal-handle"></div>
     <div class="modal-head">
-      <span class="modal-title">📸 זיהוי מהיר של קלף</span>
+      <span class="modal-title">📸 זיהוי מהיר מרובה</span>
       <button class="modal-close" onclick="closeQuickIdentify()">✕</button>
     </div>
     <div class="modal-body">
-      <div class="ai-section">
-        <div class="ai-head">✨ צילום או העלאה לזיהוי בלבד</div>
-        <div class="ai-imgs">
-          <div class="ai-img-box">
-            <div style="padding:8px;text-align:center;">
-              <div style="font-size:0.72em;color:#a78bfa;font-weight:700;margin-bottom:6px;">פנים הקלף</div>
-              <img class="ai-img-preview" id="quickFrontPrev">
-              <div style="display:flex;gap:5px;margin-top:6px;">
-                <label style="flex:1;background:#0f1730;border-radius:8px;padding:7px;text-align:center;cursor:pointer;font-size:0.7em;color:#a78bfa;font-weight:700;">
-                  <input type="file" accept="image/*" style="display:none" onchange="quickPreview('front',this)">🖼️ גלריה
-                </label>
-                <label style="flex:1;background:#0a0520;border-radius:8px;padding:7px;text-align:center;cursor:pointer;font-size:0.7em;color:#c4b5fd;font-weight:700;">
-                  <input type="file" id="quickFrontCamera" accept="image/*" capture="environment" style="display:none" onchange="quickPreview('front',this)">📸 צלם
-                </label>
-              </div>
-            </div>
-          </div>
-          <div class="ai-img-box">
-            <div style="padding:8px;text-align:center;">
-              <div style="font-size:0.72em;color:#a78bfa;font-weight:700;margin-bottom:6px;">גב (אופציונלי)</div>
-              <img class="ai-img-preview" id="quickBackPrev">
-              <div style="display:flex;gap:5px;margin-top:6px;">
-                <label style="flex:1;background:#0f1730;border-radius:8px;padding:7px;text-align:center;cursor:pointer;font-size:0.7em;color:#a78bfa;font-weight:700;">
-                  <input type="file" accept="image/*" style="display:none" onchange="quickPreview('back',this)">🖼️ גלריה
-                </label>
-                <label style="flex:1;background:#0a0520;border-radius:8px;padding:7px;text-align:center;cursor:pointer;font-size:0.7em;color:#c4b5fd;font-weight:700;">
-                  <input type="file" accept="image/*" capture="environment" style="display:none" onchange="quickPreview('back',this)">📸 צלם
-                </label>
-              </div>
-            </div>
-          </div>
-        </div>
-        <button class="btn btn-purple" id="quickIdentifyBtn" onclick="runQuickIdentify()">✨ זהה ובדוק מחיר</button>
+      <div class="quick-session-summary">
+        <div class="quick-summary-count" id="quickScanCount">0 קלפים נסרקו</div>
+        <div class="quick-summary-total" id="quickScanTotal">סה״כ: $0.00</div>
       </div>
-      <div class="quick-result" id="quickResult"></div>
-      <div class="quick-privacy">התמונה משמשת לזיהוי זמני בלבד ואינה נשמרת בגלריה או ב־Cloudinary.</div>
-      <button class="btn btn-gray" onclick="resetQuickIdentify()">בדוק קלף נוסף</button>
+
+      <div class="quick-scan-list" id="quickScanList"></div>
+
+      <div class="quick-capture-actions">
+        <label class="quick-gallery-btn">
+          <input id="quickGalleryInput" type="file" accept="image/*" multiple onchange="quickFilesSelected(this)">
+          🖼️ גלריה
+        </label>
+        <button class="quick-capture-btn" onclick="triggerQuickCamera()">📸 צלם עוד קלף</button>
+      </div>
+      <input id="quickFrontCamera" type="file" accept="image/*" capture="environment" style="display:none" onchange="quickFilesSelected(this)">
+
+      <div class="quick-session-tools">
+        <button class="quick-clear-btn" onclick="resetQuickIdentify()">🗑️ נקה את הסריקה</button>
+      </div>
+      <div class="quick-privacy">הסריקה זמנית בלבד. התמונות והתוצאות אינן נשמרות באוסף או בענן.</div>
     </div>
   </div>
 </div>
@@ -921,7 +954,7 @@
 const API = 'https://pokemon-collection-f4wv.onrender.com';
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
-let quickFront=null, quickBack=null, quickPreviewUrls=[];
+let quickScans=[], quickProcessing=false, quickSessionToken=0;
 let comments={};
 let pendingSave=null;
 
@@ -1122,54 +1155,109 @@ function openQuickIdentify(){
 function openQuickCamera(){
   resetQuickIdentify();
   document.getElementById('quickIdentifyOverlay').classList.add('open');
+  triggerQuickCamera();
+}
+function triggerQuickCamera(){
   const camera=document.getElementById('quickFrontCamera');
   camera.value='';
   camera.click();
 }
-function closeQuickIdentify(){document.getElementById('quickIdentifyOverlay').classList.remove('open');}
-function quickOverlayClick(e){if(e.target===document.getElementById('quickIdentifyOverlay'))closeQuickIdentify();}
+function closeQuickIdentify(){
+  document.getElementById('quickIdentifyOverlay').classList.remove('open');
+}
+function quickOverlayClick(e){
+  if(e.target===document.getElementById('quickIdentifyOverlay'))closeQuickIdentify();
+}
 function resetQuickIdentify(){
-  quickFront=null;quickBack=null;
-  quickPreviewUrls.forEach(url=>URL.revokeObjectURL(url));quickPreviewUrls=[];
-  ['quickFrontPrev','quickBackPrev'].forEach(id=>{const img=document.getElementById(id);img.removeAttribute('src');img.style.display='none';});
-  document.querySelectorAll('#quickIdentifyOverlay input[type="file"]').forEach(input=>input.value='');
-  const result=document.getElementById('quickResult');result.classList.remove('show');result.innerHTML='';
+  quickSessionToken++;
+  quickScans.forEach(scan=>{if(scan.url)URL.revokeObjectURL(scan.url);});
+  quickScans=[];quickProcessing=false;
+  ['quickFrontCamera','quickGalleryInput'].forEach(id=>{
+    const input=document.getElementById(id);if(input)input.value='';
+  });
+  renderQuickScans();
 }
-function quickPreview(side,input){
-  const file=input.files[0];if(!file)return;
-  if(side==='front')quickFront=file;else quickBack=file;
-  const url=URL.createObjectURL(file);quickPreviewUrls.push(url);
-  const img=document.getElementById(side==='front'?'quickFrontPrev':'quickBackPrev');
-  img.src=url;img.style.display='block';input.value='';
+function quickFilesSelected(input){
+  const files=Array.from(input.files||[]).filter(file=>file.type.startsWith('image/'));
+  input.value='';
+  files.forEach(file=>{
+    quickScans.push({
+      id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
+      file,url:URL.createObjectURL(file),status:'queued',name:'',value:null,
+      priceStatus:'',error:''
+    });
+  });
+  renderQuickScans();
+  processQuickQueue();
 }
-async function runQuickIdentify(){
-  if(!quickFront){toast('צלם או העלה את חזית הקלף');return;}
-  const btn=document.getElementById('quickIdentifyBtn');
-  btn.disabled=true;btn.textContent='🔍 מזהה ובודק מחיר...';
-  document.getElementById('aiLoading').classList.add('show');
+function removeQuickScan(id){
+  const index=quickScans.findIndex(scan=>scan.id===id);
+  if(index<0)return;
+  if(quickScans[index].url)URL.revokeObjectURL(quickScans[index].url);
+  quickScans.splice(index,1);renderQuickScans();
+}
+function renderQuickScans(){
+  const list=document.getElementById('quickScanList');
+  if(!list)return;
+  const finished=quickScans.filter(scan=>scan.status==='done');
+  const total=finished.reduce((sum,scan)=>sum+(Number.isFinite(scan.value)?scan.value:0),0);
+  document.getElementById('quickScanCount').textContent=
+    quickScans.length===1?'קלף אחד נסרק':quickScans.length+' קלפים נסרקו';
+  document.getElementById('quickScanTotal').textContent='סה״כ: $'+total.toFixed(2);
+  if(!quickScans.length){
+    list.innerHTML=`<div class="quick-scan-empty">
+      <div class="quick-scan-empty-icon">📷</div>
+      <div class="quick-scan-empty-title">צלם קלף כדי להתחיל</div>
+      <div class="quick-scan-empty-sub">אפשר להמשיך לצלם בזמן שהקלפים מזוהים</div>
+    </div>`;
+    return;
+  }
+  list.innerHTML=quickScans.map(scan=>{
+    let body='';
+    if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
+    else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה ובודק מחיר...</div>';
+    else if(scan.status==='error')body='<div class="quick-scan-status error">לא הצלחנו לזהות — אפשר לצלם שוב</div>';
+    else {
+      const price=scan.priceStatus==='matched'&&Number.isFinite(scan.value)?'$'+scan.value.toFixed(2):'מחיר לא נמצא';
+      body=`<div class="quick-scan-name">${escapeHtml(scan.name||'קלף לא מזוהה')}</div>
+        <div class="quick-scan-price">${price}</div>`;
+    }
+    return `<div class="quick-scan-row">
+      <img class="quick-scan-thumb" src="${scan.url}" alt="">
+      <div class="quick-scan-info">${body}</div>
+      <button class="quick-remove" onclick="removeQuickScan('${scan.id}')" aria-label="הסר">✕</button>
+    </div>`;
+  }).join('');
+}
+async function processQuickQueue(){
+  if(quickProcessing)return;
+  quickProcessing=true;
+  const token=quickSessionToken;
   try{
-    const fd=new FormData();fd.append('front',quickFront);if(quickBack)fd.append('back',quickBack);
-    const response=await fetch(`${API}/identify`,{method:'POST',body:fd});
-    const d=await response.json();
-    if(!response.ok||d.error)throw new Error(d.error||'identify');
-    const price=d.priceStatus==='matched'?`$${escapeHtml(d.value)}`:'לא נמצא מחיר ודאי';
-    const result=document.getElementById('quickResult');
-    result.innerHTML=`
-      <div class="quick-result-title">${escapeHtml(d.name||d.pokemon||'קלף לא מזוהה')}</div>
-      <div class="quick-result-set">${escapeHtml(d.set||'סדרה לא ידועה')}${d.number?' · #'+escapeHtml(d.number):''}</div>
-      <div class="quick-result-grid">
-        <div class="quick-result-item"><div class="quick-result-label">פוקימון</div><div class="quick-result-value">${escapeHtml(d.pokemon||'—')}</div></div>
-        <div class="quick-result-item"><div class="quick-result-label">שנה</div><div class="quick-result-value">${escapeHtml(d.year||'—')}</div></div>
-        <div class="quick-result-item"><div class="quick-result-label">נדירות</div><div class="quick-result-value">${escapeHtml(RARITY_HE[d.rarity]||d.rarity||'—')}</div></div>
-        <div class="quick-result-item"><div class="quick-result-label">מצב</div><div class="quick-result-value">${escapeHtml(CONDITION_HE[d.condition]||d.condition||'—')}</div></div>
-      </div>
-      <div class="quick-result-price">💰 ${price}${d.priceStatus==='matched'?` <span style="font-size:.55em;color:#94a3b8">מחיר שוק</span>`:''}</div>`;
-    result.classList.add('show');
-    await showCaptureSuccess();
-  }catch(e){toast('לא הצלחנו לזהות את הקלף כרגע');}
-  finally{
-    document.getElementById('aiLoading').classList.remove('show');
-    btn.disabled=false;btn.textContent='✨ זהה ובדוק מחיר';
+    while(token===quickSessionToken){
+      const scan=quickScans.find(item=>item.status==='queued');
+      if(!scan)break;
+      scan.status='processing';renderQuickScans();
+      try{
+        const fd=new FormData();fd.append('front',scan.file);
+        const response=await fetch(`${API}/identify`,{method:'POST',body:fd});
+        const data=await response.json();
+        if(!response.ok||data.error)throw new Error(data.error||'identify');
+        if(token!==quickSessionToken)return;
+        scan.status='done';
+        scan.name=data.name||data.pokemon||'קלף לא מזוהה';
+        scan.priceStatus=data.priceStatus||'';
+        const parsed=parseFloat(data.value);
+        scan.value=data.priceStatus==='matched'&&Number.isFinite(parsed)?parsed:null;
+        scan.data=data;
+      }catch(error){
+        if(token!==quickSessionToken)return;
+        scan.status='error';scan.error=String(error);
+      }
+      renderQuickScans();
+    }
+  }finally{
+    if(token===quickSessionToken)quickProcessing=false;
   }
 }
 
