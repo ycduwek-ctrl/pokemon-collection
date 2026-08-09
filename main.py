@@ -695,6 +695,9 @@ def _refresh_price_batch(limit=2):
             for row_index, card in enumerate(records, start=2)
             if not str(card.get("priceCheckedAt") or "").startswith(today)
         ]
+        all_due.sort(
+            key=lambda item: str(item[1].get("priceCheckedAt") or "")
+        )
         batch_size = max(1, min(int(limit or 2), 4))
         due = all_due[:batch_size]
         checked_at = datetime.now(timezone.utc).isoformat()
