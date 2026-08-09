@@ -159,6 +159,107 @@ def _pokemon_tcg_api_price(card_info):
         return {"value": "", "priceStatus": "service-unavailable"}
 
 
+def _enrich_identification_from_catalog(card_info):
+    """Verify a foreign printing by its language, set code and collector number."""
+    language = str(card_info.get("language") or "").strip().lower()
+    language_codes = {
+        "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
+        "french": "fr", "german": "de", "spanish": "es",
+        "italian": "it", "portuguese": "pt", "thai": "th",
+        "indonesian": "id"
+    }
+    lang = language_codes.get(language)
+    if not lang:
+        return card_info
+
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
+    if not card_number:
+        return card_info
+    set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
+    printed_name = str(card_info.get("printedName") or "").strip()
+
+    try:
+        search = requests.get(
+            f"https://api.tcgdex.net/v2/{lang}/cards",
+            params={"localId": card_number},
+            timeout=12
+        )
+        search.raise_for_status()
+        candidates = [
+            card for card in search.json()
+            if _clean_card_number(card.get("localId")) == card_number
+        ]
+        if set_code:
+            code_matches = [
+                card for card in candidates
+                if re.sub(
+                    r"[^A-Z0-9]", "",
+                    str(card.get("id") or "").rsplit("-", 1)[0].upper()
+                ) == set_code
+            ]
+            if code_matches:
+                candidates = code_matches
+        elif len(candidates) > 12:
+            # Avoid guessing among dozens of foreign sets with the same number.
+            return card_info
+
+        details = []
+        for candidate in candidates[:12]:
+            response = requests.get(
+                f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
+                timeout=12
+            )
+            if response.ok:
+                details.append(response.json())
+
+        if printed_set_count.isdigit():
+            count_matches = [
+                card for card in details
+                if str(((card.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
+            ]
+            if count_matches:
+                details = count_matches
+
+        if len(details) > 1 and printed_name:
+            scored = sorted(
+                [
+                    (
+                        SequenceMatcher(
+                            None,
+                            printed_name.casefold(),
+                            str(card.get("name") or "").casefold()
+                        ).ratio(),
+                        card
+                    )
+                    for card in details
+                ],
+                key=lambda item: item[0],
+                reverse=True
+            )
+            if scored[0][0] >= 0.72 and (
+                len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.10
+            ):
+                details = [scored[0][1]]
+
+        if len(details) != 1:
+            return card_info
+        card = details[0]
+        card_set = card.get("set") or {}
+        official_count = str((card_set.get("cardCount") or {}).get("official") or "")
+        resolved_code = str(card.get("id") or "").rsplit("-", 1)[0]
+        card_info["setCode"] = resolved_code
+        card_info["catalogCardId"] = card.get("id", "")
+        if official_count:
+            card_info["number"] = f"{card.get('localId', card_number)}/{official_count}"
+        if not card_info.get("set"):
+            card_info["set"] = card_set.get("name", "")
+        if not card_info.get("rarity") and card.get("rarity"):
+            card_info["rarity"] = card["rarity"]
+        return card_info
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        return card_info
+
+
 def _localized_tcgdex_price(card_info):
     """Look up the exact non-English printing and normalize its price to USD."""
     language = str(card_info.get("language") or "").strip().lower()
@@ -496,9 +597,9 @@ async def upload_image(file: UploadFile = File(...)):
 async def identify(front: UploadFile = File(...), back: UploadFile = File(None)):
     def compress(f):
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(f))).convert("RGB")
-        img.thumbnail((800, 800), Image.LANCZOS)
+        img.thumbnail((1200, 1200), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=85)
+        img.save(buf, format="JPEG", quality=90)
         return base64.b64encode(buf.getvalue()).decode()
 
     front_b64 = compress(await front.read())
@@ -519,7 +620,8 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 - השתמש במספר האספן כנתון הראשי לזיהוי הקלף והסדרה; השם והסמל הם אימות נוסף
 
 קרא ישירות מהקלף:
-- שם הפוקימון הרשמי באנגלית, גם אם הוא מודפס על הקלף בשפה אחרת
+- את השם המדויק כפי שהוא מודפס בשפת המקור החזר בשדה printedName
+- את השם הרשמי באנגלית החזר בשדות name ו-pokemon, גם אם הוא מודפס על הקלף בשפה אחרת
 - מספר האספן המלא בפינה התחתונה
 - קוד הסדרה הקצר שמודפס ליד מספר האספן, למשל SV11W, SV2a, S12a או SM10. החזר אותו בשדה setCode; אם אינו קריא החזר מחרוזת ריקה
 - שם הסדרה הרשמי באנגלית (Base Set, Jungle, Fossil, Team Rocket וכו׳), גם אם הקלף בשפה אחרת
@@ -532,7 +634,7 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
 אל תנחש מחיר ואל תחזיר הערכת שווי. המחיר יילקח לאחר הזיהוי ממאגר מחירי שוק.
 
 החזר JSON בלבד:
-{"name":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
+{"name":"","printedName":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
         {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
     ]
     if back:
@@ -556,5 +658,6 @@ async def identify(front: UploadFile = File(...), back: UploadFile = File(None))
     text = re.sub(r'```json|```','',text).strip()
     match = re.search(r'\{.*\}', text, re.DOTALL)
     identified = json.loads(match.group() if match else text)
+    identified = _enrich_identification_from_catalog(identified)
     identified.update(_market_price_for_card(identified))
     return identified
