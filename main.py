@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 import gspread
 from google.oauth2.service_account import Credentials
@@ -759,10 +759,12 @@ def _refresh_all_prices_job():
         _price_refresh_lock.release()
 
 @app.post("/maintenance/refresh-prices")
-def refresh_all_prices(background_tasks: BackgroundTasks):
-    if _price_refresh_status["running"]:
+def refresh_all_prices():
+    if _price_refresh_status["running"] or _price_refresh_lock.locked():
         return {"ok": True, "status": "already-running"}
-    background_tasks.add_task(_refresh_all_prices_job)
+    _price_refresh_status["running"] = True
+    worker = threading.Thread(target=_refresh_all_prices_job, daemon=True)
+    worker.start()
     return {"ok": True, "status": "started"}
 
 @app.get("/maintenance/refresh-prices/status")
