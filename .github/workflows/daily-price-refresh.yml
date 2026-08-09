@@ -11,7 +11,7 @@ permissions:
 jobs:
   refresh:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - name: Wake the free backend
         run: |
@@ -19,28 +19,22 @@ jobs:
             --retry 4 --retry-all-errors --retry-delay 15 \
             https://pokemon-collection-f4wv.onrender.com/cards > /dev/null
 
-      - name: Start price refresh
+      - name: Refresh every gallery card
         run: |
-          curl --fail --silent --show-error \
-            --retry 3 --retry-all-errors --retry-delay 10 \
-            -X POST \
-            https://pokemon-collection-f4wv.onrender.com/maintenance/refresh-prices
-          sleep 5
-
-      - name: Wait for completion
-        run: |
-          for attempt in $(seq 1 60); do
-            status=$(curl --fail --silent --show-error \
-              --retry 2 --retry-all-errors --retry-delay 5 \
-              https://pokemon-collection-f4wv.onrender.com/maintenance/refresh-prices/status)
-            echo "$status"
-            if echo "$status" | grep -q '"running":false'; then
-              if echo "$status" | grep -q '"error":""'; then
-                exit 0
-              fi
+          for batch in $(seq 1 20); do
+            response=$(curl --fail --silent --show-error \
+              --max-time 120 \
+              --retry 3 --retry-all-errors --retry-delay 10 \
+              -X POST \
+              "https://pokemon-collection-f4wv.onrender.com/maintenance/refresh-prices?limit=2")
+            echo "$response"
+            if echo "$response" | grep -q '"ok":false'; then
               exit 1
             fi
-            sleep 10
+            if echo "$response" | grep -q '"remaining":0'; then
+              exit 0
+            fi
+            sleep 3
           done
-          echo "Daily price refresh timed out"
+          echo "Daily price refresh did not finish all cards"
           exit 1
