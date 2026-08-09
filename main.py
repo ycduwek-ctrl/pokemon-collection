@@ -363,6 +363,16 @@ def _localized_tcgdex_price(card_info):
                 or cardmarket.get("avg-holo")
             )
             variant = "holo"
+            # Some Asian catalog entries expose only one ungraded market row
+            # even when the artwork looks holographic. Use that exact card's
+            # normal market row instead of returning no price.
+            if not euro_price:
+                euro_price = (
+                    cardmarket.get("trend")
+                    or cardmarket.get("avg7")
+                    or cardmarket.get("avg")
+                )
+                variant = "market"
         else:
             euro_price = (
                 cardmarket.get("trend")
