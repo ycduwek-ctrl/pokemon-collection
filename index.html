@@ -553,6 +553,36 @@
     .price-up { animation: priceUp 0.85s ease both; }
     .price-down { animation: priceDown 0.7s ease both; }
     .price-same { animation: priceSame 0.55s ease both; }
+    /* ===== FLOATING ACTIONS ===== */
+    .floating-actions {
+      position: fixed; left: 14px;
+      bottom: calc(16px + env(safe-area-inset-bottom));
+      z-index: 160; display: flex; flex-direction: column; gap: 9px;
+      align-items: flex-start; direction: rtl;
+    }
+    .floating-action {
+      min-height: 48px; border: 1px solid rgba(255,255,255,.16);
+      border-radius: 25px; padding: 0 15px;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+      color: #fff; font-family: inherit; font-size: .82em; font-weight: 900;
+      cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,.48);
+      backdrop-filter: blur(9px); transition: transform .16s, filter .16s;
+    }
+    .floating-action:active { transform: scale(.92); filter: brightness(1.18); }
+    .floating-action.scan {
+      background: linear-gradient(135deg, rgba(124,58,237,.96), rgba(79,70,229,.96));
+      box-shadow: 0 8px 30px rgba(124,58,237,.42);
+    }
+    .floating-action.add {
+      background: linear-gradient(135deg, rgba(245,158,11,.96), rgba(217,119,6,.96));
+      color: #12063a; box-shadow: 0 8px 30px rgba(245,158,11,.30);
+    }
+    .floating-action-icon { font-size: 1.25em; line-height: 1; }
+    .grid { padding-bottom: 126px; }
+    @media (min-width: 720px) {
+      .floating-actions { left: 24px; bottom: 24px; }
+    }
+
     .toast.show { animation: toastPop 0.3s cubic-bezier(.2,1.3,.3,1); }
     @keyframes cardEnter {
       from { opacity: 0; transform: translateY(14px) scale(0.96); }
@@ -594,7 +624,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-ball, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-ball, .floating-action, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
   </style>
@@ -690,6 +720,15 @@
   <button class="reset-btn" onclick="resetFilters()">🔄 נקה סינון</button>
 </div>
 
+<div class="floating-actions" aria-label="פעולות מהירות">
+  <button class="floating-action scan" onclick="openQuickCamera()" aria-label="זיהוי מהיר במצלמה">
+    <span class="floating-action-icon">📸</span><span>זיהוי מהיר</span>
+  </button>
+  <button class="floating-action add" onclick="openAdd()" aria-label="הוספת קלף">
+    <span class="floating-action-icon">＋</span><span>הוסף קלף</span>
+  </button>
+</div>
+
 <div class="grid" id="grid">
   <div class="loading"><div class="spin"></div><div class="loading-text">טוען את האוסף של בר...</div></div>
 </div>
@@ -714,7 +753,7 @@
                   <input type="file" accept="image/*" style="display:none" onchange="quickPreview('front',this)">🖼️ גלריה
                 </label>
                 <label style="flex:1;background:#0a0520;border-radius:8px;padding:7px;text-align:center;cursor:pointer;font-size:0.7em;color:#c4b5fd;font-weight:700;">
-                  <input type="file" accept="image/*" capture="environment" style="display:none" onchange="quickPreview('front',this)">📸 צלם
+                  <input type="file" id="quickFrontCamera" accept="image/*" capture="environment" style="display:none" onchange="quickPreview('front',this)">📸 צלם
                 </label>
               </div>
             </div>
@@ -812,7 +851,7 @@
         </div>
         <div class="fg" style="margin-bottom:0">
           <label>שפה</label>
-          <select id="fLanguage"><option value="English">English (אנגלית)</option><option value="Japanese">Japanese (יפנית)</option><option value="Hebrew">Hebrew (עברית)</option><option value="Other">Other (אחר)</option></select>
+          <select id="fLanguage"><option value="English">English (אנגלית)</option><option value="Japanese">Japanese (יפנית)</option><option value="Chinese">Chinese (סינית)</option><option value="Korean">Korean (קוריאנית)</option><option value="French">French (צרפתית)</option><option value="German">German (גרמנית)</option><option value="Spanish">Spanish (ספרדית)</option><option value="Italian">Italian (איטלקית)</option><option value="Portuguese">Portuguese (פורטוגזית)</option><option value="Thai">Thai (תאילנדית)</option><option value="Indonesian">Indonesian (אינדונזית)</option><option value="Hebrew">Hebrew (עברית)</option><option value="Other">Other (אחר)</option></select>
         </div>
       </div>
       <div class="row2" style="margin-top:12px">
@@ -888,10 +927,10 @@ let pendingSave=null;
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
-const LANGUAGES = ['English','Japanese','Hebrew','Other'];
+const LANGUAGES = ['English','Japanese','Chinese','Korean','French','German','Spanish','Italian','Portuguese','Thai','Indonesian','Hebrew','Other'];
 const RARITY_HE = {'Common':'רגיל','Uncommon':'לא נפוץ','Rare':'נדיר','Holo Rare':'נדיר מבריק','Ultra Rare':'נדיר במיוחד','Secret Rare':'נדיר סודי'};
 const CONDITION_HE = {'Mint':'מושלם','Near Mint':'כמעט מושלם','Excellent':'מצוין','Good':'טוב','Poor':'גרוע'};
-const LANGUAGE_HE = {'English':'אנגלית','Japanese':'יפנית','Hebrew':'עברית','Other':'אחר'};
+const LANGUAGE_HE = {'English':'אנגלית','Japanese':'יפנית','Chinese':'סינית','Korean':'קוריאנית','French':'צרפתית','German':'גרמנית','Spanish':'ספרדית','Italian':'איטלקית','Portuguese':'פורטוגזית','Thai':'תאילנדית','Indonesian':'אינדונזית','Hebrew':'עברית','Other':'אחר'};
 let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
 
 function rarityClass(r){const map={'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};return map[r]||'';}
@@ -1079,6 +1118,13 @@ function escapeHtml(value){
 function openQuickIdentify(){
   resetQuickIdentify();
   document.getElementById('quickIdentifyOverlay').classList.add('open');
+}
+function openQuickCamera(){
+  resetQuickIdentify();
+  document.getElementById('quickIdentifyOverlay').classList.add('open');
+  const camera=document.getElementById('quickFrontCamera');
+  camera.value='';
+  camera.click();
 }
 function closeQuickIdentify(){document.getElementById('quickIdentifyOverlay').classList.remove('open');}
 function quickOverlayClick(e){if(e.target===document.getElementById('quickIdentifyOverlay'))closeQuickIdentify();}
