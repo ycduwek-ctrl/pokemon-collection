@@ -9,8 +9,11 @@ ACCESS_TABLE = "access_requests"
 
 
 def _supabase_settings():
+    url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    if url.endswith("/rest/v1"):
+        url = url[: -len("/rest/v1")]
     return {
-        "url": os.environ.get("SUPABASE_URL", "").rstrip("/"),
+        "url": url,
         "anon": os.environ.get("SUPABASE_ANON_KEY", ""),
         "service": os.environ.get("SUPABASE_SERVICE_ROLE_KEY", ""),
         "admin": os.environ.get("HITIM_ADMIN_EMAIL", "").strip().lower(),
