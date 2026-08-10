@@ -1,9 +1,7 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import gspread
 from google.oauth2.service_account import Credentials
-import cloudinary
-import cloudinary.uploader
 from PIL import Image, ImageOps
 import io
 import os
@@ -15,6 +13,14 @@ import time
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
+from hitim_auth import (
+    public_auth_config,
+    ensure_access_request,
+    require_access,
+    list_access_users,
+    update_access_user,
+    remove_access_user,
+)
 
 app = FastAPI()
 
@@ -28,12 +34,6 @@ app.add_middleware(
 
 SCOPES = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 SHEET_URL = "https://docs.google.com/spreadsheets/d/1Hzn0CQCoZrMPKt-Hn6NfkXl6WhJ5tZC_-YILuFsiak0"
-
-cloudinary.config(
-    cloud_name=os.environ["CLOUDINARY_CLOUD_NAME"],
-    api_key=os.environ["CLOUDINARY_API_KEY"],
-    api_secret=os.environ["CLOUDINARY_API_SECRET"]
-)
 
 CARD_COLUMNS = [
     "id", "name", "pokemon", "set", "number", "year", "condition",
@@ -963,48 +963,71 @@ def _market_price_for_card(card_info):
             catalog_image
         )
 
-@app.get("/cards")
-def get_cards():
+@app.get("/health")
+def health():
+    return {"ok": True, "app": "Hitim", "authConfigured": public_auth_config()["configured"]}
+
+
+@app.get("/auth/config")
+def auth_config():
+    return public_auth_config()
+
+
+@app.post("/access/request")
+def request_access(authorization: str = Header(None)):
+    return ensure_access_request(authorization)
+
+
+@app.get("/access/me")
+def access_me(authorization: str = Header(None)):
+    return ensure_access_request(authorization)
+
+
+@app.get("/admin/users")
+def admin_users(authorization: str = Header(None)):
+    return list_access_users(authorization)
+
+
+@app.patch("/admin/users/{user_id}")
+def admin_update_user(user_id: str, data: dict, authorization: str = Header(None)):
+    return update_access_user(authorization, user_id, str(data.get("status") or ""))
+
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: str, authorization: str = Header(None)):
+    return remove_access_user(authorization, user_id)
+
+
+def _legacy_cards():
     ws = get_sheet()
-    _ensure_columns(ws)
     return ws.get_all_records()
 
+
+@app.get("/legacy/cards")
+def legacy_cards(authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    return _legacy_cards()
+
+
+@app.get("/cards")
+def get_cards(authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    return _legacy_cards()
+
 @app.post("/cards")
-def add_card(data: dict):
-    ws = get_sheet()
-    headers = _ensure_columns(ws)
-    ws.append_row([data.get(column, "") for column in headers])
-    return {"ok": True}
+def add_card(data: dict, authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    raise HTTPException(status_code=410, detail="Hitim cards are stored on the user's device")
 
 @app.put("/cards/{card_id}")
-def update_card(card_id: str, data: dict):
-    ws = get_sheet()
-    headers = _ensure_columns(ws)
-    records = ws.get_all_records()
-    column_indexes = {
-        column: index + 1 for index, column in enumerate(headers)
-    }
-    for row_index, row in enumerate(records, start=2):
-        if str(row["id"]) == card_id:
-            updates = [
-                gspread.Cell(row_index, column_indexes[column], data[column])
-                for column in CARD_COLUMNS
-                if column in data and column in column_indexes
-            ]
-            if updates:
-                ws.update_cells(updates, value_input_option="USER_ENTERED")
-            return {"ok": True}
-    return {"ok": False}
+def update_card(card_id: str, data: dict, authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    raise HTTPException(status_code=410, detail="Hitim cards are stored on the user's device")
 
 @app.delete("/cards/{card_id}")
-def delete_card(card_id: str):
-    ws = get_sheet()
-    records = ws.get_all_records()
-    for i, row in enumerate(records):
-        if str(row["id"]) == card_id:
-            ws.delete_rows(i + 2)
-            return {"ok": True}
-    return {"ok": False}
+def delete_card(card_id: str, authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    raise HTTPException(status_code=410, detail="Hitim cards are stored on the user's device")
 
 _price_refresh_status = {
     "running": False,
@@ -1172,43 +1195,32 @@ def _refresh_price_batch(limit=2):
         }
 
 @app.post("/maintenance/refresh-prices")
-def refresh_all_prices(limit: int = 2):
-    return _refresh_price_batch(limit)
+def refresh_all_prices(limit: int = 2, authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    raise HTTPException(status_code=410, detail="Price refresh now runs against each local gallery")
 
 @app.get("/maintenance/refresh-prices/status")
-def refresh_all_prices_status():
+def refresh_all_prices_status(authorization: str = Header(None)):
+    require_access(authorization, admin=True)
     return _price_refresh_status
 
 @app.post("/price")
-def refresh_market_price(data: dict):
+def refresh_market_price(data: dict, authorization: str = Header(None)):
+    require_access(authorization)
     return _market_price_for_card(data)
 
 @app.post("/upload")
-async def upload_image(file: UploadFile = File(...)):
-    data = await file.read()
-    img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
-    # Pokemon cards are portrait. Phone cameras sometimes save a landscape
-    # frame without a useful EXIF orientation, so normalize it before cropping.
-    if img.width > img.height:
-        img = img.rotate(90, expand=True)
-    w, h = img.size
-    # Keep one consistent 5:7 card frame. The previous 2:3 crop was resized
-    # to 5:7 afterwards, which visibly stretched some uploads.
-    target_ratio = 5/7
-    if w/h > target_ratio:
-        new_w = int(h * target_ratio)
-        img = img.crop(((w-new_w)//2, 0, (w+new_w)//2, h))
-    else:
-        new_h = int(w / target_ratio)
-        img = img.crop((0, (h-new_h)//2, w, (h+new_h)//2))
-    img = img.resize((500, 700), Image.LANCZOS)
-    buf = io.BytesIO()
-    img.save(buf, format="WEBP", quality=85)
-    res = cloudinary.uploader.upload(buf.getvalue(), format="webp")
-    return {"url": res["secure_url"]}
+async def upload_image(file: UploadFile = File(...), authorization: str = Header(None)):
+    require_access(authorization, admin=True)
+    raise HTTPException(status_code=410, detail="Images are stored locally by the Hitim browser app")
 
 @app.post("/identify")
-async def identify(front: UploadFile = File(...), back: UploadFile = File(None)):
+async def identify(
+    front: UploadFile = File(...),
+    back: UploadFile = File(None),
+    authorization: str = Header(None)
+):
+    require_access(authorization)
     def compress(f):
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(f))).convert("RGB")
         img.thumbnail((1200, 1200), Image.LANCZOS)

@@ -3,7 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>האוסף של בר</title>
+  <meta name="theme-color" content="#12063a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
+  <title>Hitim</title>
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/hitim-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/hitim-icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -761,17 +768,177 @@
       .price-up, .price-down, .price-same { animation: none; }
       .card-holo-effect { transition: none; }
     }
+
+    /* ===== HITIM ACCOUNT & LOCAL APP ===== */
+    body.auth-locked { overflow: hidden; }
+    .auth-gate {
+      position: fixed; inset: 0; z-index: 1000; display: none;
+      align-items: center; justify-content: center; padding: 22px;
+      background:
+        radial-gradient(circle at 20% 15%, rgba(245,158,11,.20), transparent 34%),
+        radial-gradient(circle at 85% 78%, rgba(124,58,237,.32), transparent 38%),
+        linear-gradient(155deg, #050a18, #12063a 58%, #080d1f);
+    }
+    .auth-gate.show { display: flex; }
+    .auth-card {
+      width: min(100%, 390px); border-radius: 25px; padding: 28px 22px 22px;
+      text-align: center; background: rgba(8,13,31,.94);
+      border: 1px solid rgba(167,139,250,.36);
+      box-shadow: 0 25px 80px rgba(0,0,0,.62), inset 0 1px rgba(255,255,255,.07);
+      backdrop-filter: blur(18px);
+    }
+    .auth-ball {
+      width: 72px; height: 72px; margin: 0 auto 11px; border-radius: 50%;
+      border: 5px solid #050a18; position: relative;
+      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
+      box-shadow: 0 0 32px rgba(251,191,36,.36);
+      animation: titleBall 2.2s ease-in-out infinite;
+    }
+    .auth-ball::after {
+      content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+      border-radius: 50%; transform: translate(-50%,-50%); background: #fff;
+      border: 5px solid #050a18;
+    }
+    .auth-brand { font-size: 2.1em; font-weight: 900; color: #fbbf24; line-height: 1; }
+    .auth-tagline { color: #94a3b8; font-size: .88em; margin: 8px 0 21px; }
+    .auth-view h2 { color: #fff; font-size: 1.12em; margin-bottom: 7px; }
+    .auth-view p { color: #94a3b8; font-size: .86em; line-height: 1.55; margin-bottom: 15px; }
+    .auth-primary, .auth-secondary {
+      width: 100%; min-height: 48px; border-radius: 14px; font: 800 .91em 'Heebo', sans-serif;
+      cursor: pointer; padding: 10px 16px;
+    }
+    .auth-primary {
+      border: 1px solid rgba(255,255,255,.25); color: #0f172a; background: #fff;
+      box-shadow: 0 8px 22px rgba(0,0,0,.24);
+    }
+    .auth-primary:disabled { opacity: .6; cursor: wait; }
+    .auth-secondary { margin-top: 9px; color: #c4b5fd; border: 1px solid #47348a; background: #130b31; }
+    .auth-spinner {
+      width: 38px; height: 38px; border: 4px solid rgba(167,139,250,.24);
+      border-top-color: #fbbf24; border-radius: 50%; margin: 8px auto 15px;
+      animation: spin .85s linear infinite;
+    }
+    .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
+
+    .header-tools {
+      position: absolute; top: 8px; right: 8px; z-index: 12;
+      display: flex; gap: 5px; direction: rtl;
+    }
+    .header-tool {
+      width: 31px; height: 31px; border-radius: 50%; border: 1px solid rgba(255,255,255,.16);
+      background: rgba(5,10,24,.58); color: #e2e8f0; cursor: pointer; font-size: .82em;
+      display: grid; place-items: center; backdrop-filter: blur(7px);
+    }
+    .header-tool[hidden] { display: none; }
+
+    .system-overlay {
+      position: fixed; inset: 0; z-index: 460; display: none; padding: 18px;
+      align-items: flex-end; justify-content: center; background: rgba(0,0,0,.82);
+    }
+    .system-overlay.open { display: flex; }
+    .system-panel {
+      width: min(100%, 540px); max-height: min(88vh, 760px); overflow-y: auto;
+      border-radius: 22px 22px 14px 14px; background: #080d1f;
+      border: 1px solid #25315b; box-shadow: 0 25px 70px rgba(0,0,0,.7);
+    }
+    .system-head {
+      position: sticky; top: 0; z-index: 2; padding: 16px 18px; display: flex;
+      align-items: center; justify-content: space-between; background: rgba(8,13,31,.97);
+      border-bottom: 1px solid #1e2d5a;
+    }
+    .system-head h2 { font-size: 1.04em; color: #fbbf24; }
+    .system-close { width: 31px; height: 31px; border: 0; border-radius: 50%; color: #94a3b8; background: #111a37; cursor: pointer; }
+    .system-body { padding: 14px 16px 20px; }
+    .system-note {
+      color: #94a3b8; font-size: .78em; line-height: 1.55; padding: 11px 12px;
+      border-radius: 12px; background: #0f1730; border: 1px solid #1e2d5a; margin-bottom: 12px;
+    }
+    .system-action {
+      width: 100%; min-height: 46px; margin-top: 8px; border-radius: 12px;
+      border: 1px solid #33436f; color: #e2e8f0; background: #111a37;
+      font: 800 .84em 'Heebo', sans-serif; cursor: pointer; padding: 9px 13px;
+    }
+    .system-action.primary { color: #160929; border-color: #f59e0b; background: linear-gradient(135deg,#fbbf24,#f59e0b); }
+    .system-action.danger { color: #fecaca; border-color: #7f1d1d; background: rgba(127,29,29,.28); }
+    .system-action:disabled { opacity: .55; cursor: wait; }
+    .storage-meter { margin: 13px 0 5px; height: 7px; border-radius: 8px; overflow: hidden; background: #111a37; }
+    .storage-meter > span { display: block; height: 100%; width: 0; background: linear-gradient(90deg,#7c3aed,#f59e0b); }
+    .storage-label { font-size: .72em; color: #64748b; }
+    .admin-list { display: grid; gap: 9px; }
+    .admin-user { padding: 11px; border: 1px solid #1e2d5a; border-radius: 13px; background: #0f1730; }
+    .admin-user-top { display: flex; justify-content: space-between; align-items: center; gap: 9px; }
+    .admin-email { direction: ltr; text-align: left; color: #e2e8f0; font-size: .81em; overflow-wrap: anywhere; }
+    .admin-status { flex: 0 0 auto; border-radius: 12px; padding: 3px 8px; font-size: .67em; font-weight: 800; }
+    .admin-status.approved { color: #6ee7b7; background: rgba(6,78,59,.55); }
+    .admin-status.pending { color: #fcd34d; background: rgba(120,53,15,.55); }
+    .admin-status.blocked { color: #fca5a5; background: rgba(127,29,29,.55); }
+    .admin-user-actions { display: flex; gap: 6px; margin-top: 9px; }
+    .admin-user-actions button { flex: 1; border: 1px solid #33436f; border-radius: 9px; padding: 6px; color: #cbd5e1; background: #111a37; font: 700 .72em 'Heebo',sans-serif; cursor: pointer; }
+    .admin-user-actions button.danger { color: #fca5a5; border-color: #7f1d1d; }
+    .admin-empty { color: #64748b; text-align: center; padding: 25px 10px; font-size: .84em; }
+    .privacy-local { color: #6ee7b7; }
+
+    @media (min-width: 620px) {
+      .system-overlay { align-items: center; }
+      .system-panel { border-radius: 22px; }
+    }
   </style>
 </head>
 <body>
 
+<div class="auth-gate" id="authGate" role="dialog" aria-modal="true" aria-label="כניסה ל-Hitim">
+  <div class="auth-card">
+    <div class="auth-ball" aria-hidden="true"></div>
+    <div class="auth-brand">Hitim</div>
+    <div class="auth-tagline">אוסף קלפי הפוקימון האישי שלך</div>
+
+    <div class="auth-view" data-auth-view="checking">
+      <div class="auth-spinner"></div>
+      <p>בודק את החיבור וההרשאה שלך...</p>
+    </div>
+    <div class="auth-view" data-auth-view="login" hidden>
+      <h2>כניסה לאוסף הפרטי</h2>
+      <p data-auth-message="login">התחבר באמצעות חשבון Google שקיבל גישה.</p>
+      <button class="auth-primary" id="googleLoginBtn" onclick="HitimAuth.signInWithGoogle()">G&nbsp;&nbsp; כניסה באמצעות Google</button>
+      <div class="auth-privacy">הקלפים והתמונות נשמרים במכשיר הזה. לחשבון המרכזי נשמרים פרטי הגישה בלבד.</div>
+    </div>
+    <div class="auth-view" data-auth-view="pending" hidden>
+      <h2>הבקשה נשלחה</h2>
+      <p data-auth-message="pending">החשבון ממתין לאישור מנהל.</p>
+      <button class="auth-secondary" onclick="HitimAuth.refreshAccess()">בדוק שוב</button>
+      <button class="auth-secondary" onclick="HitimAuth.signOut()">התחבר עם חשבון אחר</button>
+    </div>
+    <div class="auth-view" data-auth-view="blocked" hidden>
+      <h2>הגישה חסומה</h2>
+      <p data-auth-message="blocked">לחשבון הזה אין כרגע גישה ל-Hitim.</p>
+      <button class="auth-secondary" onclick="HitimAuth.signOut()">יציאה</button>
+    </div>
+    <div class="auth-view" data-auth-view="setup" hidden>
+      <h2>Hitim כמעט מוכן</h2>
+      <p data-auth-message="setup">חיבור Google עדיין לא הוגדר.</p>
+      <button class="auth-secondary" onclick="location.reload()">בדוק שוב</button>
+    </div>
+    <div class="auth-view" data-auth-view="error" hidden>
+      <h2>לא הצלחנו להתחבר</h2>
+      <p data-auth-message="error">אירעה שגיאה זמנית.</p>
+      <button class="auth-secondary" onclick="location.reload()">נסה שוב</button>
+      <button class="auth-secondary" onclick="HitimAuth.signOut()">יציאה</button>
+    </div>
+  </div>
+</div>
+
 <div class="header">
   <div class="header-inner">
+    <div class="header-tools" aria-label="חשבון והגדרות">
+      <button class="header-tool" id="adminBtn" hidden onclick="openAdminPanel()" aria-label="ניהול משתמשים">👥</button>
+      <button class="header-tool" onclick="openSettingsPanel()" aria-label="הגדרות וגיבוי">⚙️</button>
+      <button class="header-tool" onclick="HitimAuth.signOut()" aria-label="יציאה">↪</button>
+    </div>
     <div class="header-left">
       <div class="header-logo">
         <div class="header-title">
           <span class="header-title-ball" aria-hidden="true"></span>
-          <span class="header-title-text">האוסף של בר</span>
+          <span class="header-title-text">Hitim</span>
         </div>
       </div>
       <div class="header-stats-row">
@@ -864,7 +1031,7 @@
 </div>
 
 <div class="grid" id="grid">
-  <div class="loading"><div class="spin"></div><div class="loading-text">טוען את האוסף של בר...</div></div>
+  <div class="loading"><div class="spin"></div><div class="loading-text">טוען את Hitim...</div></div>
 </div>
 
 <div class="overlay" id="quickIdentifyOverlay" onclick="quickOverlayClick(event)">
@@ -894,7 +1061,7 @@
       <div class="quick-session-tools">
         <button class="quick-clear-btn" onclick="resetQuickIdentify()">🗑️ נקה את הסריקה</button>
       </div>
-      <div class="quick-privacy">הסריקה זמנית. רק קלף שתבחר להוסיף בעזרת ＋ יישמר באוסף ובענן.</div>
+      <div class="quick-privacy">הסריקה זמנית. רק קלף שתבחר להוסיף בעזרת ＋ יישמר מקומית במכשיר.</div>
     </div>
   </div>
 </div>
@@ -1017,6 +1184,49 @@
   </div>
 </div>
 
+<div class="system-overlay" id="settingsOverlay" onclick="systemOverlayClick(event,'settingsOverlay')">
+  <div class="system-panel">
+    <div class="system-head">
+      <h2>⚙️ Hitim במכשיר הזה</h2>
+      <button class="system-close" onclick="closeSystemPanel('settingsOverlay')">✕</button>
+    </div>
+    <div class="system-body">
+      <div class="system-note">
+        מחובר כ־<span id="settingsEmail" dir="ltr"></span><br>
+        <span class="privacy-local">הקלפים, התמונות וההערות נשמרים רק במכשיר הזה.</span>
+      </div>
+      <div class="storage-meter" aria-hidden="true"><span id="storageMeterFill"></span></div>
+      <div class="storage-label" id="storageLabel">בודק נפח אחסון...</div>
+
+      <button class="system-action primary" id="installBtn" hidden onclick="installHitim()">📲 התקן את Hitim בטלפון</button>
+      <button class="system-action" onclick="HitimDB.downloadBackup()">⬇️ הורד גיבוי של האוסף</button>
+      <button class="system-action" onclick="document.getElementById('backupImportInput').click()">⬆️ ייבא גיבוי למכשיר</button>
+      <input id="backupImportInput" type="file" accept="application/json,.json" hidden onchange="importHitimBackup(this)">
+
+      <div id="legacyImportSection" hidden>
+        <div class="system-note" style="margin-top:14px">ייבוא חד־פעמי של האוסף הישן מ-Google Sheets ו-Cloudinary. המקור הישן לא יימחק.</div>
+        <button class="system-action" id="legacyImportBtn" onclick="importLegacyGallery(this)">🧳 ייבא את האוסף הישן למכשיר</button>
+        <div class="storage-label" id="legacyImportStatus"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="system-overlay" id="adminOverlay" onclick="systemOverlayClick(event,'adminOverlay')">
+  <div class="system-panel">
+    <div class="system-head">
+      <h2>👥 ניהול גישה ל-Hitim</h2>
+      <button class="system-close" onclick="closeSystemPanel('adminOverlay')">✕</button>
+    </div>
+    <div class="system-body">
+      <div class="system-note">משתמש חדש נכנס עם Google ומופיע כאן כממתין. רק אישור שלך יפתח לו את האפליקציה.</div>
+      <button class="system-action primary" onclick="shareHitimInvite()">🔗 שתף קישור כניסה</button>
+      <div class="admin-list" id="adminUsersList"><div class="admin-empty">טוען משתמשים...</div></div>
+      <button class="system-action" onclick="loadAdminUsers()">🔄 רענן רשימה</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 <div class="ai-loading" id="aiLoading" role="status" aria-live="polite">
   <div class="ai-loading-box">
@@ -1034,14 +1244,21 @@
   <div class="capture-success-text">הקלף זוהה! ⚡</div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/hitim-db.js"></script>
+<script src="/hitim-auth.js"></script>
 <script>
 const API = 'https://pokemon-collection-f4wv.onrender.com';
+window.HITIM_API_URL=API;
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
 let aiMeta={};
 let quickScans=[], quickProcessing=false, quickSessionToken=0;
 let comments={};
 let pendingSave=null;
+let currentAccess=null;
+let deferredInstallPrompt=null;
+let dailyPriceRefreshRunning=false;
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
@@ -1096,25 +1313,14 @@ function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementBy
 
 async function load(){
   try{
-    // הצג מיד מה-cache אם יש
-    const cached=localStorage.getItem('pokeCards');
-    if(cached){
-      cards=JSON.parse(cached);
-      const s=localStorage.getItem('pokeComments');if(s)comments=JSON.parse(s);
-      render();
-    }
-    // טען מהשרת ברקע (או ראשון אם אין cache)
-    const r=await fetch(`${API}/cards`);
-    const fresh=await r.json();
-    // עדכן רק אם השתנה
-    if(JSON.stringify(fresh)!==JSON.stringify(cards)){
-      cards=fresh;
-      localStorage.setItem('pokeCards',JSON.stringify(cards));
-      const s=localStorage.getItem('pokeComments');if(s)comments=JSON.parse(s);
-      render();
-    }
+    cards=await HitimDB.listCards();
+    comments=await HitimDB.getSetting('comments',{});
+    render();
   }
-  catch{document.getElementById('grid').innerHTML='<div class="loading" style="color:#ef5350">שגיאה בטעינה</div>';}
+  catch(error){
+    console.error(error);
+    document.getElementById('grid').innerHTML='<div class="loading" style="color:#ef5350">לא הצלחנו לפתוח את האוסף המקומי</div>';
+  }
 }
 
 function getFiltered(){
@@ -1159,10 +1365,11 @@ function render(){
     const imgs=cardImageUrls(c);
     const cc=comments[String(c.id)]||[];
     const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
+    const rarityLabel=escapeHtml(c.rarity?(RARITY_HE[c.rarity]||c.rarity):'');
     const imgHtml=imgs.length
       ?(imgs.length>1
-        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}" loading="lazy"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
-        :`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}</div>`)
+        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" loading="lazy"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
+        :`<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" loading="lazy"><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`)
       :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
     const div=document.createElement('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
@@ -1170,9 +1377,9 @@ function render(){
     div.onclick=()=>openDetail(c.id);
     div.innerHTML=`${imgHtml}
       <div class="card-body">
-        <div class="card-name">${c.name||c.pokemon||'—'}</div>
+        <div class="card-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
         <div class="card-row">
-          <span class="card-value">${c.value?'$'+c.value:''}</span>
+          <span class="card-value">${c.value?'$'+escapeHtml(c.value):''}</span>
         </div>
       </div>`;
     grid.appendChild(div);
@@ -1192,32 +1399,36 @@ function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const imgs=cardImageUrls(c);
   const imgHtml=imgs.length
-    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
-  const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${t}</div>`).join(''):'';
-  document.getElementById('detailBody').innerHTML=`
+  const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
+  const detailBody=document.getElementById('detailBody');
+  detailBody.innerHTML=`
     ${imgHtml}
-    <div class="detail-name">${c.name||c.pokemon||'—'}</div>
-    <div class="detail-set">${c.set||''}${c.number?' #'+c.number:''}</div>
+    <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
+    <div class="detail-set">${escapeHtml(c.set||'')}${c.number?' #'+escapeHtml(c.number):''}</div>
     <div class="detail-badges">
-      ${c.rarity?`<span class="detail-badge">⭐ ${RARITY_HE[c.rarity]||c.rarity}</span>`:''}
-      ${c.condition?`<span class="detail-badge">🏷️ ${CONDITION_HE[c.condition]||c.condition}</span>`:''}
-      ${c.language?`<span class="detail-badge">🌐 ${LANGUAGE_HE[c.language]||c.language}</span>`:''}
+      ${c.rarity?`<span class="detail-badge">⭐ ${escapeHtml(RARITY_HE[c.rarity]||c.rarity)}</span>`:''}
+      ${c.condition?`<span class="detail-badge">🏷️ ${escapeHtml(CONDITION_HE[c.condition]||c.condition)}</span>`:''}
+      ${c.language?`<span class="detail-badge">🌐 ${escapeHtml(LANGUAGE_HE[c.language]||c.language)}</span>`:''}
     </div>
     <div class="detail-grid">
-      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+c.value:'—'}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${c.year||'—'}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${c.pokemon||'—'}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${c.set||'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+escapeHtml(c.value):'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${escapeHtml(c.year||'—')}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${escapeHtml(c.pokemon||'—')}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${escapeHtml(c.set||'—')}</div></div>
     </div>
     <div class="detail-actions">
-      <button class="card-btn" onclick="closeDetail();openEdit('${c.id}')">✏️ עריכה</button>
-      <button class="card-btn" onclick="refreshSavedPrice('${c.id}',this)">🔄 רענן מחיר</button>
-      <button class="card-btn" onclick="shareCard('${c.id}')">🔗 שתף</button>
+      <button class="card-btn" data-detail-action="edit">✏️ עריכה</button>
+      <button class="card-btn" data-detail-action="price">🔄 רענן מחיר</button>
+      <button class="card-btn" data-detail-action="share">🔗 שתף</button>
     </div>
     ${commentsHtml?`<div class="detail-comments"><div class="detail-comments-title">💬 הערות</div>${commentsHtml}</div>`:''}
   `;
+  detailBody.querySelector('[data-detail-action="edit"]').onclick=()=>{closeDetail();openEdit(c.id);};
+  detailBody.querySelector('[data-detail-action="price"]').onclick=event=>refreshSavedPrice(c.id,event.currentTarget);
+  detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
   document.getElementById('detailOverlay').classList.add('open');
 }
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
@@ -1328,13 +1539,18 @@ function escapeHtml(value){
 function uniqueImageUrls(values){
   return [...new Set((values||[])
     .map(value=>String(value||'').trim())
-    .filter(value=>/^https?:\/\//i.test(value)))];
+    .filter(value=>/^https?:\/\//i.test(value)||/^data:image\//i.test(value)))];
+}
+
+function cardPhotoUrls(card){
+  return uniqueImageUrls(String(card?.images||'').split('|'));
 }
 
 function cardImageUrls(card){
   return uniqueImageUrls([
+    card?.catalogLocalImage,
     card?.catalogImage,
-    ...String(card?.images||'').split('|')
+    ...cardPhotoUrls(card)
   ]);
 }
 
@@ -1444,7 +1660,7 @@ async function processQuickQueue(){
       scan.status='processing';renderQuickScans();
       try{
         const fd=new FormData();fd.append('front',scan.file);
-        const response=await fetch(`${API}/identify`,{method:'POST',body:fd});
+        const response=await HitimAuth.fetch('/identify',{method:'POST',body:fd});
         const data=await response.json();
         if(!response.ok||data.error)throw new Error(data.error||'identify');
         if(token!==quickSessionToken)return;
@@ -1470,10 +1686,10 @@ async function addQuickScanToGallery(id){
   if(!scan||scan.status!=='done'||scan.saving||scan.added||!scan.data)return;
   scan.saving=true;scan.saveError=false;renderQuickScans();
   try{
-    const photoUrl=await uploadFile(scan.file);
-    if(!photoUrl)throw new Error('upload');
+    const photoData=await HitimDB.imageFileToDataUrl(scan.file);
+    if(!photoData)throw new Error('local-image');
     const d=scan.data;
-    const imageUrls=uniqueImageUrls([d.catalogImage,photoUrl]);
+    const catalogLocalImage=await HitimDB.remoteImageToDataUrl(d.catalogImage);
     const card={
       id:'q-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
       name:d.name||d.pokemon||'קלף לא מזוהה',pokemon:d.pokemon||'',
@@ -1482,16 +1698,14 @@ async function addQuickScanToGallery(id){
       language:LANGUAGES.includes(d.language)?d.language:'Other',
       rarity:RARITIES.includes(d.rarity)?d.rarity:'Common',
       value:d.priceStatus==='matched'?(d.value||''):'',
-      images:imageUrls.join('|'),comments:'',setCode:d.setCode||'',
+      images:photoData,comments:'',setCode:d.setCode||'',
       catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',
+      catalogLocalImage,
       tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',
       priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',
       priceCheckedAt:new Date().toISOString()
     };
-    const response=await fetch(`${API}/cards`,{
-      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(card)
-    });
-    if(!response.ok)throw new Error('save');
+    await HitimDB.putCard(card);
     scan.added=true;scan.savedId=card.id;
     await load();
     toast(`✅ ${scan.name||'הקלף'} נוסף לאוסף!`);
@@ -1523,10 +1737,12 @@ async function shareCard(id){
       return;
     }catch(error){if(error.name==='AbortError')return;}
   }
-  const fallback=imageUrl?`${text}\n🖼️ ${imageUrl}`:text;
+  const fallback=/^https?:\/\//i.test(imageUrl||'')?`${text}\n🖼️ ${imageUrl}`:text;
   navigator.clipboard.writeText(fallback).then(()=>toast('📋 הפרטים וקישור התמונה הועתקו!'));
 }
-function saveComments(){localStorage.setItem('pokeComments',JSON.stringify(comments));}
+function saveComments(){
+  HitimDB.setSetting('comments',comments).catch(error=>console.error('Could not save comments',error));
+}
 
 function openAdd(){
   editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};
@@ -1542,8 +1758,8 @@ function openAdd(){
 
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
-  editId=id;existImgs=cardImageUrls(c);newFiles=[];aiFront=null;aiBack=null;
-  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
+  editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;
+  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',catalogLocalImage:c.catalogLocalImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
   document.getElementById('fNumber').value=c.number||'';document.getElementById('fSet').value=c.set||'';
@@ -1556,18 +1772,17 @@ function openEdit(id){
 }
 
 function renderPreview(){
-  const catalogImage=String(aiMeta.catalogImage||'').trim();
-  const catalogHtml=catalogImage&&!existImgs.includes(catalogImage)
+  const catalogImage=String(aiMeta.catalogLocalImage||aiMeta.catalogImage||'').trim();
+  const catalogHtml=catalogImage
     ?`<div class="img-prev-item"><img src="${escapeHtml(catalogImage)}"><span class="catalog-preview-badge">קטלוג</span><button class="img-prev-del" onclick="removeCatalogImage()">✕</button></div>`:'';
   const existingHtml=existImgs.map((u,i)=>`<div class="img-prev-item"><img src="${escapeHtml(u)}"><button class="img-prev-del" onclick="removeExist(${i})">✕</button></div>`).join('');
   const newHtml=newFiles.map((f,i)=>`<div class="img-prev-item"><img src="${URL.createObjectURL(f)}"><button class="img-prev-del" onclick="removeNew(${i})">✕</button></div>`).join('');
   document.getElementById('imgPreview').innerHTML=catalogHtml+existingHtml+newHtml;
 }
-function removeCatalogImage(){aiMeta={...aiMeta,catalogImage:''};renderPreview();}
+function removeCatalogImage(){aiMeta={...aiMeta,catalogImage:'',catalogLocalImage:''};renderPreview();}
 function removeExist(i){
   const removed=existImgs[i];
   existImgs.splice(i,1);
-  if(removed&&removed===aiMeta.catalogImage)aiMeta={...aiMeta,catalogImage:''};
   renderPreview();
 }
 function removeNew(i){newFiles.splice(i,1);renderPreview();}
@@ -1575,7 +1790,7 @@ function previewImgs(input){newFiles=[...newFiles,...Array.from(input.files)];in
 
 function renderComments(id){
   const list=comments[String(id)]||[];
-  document.getElementById('commentsList').innerHTML=list.map((t,i)=>`<div class="comment-item">${t}<button class="comment-del" onclick="delComment('${id}',${i})">✕</button></div>`).join('')||'<div style="font-size:0.78em;color:#3d4f7a;margin-bottom:6px">אין הערות עדיין</div>';
+  document.getElementById('commentsList').innerHTML=list.map((t,i)=>`<div class="comment-item">${escapeHtml(t)}<button class="comment-del" onclick="delComment('${id}',${i})">✕</button></div>`).join('')||'<div style="font-size:0.78em;color:#3d4f7a;margin-bottom:6px">אין הערות עדיין</div>';
   document.getElementById('commentInput').value='';
 }
 function addComment(){const t=document.getElementById('commentInput').value.trim();if(!t||!editId)return;if(!comments[String(editId)])comments[String(editId)]=[];comments[String(editId)].push(t);saveComments();renderComments(editId);render();}
@@ -1597,20 +1812,20 @@ async function identifyCoin(){
   let identifiedOk=false;
   try{
     const fd=new FormData();fd.append('front',aiFront);if(aiBack)fd.append('back',aiBack);
-    const r=await fetch(`${API}/identify`,{method:'POST',body:fd});const d=await r.json();
-    if(d.error){toast('שגיאה: '+d.error);return;}
+    const r=await HitimAuth.fetch('/identify',{method:'POST',body:fd});const d=await r.json();
+    if(!r.ok||d.error){toast('שגיאה: '+(d.detail||d.error||'הזיהוי לא הצליח'));return;}
     document.getElementById('fName').value=d.name||'';document.getElementById('fPokemon').value=d.pokemon||'';
     document.getElementById('fNumber').value=d.number||'';document.getElementById('fSet').value=d.set||'';
     document.getElementById('fYear').value=d.year||'';document.getElementById('fValue').value=d.value||'';
     if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
     if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
     if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
-    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',catalogLocalImage:'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
     const res=document.getElementById('aiResult');res.style.display='block';
     const priceText=d.priceStatus==='matched'
-      ?`💰 $${d.value} לפי ${d.priceSource||'מחיר שוק'}`
+      ?`💰 $${escapeHtml(d.value)} לפי ${escapeHtml(d.priceSource||'מחיר שוק')}`
       :'💰 לא נמצא מחיר ודאי — אפשר להזין ידנית';
-    res.innerHTML=`✅ <b>${d.name||d.pokemon}</b> | ${d.set||''} | ${d.rarity||''}<br>${priceText}`;
+    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>${priceText}`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
     identifiedOk=true;
   }catch(e){toast('שגיאת זיהוי');}
@@ -1621,10 +1836,10 @@ async function identifyCoin(){
   }
 }
 
-async function uploadFile(f){const fd=new FormData();fd.append('file',f);const r=await fetch(`${API}/upload`,{method:'POST',body:fd});return(await r.json()).url;}
+async function uploadFile(f){return HitimDB.imageFileToDataUrl(f);}
 
 async function requestMarketPrice(cardData){
-  const r=await fetch(`${API}/price`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cardData)});
+  const r=await HitimAuth.fetch('/price',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cardData)});
   if(!r.ok)throw new Error('price');
   return await r.json();
 }
@@ -1694,7 +1909,8 @@ async function refreshFormPrice(btn){
     const d=await requestMarketPrice(formCardData());
     if(d.priceStatus==='matched'){
       const newPrice=parseFloat(d.value);priceEl.value=d.value;
-      aiMeta={...aiMeta,catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',catalogImage:d.catalogImage||aiMeta.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+      const catalogImage=d.catalogImage||aiMeta.catalogImage||'';
+      aiMeta={...aiMeta,catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',catalogImage,catalogLocalImage:catalogImage===aiMeta.catalogImage?(aiMeta.catalogLocalImage||''):'',tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
       renderPreview();
       const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
       replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);
@@ -1713,12 +1929,15 @@ async function refreshSavedPrice(id,btn){
   try{
     const d=await requestMarketPrice(c);
     if(d.priceStatus!=='matched'){toast('לא נמצא מחיר ודאי לקלף הזה');return;}
-    const priceMeta={value:d.value,catalogCardId:d.catalogCardId||c.catalogCardId||'',catalogImage:d.catalogImage||c.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||c.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
-    const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(priceMeta)});
-    if(!r.ok)throw new Error('save');
+    const catalogImage=d.catalogImage||c.catalogImage||'';
+    let catalogLocalImage=c.catalogLocalImage||'';
+    if(catalogImage&&catalogImage!==c.catalogImage){
+      catalogLocalImage=await HitimDB.remoteImageToDataUrl(catalogImage);
+    }
+    const priceMeta={value:d.value,catalogCardId:d.catalogCardId||c.catalogCardId||'',catalogImage,catalogLocalImage,tcgplayerProductId:d.tcgplayerProductId||c.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
     const newPrice=parseFloat(d.value);
     const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
-    Object.assign(c,priceMeta);localStorage.setItem('pokeCards',JSON.stringify(cards));
+    Object.assign(c,priceMeta);await HitimDB.putCard(c);
     if(priceEl){priceEl.textContent=`$${d.value}`;replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);}
     render();
     toast(trend==='up'?`📈 המחיר עלה מ-$${oldPrice} ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד מ-$${oldPrice} ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
@@ -1750,7 +1969,7 @@ async function saveCard(){
   const btn=document.getElementById('saveBtn');btn.textContent='⏳ שומר...';btn.disabled=true;
   const saveEditId=editId;
   const cardId=saveEditId||String(Date.now());
-  const previewUrl=aiMeta.catalogImage||(newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||''));
+  const previewUrl=aiMeta.catalogLocalImage||aiMeta.catalogImage||(newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||''));
   const baseData={id:cardId,name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:'',comments:'',...aiMeta};
   if(!saveEditId){
     pendingSave=baseData;
@@ -1758,11 +1977,12 @@ async function saveCard(){
   }
   try{
     const urls=[];for(const f of newFiles){const u=await uploadFile(f);if(u)urls.push(u);}
-    const data={...baseData,images:uniqueImageUrls([aiMeta.catalogImage,...existImgs,...urls]).join('|')};
-    const saveResponse=saveEditId
-      ?await fetch(`${API}/cards/${saveEditId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
-      :await fetch(`${API}/cards`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
-    if(!saveResponse.ok)throw new Error('save');
+    let catalogLocalImage=aiMeta.catalogLocalImage||'';
+    if(aiMeta.catalogImage&&!catalogLocalImage){
+      catalogLocalImage=await HitimDB.remoteImageToDataUrl(aiMeta.catalogImage);
+    }
+    const data={...baseData,catalogLocalImage,images:uniqueImageUrls([...existImgs,...urls]).join('|')};
+    await HitimDB.putCard(data);
     if(saveEditId)closeModal();
     await load();pendingSave=null;render();toast(saveEditId?'✅ השינויים נשמרו!':'✅ הקלף נוסף לאוסף!');
   }catch{
@@ -1778,26 +1998,233 @@ async function deleteCard(){
   const deletedIndex=cards.findIndex(c=>String(c.id)===String(deletingId));
   const deletedCard=deletedIndex>=0?cards[deletedIndex]:null;
   closeModal();closeDetail();
-  const deleteRequest=fetch(`${API}/cards/${deletingId}`,{method:'DELETE'});
   await animateDeleteCard(deletingId);
   if(deletedIndex>=0){
     cards.splice(deletedIndex,1);
-    localStorage.setItem('pokeCards',JSON.stringify(cards));
     render();
   }
   toast('✨ הקלף יצא מהאוסף');
   try{
-    const response=await deleteRequest;
-    if(!response.ok)throw new Error('delete');
+    await HitimDB.deleteCard(deletingId);
     if(comments[String(deletingId)]){delete comments[String(deletingId)];saveComments();}
-    await load();
   }catch{
     if(deletedCard){
       cards.splice(Math.max(0,deletedIndex),0,deletedCard);
-      localStorage.setItem('pokeCards',JSON.stringify(cards));render();
+      await HitimDB.putCard(deletedCard);render();
     }
     toast('המחיקה לא הצליחה — הקלף הוחזר');
   }
+}
+
+const PRICE_REFRESH_INTERVAL=24*60*60*1000;
+
+function priceRefreshDue(card){
+  const checkedAt=Date.parse(card.priceCheckedAt||'');
+  return !Number.isFinite(checkedAt)||(Date.now()-checkedAt)>=PRICE_REFRESH_INTERVAL;
+}
+
+async function refreshDuePrices(){
+  if(dailyPriceRefreshRunning||!navigator.onLine||!cards.length)return;
+  const due=cards.filter(card=>priceRefreshDue(card)&&card.number&&(card.name||card.pokemon));
+  if(!due.length)return;
+  dailyPriceRefreshRunning=true;
+  try{
+    let cursor=0,matched=0,changed=0;
+    const worker=async()=>{
+      while(cursor<due.length){
+        const card=due[cursor++];
+        try{
+          const result=await requestMarketPrice(card);
+          const previous=String(card.value||'');
+          const catalogImage=result.catalogImage||card.catalogImage||'';
+          let catalogLocalImage=card.catalogLocalImage||'';
+          if(catalogImage&&(!catalogLocalImage||catalogImage!==card.catalogImage)){
+            catalogLocalImage=await HitimDB.remoteImageToDataUrl(catalogImage);
+          }
+          const update={
+            priceCheckedAt:new Date().toISOString(),priceStatus:result.priceStatus||'',
+            catalogCardId:result.catalogCardId||card.catalogCardId||'',catalogImage,
+            catalogLocalImage,tcgplayerProductId:result.tcgplayerProductId||card.tcgplayerProductId||'',
+            priceSource:result.priceSource||card.priceSource||'',
+            priceUpdatedAt:result.priceUpdatedAt||card.priceUpdatedAt||''
+          };
+          if(result.priceStatus==='matched'){
+            update.value=result.value;matched++;
+            if(previous!==String(result.value||''))changed++;
+          }
+          Object.assign(card,update);
+          await HitimDB.putCard(card);
+        }catch(error){
+          console.debug('Daily price refresh skipped',card.id,error);
+        }
+      }
+    };
+    await Promise.all(Array.from({length:Math.min(2,due.length)},worker));
+    render();
+    if(changed)toast(`💰 ${changed} מחירים השתנו בעדכון היומי`);
+    else if(matched)console.debug(`Hitim refreshed ${matched} market prices`);
+  }finally{
+    dailyPriceRefreshRunning=false;
+  }
+}
+
+function closeSystemPanel(id){document.getElementById(id)?.classList.remove('open');}
+function systemOverlayClick(event,id){if(event.target===document.getElementById(id))closeSystemPanel(id);}
+
+function formatBytes(value){
+  const bytes=Number(value)||0;
+  if(bytes<1024)return `${bytes} B`;
+  if(bytes<1024*1024)return `${(bytes/1024).toFixed(1)} KB`;
+  if(bytes<1024*1024*1024)return `${(bytes/1024/1024).toFixed(1)} MB`;
+  return `${(bytes/1024/1024/1024).toFixed(2)} GB`;
+}
+
+async function updateStorageInfo(){
+  const estimate=await HitimDB.storageEstimate();
+  const usage=Number(estimate.usage)||0,quota=Number(estimate.quota)||0;
+  const percent=quota?Math.min(100,(usage/quota)*100):0;
+  document.getElementById('storageMeterFill').style.width=`${percent}%`;
+  document.getElementById('storageLabel').textContent=quota
+    ?`${formatBytes(usage)} בשימוש מתוך ${formatBytes(quota)} במכשיר`
+    :`${formatBytes(usage)} בשימוש במכשיר`;
+}
+
+function openSettingsPanel(){
+  const session=HitimAuth.getSession();
+  document.getElementById('settingsEmail').textContent=currentAccess?.email||session?.user?.email||'';
+  document.getElementById('legacyImportSection').hidden=!HitimAuth.isAdmin();
+  document.getElementById('settingsOverlay').classList.add('open');
+  updateStorageInfo().catch(()=>{});
+}
+
+async function importHitimBackup(input){
+  const file=input.files?.[0];input.value='';if(!file)return;
+  try{
+    const count=await HitimDB.importBackup(file,false);
+    await load();await updateStorageInfo();
+    toast(`✅ יובאו ${count} קלפים מהגיבוי`);
+  }catch(error){
+    console.error(error);toast('קובץ הגיבוי אינו תקין');
+  }
+}
+
+async function importLegacyGallery(button){
+  if(!HitimAuth.isAdmin())return;
+  if(!confirm('לייבא עותק מקומי של האוסף הישן? המידע הישן בענן לא יימחק.'))return;
+  const status=document.getElementById('legacyImportStatus');
+  button.disabled=true;button.textContent='⏳ מכין את הייבוא...';
+  try{
+    const response=await HitimAuth.fetch('/legacy/cards');
+    const legacy=await response.json();
+    if(!response.ok||!Array.isArray(legacy))throw new Error(legacy.detail||'legacy');
+    let imported=0,remoteImages=0;
+    for(const sourceCard of legacy){
+      status.textContent=`מייבא ${imported+1} מתוך ${legacy.length}...`;
+      const card={...sourceCard,id:String(sourceCard.id||`legacy-${Date.now()}-${imported}`)};
+      const catalogImage=String(card.catalogImage||'').trim();
+      card.catalogLocalImage=await HitimDB.remoteImageToDataUrl(catalogImage);
+      const photos=[];
+      for(const imageUrl of cardPhotoUrls(card)){
+        if(imageUrl===catalogImage)continue;
+        const localImage=await HitimDB.remoteImageToDataUrl(imageUrl);
+        photos.push(localImage||imageUrl);
+        if(!localImage&&/^https?:\/\//i.test(imageUrl))remoteImages++;
+      }
+      card.images=uniqueImageUrls(photos).join('|');
+      card.legacyImportedAt=new Date().toISOString();
+      await HitimDB.putCard(card);imported++;
+    }
+    try{
+      const legacyComments=JSON.parse(localStorage.getItem('pokeComments')||'{}');
+      if(legacyComments&&typeof legacyComments==='object'){
+        comments={...comments,...legacyComments};
+        await HitimDB.setSetting('comments',comments);
+      }
+    }catch(error){console.debug('Legacy comments were not readable',error);}
+    await HitimDB.setSetting('legacyImportedAt',new Date().toISOString());
+    await load();await updateStorageInfo();
+    status.textContent=remoteImages
+      ?`הייבוא הסתיים. ${remoteImages} תמונות נשארו זמנית בקישור המקורי כי הדפדפן לא אפשר להעתיק אותן.`
+      :`הייבוא הסתיים: ${imported} קלפים נשמרו במכשיר.`;
+    toast(`✅ ${imported} קלפים יובאו ל-Hitim`);
+  }catch(error){
+    console.error(error);status.textContent='הייבוא לא הושלם. לא מחקנו דבר מהאוסף הישן.';
+    toast('לא הצלחנו לייבא את האוסף הישן');
+  }finally{
+    button.disabled=false;button.textContent='🧳 ייבא את האוסף הישן למכשיר';
+  }
+}
+
+function openAdminPanel(){
+  if(!HitimAuth.isAdmin())return;
+  document.getElementById('adminOverlay').classList.add('open');
+  loadAdminUsers();
+}
+
+async function shareHitimInvite(){
+  const url=location.origin;
+  const text='הוזמנת ל-Hitim — היכנס עם חשבון Google ושלח בקשת גישה.';
+  try{
+    if(navigator.share){await navigator.share({title:'Hitim',text,url});return;}
+    await navigator.clipboard.writeText(`${text}\n${url}`);toast('🔗 קישור הכניסה הועתק');
+  }catch(error){if(error.name!=='AbortError')toast('לא הצלחנו לשתף את הקישור');}
+}
+
+function adminStatusLabel(status){return {approved:'מאושר',pending:'ממתין',blocked:'חסום'}[status]||status;}
+
+async function loadAdminUsers(){
+  const list=document.getElementById('adminUsersList');
+  list.innerHTML='<div class="admin-empty">טוען משתמשים...</div>';
+  try{
+    const users=await HitimAuth.adminListUsers();
+    list.innerHTML=users.map(user=>{
+      const isAdmin=user.role==='admin';
+      const actions=isAdmin?'':`<div class="admin-user-actions">
+        <button onclick="setAdminUserStatus('${user.userId}','approved')">אשר</button>
+        <button onclick="setAdminUserStatus('${user.userId}','blocked')">חסום</button>
+        <button class="danger" onclick="removeAdminUser('${user.userId}')">הסר</button>
+      </div>`;
+      return `<div class="admin-user">
+        <div class="admin-user-top">
+          <div class="admin-email">${escapeHtml(user.email)}</div>
+          <span class="admin-status ${escapeHtml(user.status)}">${isAdmin?'מנהל':adminStatusLabel(user.status)}</span>
+        </div>${actions}
+      </div>`;
+    }).join('')||'<div class="admin-empty">אין עדיין משתמשים.</div>';
+  }catch(error){
+    list.innerHTML='<div class="admin-empty">לא הצלחנו לטעון את רשימת המשתמשים.</div>';
+  }
+}
+
+async function setAdminUserStatus(userId,status){
+  try{await HitimAuth.adminUpdateUser(userId,status);await loadAdminUsers();toast(status==='approved'?'✅ המשתמש אושר':'הגישה נחסמה');}
+  catch(error){toast(error.message||'הפעולה לא הצליחה');}
+}
+
+async function removeAdminUser(userId){
+  if(!confirm('להסיר את המשתמש מרשימת הגישה?'))return;
+  try{await HitimAuth.adminRemoveUser(userId);await loadAdminUsers();toast('המשתמש הוסר');}
+  catch(error){toast(error.message||'הפעולה לא הצליחה');}
+}
+
+function initPwa(){
+  window.addEventListener('beforeinstallprompt',event=>{
+    event.preventDefault();deferredInstallPrompt=event;
+    document.getElementById('installBtn').hidden=false;
+  });
+  window.addEventListener('appinstalled',()=>{
+    deferredInstallPrompt=null;document.getElementById('installBtn').hidden=true;toast('📲 Hitim הותקן בהצלחה');
+  });
+  if('serviceWorker' in navigator){
+    window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(error=>console.debug('Service worker',error)));
+  }
+}
+
+async function installHitim(){
+  if(!deferredInstallPrompt){toast('פתח את תפריט הדפדפן ובחר „הוספה למסך הבית”');return;}
+  deferredInstallPrompt.prompt();
+  await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt=null;document.getElementById('installBtn').hidden=true;
 }
 
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
@@ -1807,11 +2234,32 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 
 ['fNumber','fLanguage'].forEach(id=>{
   const field=document.getElementById(id);
-  const clearExactMatch=()=>{aiMeta={...aiMeta,catalogCardId:'',catalogImage:'',tcgplayerProductId:'',priceCheckedAt:''};renderPreview();};
+  const clearExactMatch=()=>{aiMeta={...aiMeta,catalogCardId:'',catalogImage:'',catalogLocalImage:'',tcgplayerProductId:'',priceCheckedAt:''};renderPreview();};
   field.addEventListener('input',clearExactMatch);
   field.addEventListener('change',clearExactMatch);
 });
-initCols();initPanel();initHoloEffect();load();
+initCols();initPanel();initHoloEffect();initPwa();
+HitimAuth.init(async access=>{
+  currentAccess=access;
+  document.getElementById('adminBtn').hidden=access.role!=='admin';
+  document.getElementById('legacyImportSection').hidden=access.role!=='admin';
+  await HitimDB.requestPersistence();
+  await load();
+  refreshDuePrices();
+});
+window.addEventListener('online',()=>refreshDuePrices());
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){
+    HitimAuth.refreshAccess();
+    refreshDuePrices();
+  }
+});
+setInterval(()=>{
+  if(document.visibilityState==='visible'&&navigator.onLine)HitimAuth.refreshAccess();
+},5*60*1000);
+setInterval(()=>{
+  if(document.visibilityState==='visible'&&navigator.onLine)refreshDuePrices();
+},60*60*1000);
 </script>
 </body>
 </html>
