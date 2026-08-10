@@ -220,7 +220,8 @@
 
     /* ===== POKEMON CARD ===== */
     .poke-card {
-      --holo-strength: .43;
+      --holo-strength: .46;
+      --holo-hover-strength: .66;
       background: linear-gradient(160deg, #0f1730 0%, #080d1f 100%);
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
@@ -229,9 +230,9 @@
       min-width: 0; cursor: pointer; position: relative;
     }
     .poke-card:active { transform: scale(0.96); }
-    .poke-card.holo { --holo-strength: .52; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
-    .poke-card.ultra { --holo-strength: .58; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
-    .poke-card.secret { --holo-strength: .63; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
+    .poke-card.holo { --holo-strength: .53; --holo-hover-strength: .71; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
+    .poke-card.ultra { --holo-strength: .58; --holo-hover-strength: .76; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
+    .poke-card.secret { --holo-strength: .63; --holo-hover-strength: .80; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
     .poke-card.ultra::after, .poke-card.secret::after {
       content: ''; position: absolute; inset: 0; border-radius: 14px;
       background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%);
@@ -305,11 +306,11 @@
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { --holo-strength: .58; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
+    .detail-carousel { --holo-strength: .58; --holo-hover-strength: .72; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
     @media (hover: hover) and (pointer: fine) {
       .card-holo-effect { opacity: 0; }
       .poke-card:hover .card-holo-effect,
-      .detail-carousel:hover .card-holo-effect { opacity: var(--holo-strength, .58); }
+      .detail-carousel:hover .card-holo-effect { opacity: var(--holo-hover-strength, .68); }
     }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
     .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
