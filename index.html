@@ -220,6 +220,7 @@
 
     /* ===== POKEMON CARD ===== */
     .poke-card {
+      --holo-strength: .43;
       background: linear-gradient(160deg, #0f1730 0%, #080d1f 100%);
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
@@ -228,9 +229,9 @@
       min-width: 0; cursor: pointer; position: relative;
     }
     .poke-card:active { transform: scale(0.96); }
-    .poke-card.holo { border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
-    .poke-card.ultra { border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
-    .poke-card.secret { border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
+    .poke-card.holo { --holo-strength: .52; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
+    .poke-card.ultra { --holo-strength: .58; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
+    .poke-card.secret { --holo-strength: .63; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
     .poke-card.ultra::after, .poke-card.secret::after {
       content: ''; position: absolute; inset: 0; border-radius: 14px;
       background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%);
@@ -248,36 +249,51 @@
     .poke-card:active .card-img-wrap img { transform: scale(1.03); }
     .card-holo-effect {
       position: absolute; inset: -1px; z-index: 2; pointer-events: none;
-      border-radius: inherit; opacity: .43; mix-blend-mode: screen;
+      border-radius: inherit; opacity: var(--holo-strength, .43); mix-blend-mode: screen;
       background:
-        radial-gradient(circle at var(--holo-x) var(--holo-y),
-          rgba(255,255,255,.98) 0 1.5%, rgba(224,242,254,.64) 4%,
-          rgba(255,255,255,.18) 10%, transparent 28%),
         linear-gradient(var(--holo-angle),
-          transparent 7%, rgba(255,40,170,.30) 24%,
-          rgba(56,189,248,.42) 40%, rgba(253,224,71,.32) 55%,
-          rgba(167,139,250,.42) 70%, transparent 93%),
-        repeating-linear-gradient(118deg,
-          rgba(255,255,255,.08) 0 1px, transparent 1px 8px);
-      background-size: 100% 100%, 190% 190%, 230% 230%;
-      background-position: center, var(--holo-x) var(--holo-y),
-        calc(100% - var(--holo-x)) calc(100% - var(--holo-y));
-      filter: saturate(1.45) contrast(1.08);
-      transform: translateZ(0); will-change: background-position;
+          transparent 0 17%,
+          rgba(255,228,94,.14) 23%,
+          rgba(255,89,205,.46) 31%,
+          rgba(98,214,255,.52) 39%,
+          rgba(255,255,255,.88) 47%,
+          rgba(170,116,255,.52) 54%,
+          rgba(255,222,83,.43) 62%,
+          rgba(80,229,255,.39) 69%,
+          transparent 79% 100%),
+        repeating-linear-gradient(135deg,
+          rgba(255,88,205,.17) 0 11%,
+          rgba(255,224,90,.14) 11% 22%,
+          rgba(85,216,255,.18) 22% 33%,
+          rgba(165,112,255,.18) 33% 44%),
+        linear-gradient(135deg,
+          transparent 18%, rgba(255,255,255,.13) 44%,
+          rgba(255,255,255,.04) 55%, transparent 76%);
+      background-size: 230% 230%, 175% 175%, 210% 210%;
+      background-position:
+        var(--holo-x) var(--holo-y),
+        calc(100% - var(--holo-x)) calc(100% - var(--holo-y)),
+        var(--holo-x) var(--holo-y);
+      filter: saturate(1.3) contrast(1.04);
+      transform: translateZ(0); will-change: background-position, opacity;
       transition: opacity .22s ease;
     }
     .card-holo-effect::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit;
       background:
-        radial-gradient(circle at calc(var(--holo-x) + 13%) calc(var(--holo-y) - 9%), rgba(255,255,255,.75) 0 1px, transparent 2px),
-        radial-gradient(circle at calc(var(--holo-x) - 18%) calc(var(--holo-y) + 15%), rgba(186,230,253,.72) 0 1.5px, transparent 3px),
-        radial-gradient(circle at calc(var(--holo-x) + 4%) calc(var(--holo-y) + 23%), rgba(254,240,138,.7) 0 1px, transparent 2.5px);
-      background-size: 47px 53px, 61px 67px, 73px 79px;
-      opacity: .72; mix-blend-mode: screen;
+        linear-gradient(125deg,
+          transparent 0 38%,
+          rgba(255,245,196,.18) 43%,
+          rgba(255,255,255,.78) 49%,
+          rgba(161,238,255,.25) 54%,
+          transparent 61% 100%),
+        repeating-linear-gradient(135deg,
+          rgba(255,255,255,.10) 0 1px,
+          transparent 1px 8px);
+      background-size: 240% 240%, 100% 100%;
+      background-position: var(--holo-x) var(--holo-y), center;
+      opacity: .78; mix-blend-mode: screen;
     }
-    .poke-card.holo .card-holo-effect { opacity: .56; }
-    .poke-card.ultra .card-holo-effect { opacity: .62; }
-    .poke-card.secret .card-holo-effect { opacity: .68; }
     .poke-card:active .card-holo-effect { opacity: .78; }
     .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
@@ -289,8 +305,12 @@
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
-    .detail-carousel .card-holo-effect { opacity: .58; }
+    .detail-carousel { --holo-strength: .58; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
+    @media (hover: hover) and (pointer: fine) {
+      .card-holo-effect { opacity: 0; }
+      .poke-card:hover .card-holo-effect,
+      .detail-carousel:hover .card-holo-effect { opacity: var(--holo-strength, .58); }
+    }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
     .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
     .detail-set { font-size: 0.85em; color: #7891c8; margin-bottom: 14px; }
@@ -738,7 +758,7 @@
     @media (prefers-reduced-motion: reduce) {
       .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
-      .card-holo-effect { opacity: .18 !important; transition: none; }
+      .card-holo-effect { transition: none; }
     }
   </style>
 </head>
@@ -1209,27 +1229,33 @@ function updateDots(track){
 }
 
 let holoFrame=0;
-let holoTargetX=50;
-let holoTargetY=46;
+let holoPendingPosition=null;
 let holoOrientationBase=null;
 let holoMotionAttached=false;
 let holoPermissionAsked=false;
 
 function clampHolo(value,min,max){return Math.max(min,Math.min(max,value));}
+function isDesktopHolo(){return window.matchMedia('(hover: hover) and (pointer: fine)').matches;}
 
-function applyHoloPosition(x,y){
-  holoTargetX=clampHolo(Number(x)||50,4,96);
-  holoTargetY=clampHolo(Number(y)||46,4,96);
+function applyHoloPosition(x,y,scope=document.documentElement){
+  holoPendingPosition={
+    x:clampHolo(Number(x)||50,4,96),
+    y:clampHolo(Number(y)||46,4,96),
+    scope
+  };
   if(holoFrame)return;
   holoFrame=requestAnimationFrame(()=>{
     holoFrame=0;
-    document.documentElement.style.setProperty('--holo-x',`${holoTargetX.toFixed(1)}%`);
-    document.documentElement.style.setProperty('--holo-y',`${holoTargetY.toFixed(1)}%`);
-    document.documentElement.style.setProperty('--holo-angle',`${(88+holoTargetX*.74).toFixed(1)}deg`);
+    const next=holoPendingPosition;
+    if(!next)return;
+    next.scope.style.setProperty('--holo-x',`${next.x.toFixed(1)}%`);
+    next.scope.style.setProperty('--holo-y',`${next.y.toFixed(1)}%`);
+    next.scope.style.setProperty('--holo-angle',`${(94+next.x*.56).toFixed(1)}deg`);
   });
 }
 
 function handleHoloOrientation(event){
+  if(isDesktopHolo())return;
   if(event.gamma==null||event.beta==null)return;
   if(!holoOrientationBase)holoOrientationBase={gamma:event.gamma,beta:event.beta};
   let dx=event.gamma-holoOrientationBase.gamma;
@@ -1271,7 +1297,8 @@ function handleHoloPointer(event){
   if(!rect.width||!rect.height)return;
   applyHoloPosition(
     ((event.clientX-rect.left)/rect.width)*100,
-    ((event.clientY-rect.top)/rect.height)*100
+    ((event.clientY-rect.top)/rect.height)*100,
+    isDesktopHolo()?surface:document.documentElement
   );
 }
 
@@ -1279,7 +1306,7 @@ function initHoloEffect(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   document.addEventListener('pointerdown',handleHoloPointer,{passive:true});
   document.addEventListener('pointermove',handleHoloPointer,{passive:true});
-  if(typeof DeviceOrientationEvent==='undefined')return;
+  if(isDesktopHolo()||typeof DeviceOrientationEvent==='undefined')return;
   if(typeof DeviceOrientationEvent.requestPermission==='function'){
     const askForMotion=event=>{
       if(!holoSurfaceFromEvent(event))return;
