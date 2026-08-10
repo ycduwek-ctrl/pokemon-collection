@@ -1248,7 +1248,9 @@
 <script src="/hitim-db.js"></script>
 <script src="/hitim-auth.js"></script>
 <script>
-const API = 'https://hitim-staging.onrender.com';
+const API = location.hostname === 'pokemon-collection-ecru.vercel.app'
+  ? 'https://pokemon-collection-f4wv.onrender.com'
+  : 'https://hitim-staging.onrender.com';
 window.HITIM_API_URL=API;
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
