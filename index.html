@@ -238,9 +238,47 @@
     }
     @keyframes shimmer { 0%,100%{opacity:0} 50%{opacity:1} }
 
+    :root {
+      --holo-x: 50%;
+      --holo-y: 46%;
+      --holo-angle: 125deg;
+    }
     .card-img-wrap { width: 100%; aspect-ratio: 5/7; position: relative; overflow: hidden; background: #050a18; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; transition: transform 0.3s; }
     .poke-card:active .card-img-wrap img { transform: scale(1.03); }
+    .card-holo-effect {
+      position: absolute; inset: -1px; z-index: 2; pointer-events: none;
+      border-radius: inherit; opacity: .43; mix-blend-mode: screen;
+      background:
+        radial-gradient(circle at var(--holo-x) var(--holo-y),
+          rgba(255,255,255,.98) 0 1.5%, rgba(224,242,254,.64) 4%,
+          rgba(255,255,255,.18) 10%, transparent 28%),
+        linear-gradient(var(--holo-angle),
+          transparent 7%, rgba(255,40,170,.30) 24%,
+          rgba(56,189,248,.42) 40%, rgba(253,224,71,.32) 55%,
+          rgba(167,139,250,.42) 70%, transparent 93%),
+        repeating-linear-gradient(118deg,
+          rgba(255,255,255,.08) 0 1px, transparent 1px 8px);
+      background-size: 100% 100%, 190% 190%, 230% 230%;
+      background-position: center, var(--holo-x) var(--holo-y),
+        calc(100% - var(--holo-x)) calc(100% - var(--holo-y));
+      filter: saturate(1.45) contrast(1.08);
+      transform: translateZ(0); will-change: background-position;
+      transition: opacity .22s ease;
+    }
+    .card-holo-effect::after {
+      content: ''; position: absolute; inset: 0; border-radius: inherit;
+      background:
+        radial-gradient(circle at calc(var(--holo-x) + 13%) calc(var(--holo-y) - 9%), rgba(255,255,255,.75) 0 1px, transparent 2px),
+        radial-gradient(circle at calc(var(--holo-x) - 18%) calc(var(--holo-y) + 15%), rgba(186,230,253,.72) 0 1.5px, transparent 3px),
+        radial-gradient(circle at calc(var(--holo-x) + 4%) calc(var(--holo-y) + 23%), rgba(254,240,138,.7) 0 1px, transparent 2.5px);
+      background-size: 47px 53px, 61px 67px, 73px 79px;
+      opacity: .72; mix-blend-mode: screen;
+    }
+    .poke-card.holo .card-holo-effect { opacity: .56; }
+    .poke-card.ultra .card-holo-effect { opacity: .62; }
+    .poke-card.secret .card-holo-effect { opacity: .68; }
+    .poke-card:active .card-holo-effect { opacity: .78; }
     .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
     .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
@@ -252,6 +290,7 @@
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
     .detail-carousel { width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
+    .detail-carousel .card-holo-effect { opacity: .58; }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
     .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
     .detail-set { font-size: 0.85em; color: #7891c8; margin-bottom: 14px; }
@@ -268,7 +307,7 @@
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
-    .rarity-badge { position: absolute; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; backdrop-filter: blur(4px); }
+    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; backdrop-filter: blur(4px); }
     .rarity-common { background: rgba(55,65,81,0.85); color: #9ca3af; }
     .rarity-uncommon { background: rgba(6,78,59,0.85); color: #6ee7b7; }
     .rarity-rare { background: rgba(30,58,138,0.85); color: #93c5fd; }
@@ -276,8 +315,8 @@
     .rarity-ultra { background: rgba(120,53,15,0.85); color: #fcd34d; }
     .rarity-secret { background: rgba(136,19,55,0.85); color: #fda4af; }
 
-    .card-img-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); }
-    .comments-badge { position: absolute; bottom: 5px; left: 5px; background: rgba(0,0,0,0.75); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; backdrop-filter: blur(4px); }
+    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); }
+    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.75); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; backdrop-filter: blur(4px); }
 
     .card-body { padding: 7px 8px 5px; }
     .card-name { font-weight: 800; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e2e8f0; margin-bottom: 2px; }
@@ -699,6 +738,7 @@
     @media (prefers-reduced-motion: reduce) {
       .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
+      .card-holo-effect { opacity: .18 !important; transition: none; }
     }
   </style>
 </head>
@@ -1100,8 +1140,8 @@ function render(){
     const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
     const imgHtml=imgs.length
       ?(imgs.length>1
-        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}" loading="lazy"></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
-        :`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}</div>`)
+        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}" loading="lazy"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
+        :`<div class="card-img-wrap"><img src="${imgs[0]}" loading="lazy"><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${c.rarity?(RARITY_HE[c.rarity]||c.rarity):''}</div>${badge}</div>`)
       :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
     const div=document.createElement('div');
     div.className=`poke-card ${rarityClass(c.rarity)}`;
@@ -1131,7 +1171,7 @@ function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const imgs=cardImageUrls(c);
   const imgHtml=imgs.length
-    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}"></div>`).join('')}</div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
   const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${t}</div>`).join(''):'';
@@ -1166,6 +1206,91 @@ function updateDots(track){
   const idx=Math.round(track.scrollLeft/track.offsetWidth);
   const dots=track.parentElement.querySelectorAll('.carousel-dot');
   dots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+}
+
+let holoFrame=0;
+let holoTargetX=50;
+let holoTargetY=46;
+let holoOrientationBase=null;
+let holoMotionAttached=false;
+let holoPermissionAsked=false;
+
+function clampHolo(value,min,max){return Math.max(min,Math.min(max,value));}
+
+function applyHoloPosition(x,y){
+  holoTargetX=clampHolo(Number(x)||50,4,96);
+  holoTargetY=clampHolo(Number(y)||46,4,96);
+  if(holoFrame)return;
+  holoFrame=requestAnimationFrame(()=>{
+    holoFrame=0;
+    document.documentElement.style.setProperty('--holo-x',`${holoTargetX.toFixed(1)}%`);
+    document.documentElement.style.setProperty('--holo-y',`${holoTargetY.toFixed(1)}%`);
+    document.documentElement.style.setProperty('--holo-angle',`${(88+holoTargetX*.74).toFixed(1)}deg`);
+  });
+}
+
+function handleHoloOrientation(event){
+  if(event.gamma==null||event.beta==null)return;
+  if(!holoOrientationBase)holoOrientationBase={gamma:event.gamma,beta:event.beta};
+  let dx=event.gamma-holoOrientationBase.gamma;
+  let dy=event.beta-holoOrientationBase.beta;
+  const angle=Number(window.screen?.orientation?.angle??window.orientation??0);
+  if(Math.abs(angle)===90){const swap=dx;dx=dy;dy=-swap;}
+  applyHoloPosition(50+dx*1.85,46+dy*1.3);
+}
+
+function attachHoloMotion(){
+  if(holoMotionAttached)return;
+  holoMotionAttached=true;
+  window.addEventListener('deviceorientation',handleHoloOrientation,{passive:true});
+}
+
+async function requestHoloMotion(){
+  if(holoPermissionAsked)return;
+  holoPermissionAsked=true;
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
+      if(await DeviceOrientationEvent.requestPermission()==='granted')attachHoloMotion();
+    }else{
+      attachHoloMotion();
+    }
+  }catch(error){
+    console.debug('Motion permission unavailable',error);
+  }
+}
+
+function holoSurfaceFromEvent(event){
+  if(!(event.target instanceof Element))return null;
+  return event.target.closest('.poke-card,.detail-carousel');
+}
+
+function handleHoloPointer(event){
+  const surface=holoSurfaceFromEvent(event);
+  if(!surface)return;
+  const rect=surface.getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  applyHoloPosition(
+    ((event.clientX-rect.left)/rect.width)*100,
+    ((event.clientY-rect.top)/rect.height)*100
+  );
+}
+
+function initHoloEffect(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  document.addEventListener('pointerdown',handleHoloPointer,{passive:true});
+  document.addEventListener('pointermove',handleHoloPointer,{passive:true});
+  if(typeof DeviceOrientationEvent==='undefined')return;
+  if(typeof DeviceOrientationEvent.requestPermission==='function'){
+    const askForMotion=event=>{
+      if(!holoSurfaceFromEvent(event))return;
+      requestHoloMotion();
+      document.removeEventListener('pointerup',askForMotion);
+    };
+    document.addEventListener('pointerup',askForMotion,{passive:true});
+  }else{
+    attachHoloMotion();
+  }
+  window.addEventListener('orientationchange',()=>{holoOrientationBase=null;},{passive:true});
 }
 
 function escapeHtml(value){
@@ -1658,7 +1783,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
   field.addEventListener('input',clearExactMatch);
   field.addEventListener('change',clearExactMatch);
 });
-initCols();initPanel();load();
+initCols();initPanel();initHoloEffect();load();
 </script>
 </body>
 </html>
