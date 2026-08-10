@@ -38,7 +38,7 @@ cloudinary.config(
 CARD_COLUMNS = [
     "id", "name", "pokemon", "set", "number", "year", "condition",
     "language", "rarity", "value", "images", "comments", "setCode",
-    "catalogCardId", "tcgplayerProductId", "finish", "priceSource",
+    "catalogCardId", "catalogImage", "tcgplayerProductId", "finish", "priceSource",
     "priceUpdatedAt",
     "priceCheckedAt"
 ]
@@ -75,6 +75,31 @@ def _card_number_parts(value):
 def _english_card_name(value):
     return re.sub(r"\s*\([^)]*[\u0590-\u05FF][^)]*\)\s*$", "", str(value or "")).strip()
 
+def _tcgdex_image_url(card):
+    """Return TCGdex's high-resolution scan for an exact card record."""
+    image_url = str((card or {}).get("image") or "").strip().rstrip("/")
+    if not image_url:
+        return ""
+    if re.search(r"\.(?:webp|png|jpe?g)$", image_url, re.IGNORECASE):
+        return image_url
+    return f"{image_url}/high.webp"
+
+def _tcgplayer_image_url(product_id):
+    product_id = str(product_id or "").strip()
+    if product_id.endswith(".0"):
+        product_id = product_id[:-2]
+    if not product_id.isdigit():
+        return ""
+    return (
+        "https://tcgplayer-cdn.tcgplayer.com/product/"
+        f"{product_id}_in_1000x1000.jpg"
+    )
+
+def _with_catalog_image(payload, image_url):
+    if image_url:
+        payload["catalogImage"] = image_url
+    return payload
+
 def _pokemon_tcg_api_price(card_info):
     """Primary free price lookup using Pokémon TCG API / TCGplayer data."""
     english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
@@ -94,7 +119,7 @@ def _pokemon_tcg_api_price(card_info):
             params={
                 "q": f'name:"{query_name}"',
                 "pageSize": 250,
-                "select": "id,name,number,set,rarity,tcgplayer"
+                "select": "id,name,number,set,rarity,images,tcgplayer"
             },
             headers=headers,
             timeout=15
@@ -135,17 +160,22 @@ def _pokemon_tcg_api_price(card_info):
         else:
             card = candidates[0]
 
+        catalog_image = (
+            (card.get("images") or {}).get("large")
+            or (card.get("images") or {}).get("small")
+            or ""
+        )
         tcgplayer = card.get("tcgplayer") or {}
         variants = {
             key: value for key, value in (tcgplayer.get("prices") or {}).items()
             if isinstance(value, dict) and value.get("market") is not None
         }
         if not variants:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "price-unavailable",
                 "marketCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         finish = str(card_info.get("finish") or "").lower()
         rarity = str(card_info.get("rarity") or "").lower()
@@ -162,21 +192,21 @@ def _pokemon_tcg_api_price(card_info):
         if not chosen_key and len(variants) == 1:
             chosen_key = next(iter(variants))
         if not chosen_key:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "variant-ambiguous",
                 "marketCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         price = float(variants[chosen_key]["market"])
-        return {
+        return _with_catalog_image({
             "value": f"{price:.2f}".rstrip("0").rstrip("."),
             "priceStatus": "matched",
             "priceSource": "TCGplayer",
             "priceVariant": chosen_key,
             "priceUpdatedAt": tcgplayer.get("updatedAt", ""),
             "marketCardId": card.get("id", "")
-        }
+        }, catalog_image)
     except (requests.RequestException, ValueError, TypeError, KeyError):
         return {"value": "", "priceStatus": "service-unavailable"}
 
@@ -185,6 +215,7 @@ def _enrich_identification_from_catalog(card_info):
     """Verify a foreign printing by its language, set code and collector number."""
     language = str(card_info.get("language") or "").strip().lower()
     language_codes = {
+        "english": "en",
         "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
         "french": "fr", "german": "de", "spanish": "es",
         "italian": "it", "portuguese": "pt", "thai": "th",
@@ -271,6 +302,9 @@ def _enrich_identification_from_catalog(card_info):
         resolved_code = str(card.get("id") or "").rsplit("-", 1)[0]
         card_info["setCode"] = resolved_code
         card_info["catalogCardId"] = card.get("id", "")
+        catalog_image = _tcgdex_image_url(card)
+        if catalog_image:
+            card_info["catalogImage"] = catalog_image
         if official_count:
             card_info["number"] = f"{card.get('localId', card_number)}/{official_count}"
         if not card_info.get("set"):
@@ -396,6 +430,7 @@ def _localized_tcgdex_price(card_info):
                 "priceStatus": "not-found" if not details else "ambiguous"
             }
         card = details[0]
+        catalog_image = _tcgdex_image_url(card)
         pricing = card.get("pricing") or {}
 
         tcgplayer = pricing.get("tcgplayer") or {}
@@ -419,7 +454,7 @@ def _localized_tcgdex_price(card_info):
             chosen = next(iter(variants))
         if chosen:
             price = float(variants[chosen]["marketPrice"])
-            return {
+            return _with_catalog_image({
                 "value": f"{price:.2f}".rstrip("0").rstrip("."),
                 "priceStatus": "matched",
                 "priceSource": "TCGplayer",
@@ -427,7 +462,7 @@ def _localized_tcgdex_price(card_info):
                 "priceUpdatedAt": tcgplayer.get("updated", ""),
                 "marketCardId": card.get("id", ""),
                 "catalogCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         cardmarket = pricing.get("cardmarket") or {}
         if "holo" in finish or "holo" in rarity:
@@ -452,11 +487,11 @@ def _localized_tcgdex_price(card_info):
             )
             variant = "normal"
         if euro_price is None:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "price-unavailable",
                 "catalogCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         fx_response = requests.get(
             "https://api.frankfurter.dev/v2/rate/EUR/USD",
@@ -465,7 +500,7 @@ def _localized_tcgdex_price(card_info):
         fx_response.raise_for_status()
         usd_rate = float(fx_response.json()["rate"])
         usd_price = float(euro_price) * usd_rate
-        return {
+        return _with_catalog_image({
             "value": f"{usd_price:.2f}".rstrip("0").rstrip("."),
             "priceStatus": "matched",
             "priceSource": "Cardmarket",
@@ -475,7 +510,7 @@ def _localized_tcgdex_price(card_info):
             "catalogCardId": card.get("id", ""),
             "originalPrice": euro_price,
             "originalCurrency": "EUR"
-        }
+        }, catalog_image)
     except (requests.RequestException, ValueError, TypeError, KeyError):
         return {"value": "", "priceStatus": "service-unavailable"}
 
@@ -586,7 +621,7 @@ def _tcgplayer_marketplace_price(card_info):
                 market_price = detail.get("marketPrice")
                 if number_ok and name_ok and market_price is not None:
                     price = float(market_price)
-                    return {
+                    return _with_catalog_image({
                         "value": f"{price:.2f}".rstrip("0").rstrip("."),
                         "priceStatus": "matched",
                         "priceSource": "TCGplayer",
@@ -595,7 +630,7 @@ def _tcgplayer_marketplace_price(card_info):
                             timezone.utc
                         ).isoformat(),
                         "tcgplayerProductId": stored_product_id
-                    }
+                    }, _tcgplayer_image_url(stored_product_id))
 
         set_code = re.sub(
             r"[^A-Z0-9]",
@@ -721,11 +756,11 @@ def _tcgplayer_marketplace_price(card_info):
             )
         ]
         if not priced_rows:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "price-unavailable",
                 "tcgplayerProductId": product_id
-            }
+            }, _tcgplayer_image_url(product_id))
 
         finish = str(card_info.get("finish") or "").lower()
         rarity = str(card_info.get("rarity") or "").lower()
@@ -751,39 +786,43 @@ def _tcgplayer_marketplace_price(card_info):
             if len(printings) == 1:
                 chosen_rows = priced_rows
         if len(chosen_rows) != 1:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "variant-ambiguous",
                 "tcgplayerProductId": product_id
-            }
+            }, _tcgplayer_image_url(product_id))
 
         chosen = chosen_rows[0]
         price = float(chosen["marketPrice"])
-        return {
+        return _with_catalog_image({
             "value": f"{price:.2f}".rstrip("0").rstrip("."),
             "priceStatus": "matched",
             "priceSource": "TCGplayer",
             "priceVariant": chosen.get("printing", "market"),
             "priceUpdatedAt": datetime.now(timezone.utc).isoformat(),
             "tcgplayerProductId": product_id
-        }
+        }, _tcgplayer_image_url(product_id))
     except (requests.RequestException, ValueError, TypeError, KeyError):
         return {"value": "", "priceStatus": "service-unavailable"}
 
 
 def _market_price_for_card(card_info):
     """Find a verified market price across localized and English catalogs."""
+    catalog_image = str(card_info.get("catalogImage") or "").strip()
     localized = _localized_tcgdex_price(card_info)
+    catalog_image = localized.get("catalogImage") or catalog_image
     if localized.get("priceStatus") == "matched":
-        return localized
+        return _with_catalog_image(localized, catalog_image)
 
     primary = _pokemon_tcg_api_price(card_info)
+    catalog_image = primary.get("catalogImage") or catalog_image
     if primary.get("priceStatus") == "matched":
-        return primary
+        return _with_catalog_image(primary, catalog_image)
 
     marketplace = _tcgplayer_marketplace_price(card_info)
+    catalog_image = marketplace.get("catalogImage") or catalog_image
     if marketplace.get("priceStatus") == "matched":
-        return marketplace
+        return _with_catalog_image(marketplace, catalog_image)
 
     english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
@@ -792,7 +831,10 @@ def _market_price_for_card(card_info):
     # The printed collector number is the primary identifier. Names and set
     # text are supporting signals only, since AI can translate or misread them.
     if not card_number:
-        return {"value": "", "priceStatus": "missing-collector-number"}
+        return _with_catalog_image(
+            {"value": "", "priceStatus": "missing-collector-number"},
+            catalog_image
+        )
 
     try:
         search = requests.get(
@@ -812,7 +854,10 @@ def _market_price_for_card(card_info):
         ]
 
         if not candidates:
-            return {"value": "", "priceStatus": "not-found"}
+            return _with_catalog_image(
+                {"value": "", "priceStatus": "not-found"},
+                catalog_image
+            )
 
         details = []
         for candidate in candidates[:8]:
@@ -824,7 +869,10 @@ def _market_price_for_card(card_info):
                 details.append(response.json())
 
         if not details:
-            return {"value": "", "priceStatus": "not-found"}
+            return _with_catalog_image(
+                {"value": "", "priceStatus": "not-found"},
+                catalog_image
+            )
 
         # The denominator printed on cards (for example 095/086) is often a
         # stronger set identifier than a translated or AI-read set name.
@@ -855,22 +903,26 @@ def _market_price_for_card(card_info):
             best_score, best_card = scored[0]
             second_score = scored[1][0] if len(scored) > 1 else 0
             if best_score < 0.58 or best_score - second_score < 0.08:
-                return {"value": "", "priceStatus": "ambiguous"}
+                return _with_catalog_image(
+                    {"value": "", "priceStatus": "ambiguous"},
+                    catalog_image
+                )
             card = best_card
         else:
             card = details[0]
 
+        catalog_image = _tcgdex_image_url(card) or catalog_image
         tcgplayer = (card.get("pricing") or {}).get("tcgplayer") or {}
         price_variants = {
             key: value for key, value in tcgplayer.items()
             if isinstance(value, dict) and value.get("marketPrice") is not None
         }
         if not price_variants:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "price-unavailable",
                 "marketCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         finish = str(card_info.get("finish") or "").lower()
         rarity = str(card_info.get("rarity") or "").lower()
@@ -888,25 +940,28 @@ def _market_price_for_card(card_info):
         if not chosen_key and len(price_variants) == 1:
             chosen_key = next(iter(price_variants))
         if not chosen_key:
-            return {
+            return _with_catalog_image({
                 "value": "",
                 "priceStatus": "variant-ambiguous",
                 "marketCardId": card.get("id", "")
-            }
+            }, catalog_image)
 
         price = float(price_variants[chosen_key]["marketPrice"])
-        return {
+        return _with_catalog_image({
             "value": f"{price:.2f}".rstrip("0").rstrip("."),
             "priceStatus": "matched",
             "priceSource": "TCGplayer",
             "priceVariant": chosen_key,
             "priceUpdatedAt": tcgplayer.get("updated", ""),
             "marketCardId": card.get("id", "")
-        }
+        }, catalog_image)
     except (requests.RequestException, ValueError, TypeError, KeyError):
         # Identification must keep working even when the free price service is
         # unavailable. A blank value is safer than an invented price.
-        return {"value": "", "priceStatus": "service-unavailable"}
+        return _with_catalog_image(
+            {"value": "", "priceStatus": "service-unavailable"},
+            catalog_image
+        )
 
 @app.get("/cards")
 def get_cards():
@@ -1048,6 +1103,13 @@ def _refresh_price_batch(limit=2):
                         str(catalog_card_id).rsplit("-", 1)[0]
                     )
                 ])
+            catalog_image = result.get("catalogImage")
+            if catalog_image:
+                cells.append(gspread.Cell(
+                    row_index,
+                    column_indexes["catalogImage"],
+                    catalog_image
+                ))
             tcgplayer_product_id = result.get("tcgplayerProductId")
             if tcgplayer_product_id:
                 cells.append(gspread.Cell(
