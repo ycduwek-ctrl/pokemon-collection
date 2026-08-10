@@ -43,7 +43,7 @@
     .header-logo { display: flex; flex-direction: column; align-items: center; width: 100%; }
     .header-title {
       display: flex; align-items: center; justify-content: center; gap: 5px;
-      width: 100%; font-size: 1.65em; font-weight: 900; line-height: 1;
+      width: 100%; font-size: 1.92em; font-weight: 900; line-height: 1;
       text-align: center;
     }
     .header-title-text {
@@ -147,7 +147,7 @@
         width: 100%; padding-left: 105px;
       }
       .header-title {
-        font-size: 1.55em;
+        font-size: 1.86em;
         white-space: nowrap;
         filter: drop-shadow(0 0 10px rgba(251,191,36,0.5));
         text-shadow: 0 2px 14px #12063a;
@@ -820,16 +820,48 @@
     }
     .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
 
-    .header-tools {
+    .header-menu {
       position: absolute; top: 8px; right: 8px; z-index: 12;
-      display: flex; gap: 5px; direction: rtl;
+      direction: rtl;
     }
-    .header-tool {
-      width: 31px; height: 31px; border-radius: 50%; border: 1px solid rgba(255,255,255,.16);
-      background: rgba(5,10,24,.58); color: #e2e8f0; cursor: pointer; font-size: .82em;
-      display: grid; place-items: center; backdrop-filter: blur(7px);
+    .header-menu-toggle {
+      width: 38px; height: 38px; padding: 0; border-radius: 50%;
+      border: 1px solid rgba(251,191,36,.42); background: rgba(5,10,24,.72);
+      color: #f8fafc; cursor: pointer; display: grid; place-content: center; gap: 4px;
+      backdrop-filter: blur(9px); box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.08);
     }
-    .header-tool[hidden] { display: none; }
+    .header-menu-toggle span {
+      display: block; width: 17px; height: 2px; border-radius: 3px; background: currentColor;
+      transition: transform .2s ease, opacity .16s ease;
+    }
+    .header-menu.open .header-menu-toggle span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
+    .header-menu.open .header-menu-toggle span:nth-child(2) { opacity: 0; }
+    .header-menu.open .header-menu-toggle span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
+    .header-menu-panel {
+      position: absolute; top: 45px; right: 0; width: 178px; padding: 7px;
+      display: grid; gap: 5px; border-radius: 15px;
+      border: 1px solid rgba(251,191,36,.3);
+      background: linear-gradient(145deg, rgba(15,23,48,.98), rgba(18,6,58,.98));
+      box-shadow: 0 18px 38px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06);
+      opacity: 0; visibility: hidden; pointer-events: none;
+      transform: translateY(-7px) scale(.96); transform-origin: top right;
+      transition: opacity .18s ease, transform .18s ease, visibility .18s;
+    }
+    .header-menu.open .header-menu-panel {
+      opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1);
+    }
+    .header-menu-item {
+      min-height: 40px; padding: 7px 10px; border-radius: 10px;
+      border: 1px solid transparent; background: rgba(255,255,255,.035);
+      color: #e2e8f0; cursor: pointer; font: 800 .78em 'Heebo',sans-serif;
+      display: flex; align-items: center; gap: 9px; text-align: right;
+    }
+    .header-menu-item:hover, .header-menu-item:focus-visible {
+      outline: none; color: #fff; border-color: rgba(167,139,250,.42); background: rgba(124,58,237,.17);
+    }
+    .header-menu-item.danger { color: #fca5a5; }
+    .header-menu-item[hidden] { display: none; }
+    .header-menu-icon { width: 23px; text-align: center; font-size: 1.12em; }
 
     .system-overlay {
       position: fixed; inset: 0; z-index: 460; display: none; padding: 18px;
@@ -929,10 +961,26 @@
 
 <div class="header">
   <div class="header-inner">
-    <div class="header-tools" aria-label="חשבון והגדרות">
-      <button class="header-tool" id="adminBtn" hidden onclick="openAdminPanel()" aria-label="ניהול משתמשים">👥</button>
-      <button class="header-tool" onclick="openSettingsPanel()" aria-label="הגדרות וגיבוי">⚙️</button>
-      <button class="header-tool" onclick="HitimAuth.signOut()" aria-label="יציאה">↪</button>
+    <div class="header-menu" id="headerMenu">
+      <button class="header-menu-toggle" id="headerMenuToggle" type="button"
+              onclick="toggleHeaderMenu(event)" aria-expanded="false"
+              aria-controls="headerMenuPanel" aria-label="פתיחת תפריט">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="header-menu-panel" id="headerMenuPanel" role="menu" aria-label="חשבון והגדרות">
+        <button class="header-menu-item" id="adminMenuBtn" type="button" role="menuitem" hidden
+                onclick="closeHeaderMenu();openAdminPanel()">
+          <span class="header-menu-icon">👥</span><span>ניהול משתמשים</span>
+        </button>
+        <button class="header-menu-item" type="button" role="menuitem"
+                onclick="closeHeaderMenu();openSettingsPanel()">
+          <span class="header-menu-icon">⚙️</span><span>הגדרות וגיבוי</span>
+        </button>
+        <button class="header-menu-item danger" type="button" role="menuitem"
+                onclick="closeHeaderMenu();HitimAuth.signOut()">
+          <span class="header-menu-icon">↪</span><span>יציאה</span>
+        </button>
+      </div>
     </div>
     <div class="header-left">
       <div class="header-logo">
@@ -2070,6 +2118,33 @@ async function refreshDuePrices(){
   }
 }
 
+function setHeaderMenuOpen(open,returnFocus=false){
+  const menu=document.getElementById('headerMenu');
+  const toggle=document.getElementById('headerMenuToggle');
+  if(!menu||!toggle)return;
+  menu.classList.toggle('open',open);
+  toggle.setAttribute('aria-expanded',String(open));
+  toggle.setAttribute('aria-label',open?'סגירת תפריט':'פתיחת תפריט');
+  if(open){
+    requestAnimationFrame(()=>document.querySelector('#headerMenuPanel .header-menu-item:not([hidden])')?.focus());
+  }else if(returnFocus){
+    toggle.focus();
+  }
+}
+function toggleHeaderMenu(event){
+  event?.stopPropagation();
+  const menu=document.getElementById('headerMenu');
+  setHeaderMenuOpen(!menu?.classList.contains('open'));
+}
+function closeHeaderMenu(returnFocus=false){setHeaderMenuOpen(false,returnFocus);}
+document.addEventListener('click',event=>{
+  const menu=document.getElementById('headerMenu');
+  if(menu?.classList.contains('open')&&!menu.contains(event.target))closeHeaderMenu();
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape'&&document.getElementById('headerMenu')?.classList.contains('open'))closeHeaderMenu(true);
+});
+
 function closeSystemPanel(id){document.getElementById(id)?.classList.remove('open');}
 function systemOverlayClick(event,id){if(event.target===document.getElementById(id))closeSystemPanel(id);}
 
@@ -2243,7 +2318,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 initCols();initPanel();initHoloEffect();initPwa();
 HitimAuth.init(async access=>{
   currentAccess=access;
-  document.getElementById('adminBtn').hidden=access.role!=='admin';
+  document.getElementById('adminMenuBtn').hidden=access.role!=='admin';
   document.getElementById('legacyImportSection').hidden=access.role!=='admin';
   await HitimDB.requestPersistence();
   await load();
