@@ -78,9 +78,13 @@ def _service_headers(prefer=None):
     settings = _require_configuration()
     headers = {
         "apikey": settings["service"],
-        "Authorization": f"Bearer {settings['service']}",
         "Content-Type": "application/json",
     }
+    # Supabase's new sb_secret_* keys are opaque API keys, not JWTs. Sending
+    # one as a Bearer token makes the gateway reject an otherwise valid key.
+    # Legacy service_role JWTs still require the Authorization header.
+    if not settings["service"].startswith("sb_secret_"):
+        headers["Authorization"] = f"Bearer {settings['service']}"
     if prefer:
         headers["Prefer"] = prefer
     return headers
@@ -99,7 +103,15 @@ def _service_request(method, path, **kwargs):
     except requests.RequestException as exc:
         raise HTTPException(status_code=503, detail="Access database unavailable") from exc
     if not response.ok:
-        raise HTTPException(status_code=503, detail="Access database request failed")
+        try:
+            supabase_code = str(response.json().get("code") or "").strip()
+        except (TypeError, ValueError, AttributeError):
+            supabase_code = ""
+        diagnostic = f"{response.status_code}/{supabase_code}" if supabase_code else str(response.status_code)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Access database request failed ({diagnostic})",
+        )
     if not response.content:
         return None
     return response.json()
