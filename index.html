@@ -1095,7 +1095,7 @@ function render(){
   const grid=document.getElementById('grid');grid.innerHTML='';
   if(!list.length&&cards.length){grid.innerHTML='<div class="no-results">😕 לא נמצאו קלפים</div>';}
   list.forEach(c=>{
-    const imgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));
+    const imgs=cardImageUrls(c);
     const cc=comments[String(c.id)]||[];
     const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
     const imgHtml=imgs.length
@@ -1129,7 +1129,7 @@ function render(){
 
 function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
-  const imgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));
+  const imgs=cardImageUrls(c);
   const imgHtml=imgs.length
     ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${u}"></div>`).join('')}</div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
@@ -1176,6 +1176,13 @@ function uniqueImageUrls(values){
   return [...new Set((values||[])
     .map(value=>String(value||'').trim())
     .filter(value=>/^https?:\/\//i.test(value)))];
+}
+
+function cardImageUrls(card){
+  return uniqueImageUrls([
+    card?.catalogImage,
+    ...String(card?.images||'').split('|')
+  ]);
 }
 
 function openQuickIdentify(){
@@ -1346,7 +1353,7 @@ async function addQuickScanToGallery(id){
 async function shareCard(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const text=`⚡ ${c.name||c.pokemon}\n📦 ${c.set||''} ${c.number?'#'+c.number:''}\n⭐ ${c.rarity||''} | 🏷️ ${c.condition||''}\n💰 $${c.value||'0'}`;
-  const imageUrl=(c.images||'').split('|').find(url=>url.startsWith('http'));
+  const imageUrl=cardImageUrls(c)[0];
   if(navigator.share){
     try{
       if(imageUrl){
@@ -1382,7 +1389,7 @@ function openAdd(){
 
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
-  editId=id;existImgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));newFiles=[];aiFront=null;aiBack=null;
+  editId=id;existImgs=cardImageUrls(c);newFiles=[];aiFront=null;aiBack=null;
   aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
