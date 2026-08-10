@@ -346,7 +346,7 @@
     .quick-scan-empty-title { color: #94a3b8; font-size: .84em; font-weight: 800; }
     .quick-scan-empty-sub { font-size: .68em; margin-top: 3px; }
     .quick-scan-row {
-      display: grid; grid-template-columns: 58px minmax(0,1fr) 30px;
+      display: grid; grid-template-columns: 58px minmax(0,1fr) 34px;
       gap: 10px; align-items: center; padding: 8px;
       border-radius: 13px; background: #0f1730; border: 1px solid #1e2d5a;
       animation: cardEnter .28s ease both;
@@ -372,6 +372,24 @@
       width: 28px; height: 28px; border: 0; border-radius: 50%;
       background: #182443; color: #64748b; cursor: pointer; font-size: .8em;
     }
+    .quick-scan-actions { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+    .quick-add {
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+      border: 1px solid rgba(45,212,191,.65); color: #5eead4;
+      background: rgba(13,148,136,.14); font-size: 1.35em; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 0 16px rgba(45,212,191,.14); transition: .2s ease;
+    }
+    .quick-add:active:not(:disabled) { transform: scale(.9); }
+    .quick-add:disabled { cursor: default; }
+    .quick-add.saving { color: #c4b5fd; border-color: rgba(167,139,250,.55); background: rgba(124,58,237,.18); }
+    .quick-add.added { color: #052e2b; background: #5eead4; border-color: #5eead4; font-size: 1em; font-weight: 900; }
+    .quick-add-spinner {
+      width: 15px; height: 15px; border-radius: 50%;
+      border: 2px solid rgba(196,181,253,.3); border-top-color: #c4b5fd;
+      animation: quickAddSpin .65s linear infinite;
+    }
+    @keyframes quickAddSpin { to { transform: rotate(360deg); } }
     .quick-capture-actions {
       display: grid; grid-template-columns: .8fr 1.2fr; gap: 9px; margin-top: 13px;
       position: sticky; bottom: 0; padding: 9px 0 2px;
@@ -406,6 +424,11 @@
     .img-prev-item { position: relative; }
     .img-prev-item img { width: 60px; height: 84px; object-fit: cover; border-radius: 8px; display: block; }
     .img-prev-del { position: absolute; top: -4px; left: -4px; background: #ef5350; color: white; border: none; border-radius: 50%; width: 18px; height: 18px; font-size: 0.65em; cursor: pointer; }
+    .catalog-preview-badge {
+      position: absolute; right: 3px; bottom: 3px; padding: 2px 4px;
+      border-radius: 5px; background: rgba(5,10,24,.84); color: #5eead4;
+      font-size: .5em; font-weight: 800; pointer-events: none;
+    }
 
     .comments-section { background: #0f1730; border-radius: 12px; padding: 12px; margin-bottom: 12px; border: 1px solid #1e2d5a; }
     .comments-title { font-size: 0.8em; font-weight: 800; color: #3d4f7a; margin-bottom: 10px; }
@@ -674,7 +697,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-ball, .floating-action, .quick-mini-ball, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
   </style>
@@ -810,7 +833,7 @@
       <div class="quick-session-tools">
         <button class="quick-clear-btn" onclick="resetQuickIdentify()">🗑️ נקה את הסריקה</button>
       </div>
-      <div class="quick-privacy">הסריקה זמנית בלבד. התמונות והתוצאות אינן נשמרות באוסף או בענן.</div>
+      <div class="quick-privacy">הסריקה זמנית. רק קלף שתבחר להוסיף בעזרת ＋ יישמר באוסף ובענן.</div>
     </div>
   </div>
 </div>
@@ -1149,6 +1172,12 @@ function escapeHtml(value){
   return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[char]));
 }
 
+function uniqueImageUrls(values){
+  return [...new Set((values||[])
+    .map(value=>String(value||'').trim())
+    .filter(value=>/^https?:\/\//i.test(value)))];
+}
+
 function openQuickIdentify(){
   resetQuickIdentify();
   document.getElementById('quickIdentifyOverlay').classList.add('open');
@@ -1185,7 +1214,7 @@ function quickFilesSelected(input){
     quickScans.push({
       id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
       file,url:URL.createObjectURL(file),status:'queued',name:'',value:null,
-      priceStatus:'',error:''
+      priceStatus:'',error:'',saving:false,added:false,saveError:false
     });
   });
   renderQuickScans();
@@ -1194,6 +1223,7 @@ function quickFilesSelected(input){
 function removeQuickScan(id){
   const index=quickScans.findIndex(scan=>scan.id===id);
   if(index<0)return;
+  if(quickScans[index].saving)return;
   if(quickScans[index].url)URL.revokeObjectURL(quickScans[index].url);
   quickScans.splice(index,1);renderQuickScans();
 }
@@ -1202,8 +1232,10 @@ function renderQuickScans(){
   if(!list)return;
   const finished=quickScans.filter(scan=>scan.status==='done');
   const total=finished.reduce((sum,scan)=>sum+(Number.isFinite(scan.value)?scan.value:0),0);
+  const added=finished.filter(scan=>scan.added).length;
   document.getElementById('quickScanCount').textContent=
-    quickScans.length===1?'קלף אחד נסרק':quickScans.length+' קלפים נסרקו';
+    (quickScans.length===1?'קלף אחד נסרק':quickScans.length+' קלפים נסרקו')+
+    (added?' • '+added+' נוספו':'');
   document.getElementById('quickScanTotal').textContent='סה״כ: $'+total.toFixed(2);
   if(!quickScans.length){
     list.innerHTML=`<div class="quick-scan-empty">
@@ -1223,10 +1255,21 @@ function renderQuickScans(){
       body=`<div class="quick-scan-name">${escapeHtml(scan.name||'קלף לא מזוהה')}</div>
         <div class="quick-scan-price">${price}</div>`;
     }
+    const thumb=scan.status==='done'&&scan.data?.catalogImage
+      ?scan.data.catalogImage:scan.url;
+    const addButton=scan.status==='done'
+      ?`<button class="quick-add${scan.saving?' saving':''}${scan.added?' added':''}"
+          onclick="addQuickScanToGallery('${scan.id}')"
+          aria-label="${scan.added?'נוסף לאוסף':'הוסף לאוסף'}"
+          ${scan.saving||scan.added?'disabled':''}>${scan.saving?'<span class="quick-add-spinner"></span>':scan.added?'✓':'＋'}</button>`
+      :'';
     return `<div class="quick-scan-row">
-      <img class="quick-scan-thumb" src="${scan.url}" alt="">
+      <img class="quick-scan-thumb" src="${escapeHtml(thumb)}" alt="">
       <div class="quick-scan-info">${body}</div>
-      <button class="quick-remove" onclick="removeQuickScan('${scan.id}')" aria-label="הסר">✕</button>
+      <div class="quick-scan-actions">
+        ${addButton}
+        <button class="quick-remove" onclick="removeQuickScan('${scan.id}')" aria-label="הסר" ${scan.saving?'disabled':''}>✕</button>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1259,6 +1302,44 @@ async function processQuickQueue(){
     }
   }finally{
     if(token===quickSessionToken)quickProcessing=false;
+  }
+}
+
+async function addQuickScanToGallery(id){
+  const scan=quickScans.find(item=>item.id===id);
+  if(!scan||scan.status!=='done'||scan.saving||scan.added||!scan.data)return;
+  scan.saving=true;scan.saveError=false;renderQuickScans();
+  try{
+    const photoUrl=await uploadFile(scan.file);
+    if(!photoUrl)throw new Error('upload');
+    const d=scan.data;
+    const imageUrls=uniqueImageUrls([d.catalogImage,photoUrl]);
+    const card={
+      id:'q-'+Date.now()+'-'+Math.random().toString(36).slice(2,7),
+      name:d.name||d.pokemon||'קלף לא מזוהה',pokemon:d.pokemon||'',
+      set:d.set||'',number:d.number||'',year:d.year||'',
+      condition:CONDITIONS.includes(d.condition)?d.condition:'Near Mint',
+      language:LANGUAGES.includes(d.language)?d.language:'Other',
+      rarity:RARITIES.includes(d.rarity)?d.rarity:'Common',
+      value:d.priceStatus==='matched'?(d.value||''):'',
+      images:imageUrls.join('|'),comments:'',setCode:d.setCode||'',
+      catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',
+      tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',
+      priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',
+      priceCheckedAt:new Date().toISOString()
+    };
+    const response=await fetch(`${API}/cards`,{
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(card)
+    });
+    if(!response.ok)throw new Error('save');
+    scan.added=true;scan.savedId=card.id;
+    await load();
+    toast(`✅ ${scan.name||'הקלף'} נוסף לאוסף!`);
+  }catch(error){
+    scan.saveError=true;
+    toast('לא הצלחנו להוסיף את הקלף — אפשר לנסות שוב');
+  }finally{
+    scan.saving=false;renderQuickScans();
   }
 }
 
@@ -1302,7 +1383,7 @@ function openAdd(){
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   editId=id;existImgs=(c.images||'').split('|').filter(u=>u.startsWith('http'));newFiles=[];aiFront=null;aiBack=null;
-  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
+  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
   document.getElementById('fNumber').value=c.number||'';document.getElementById('fSet').value=c.set||'';
@@ -1314,8 +1395,21 @@ function openEdit(id){
   document.getElementById('overlay').classList.add('open');
 }
 
-function renderPreview(){document.getElementById('imgPreview').innerHTML=existImgs.map((u,i)=>`<div class="img-prev-item"><img src="${u}"><button class="img-prev-del" onclick="removeExist(${i})">✕</button></div>`).join('')+newFiles.map((f,i)=>`<div class="img-prev-item"><img src="${URL.createObjectURL(f)}"><button class="img-prev-del" onclick="removeNew(${i})">✕</button></div>`).join('');}
-function removeExist(i){existImgs.splice(i,1);renderPreview();}
+function renderPreview(){
+  const catalogImage=String(aiMeta.catalogImage||'').trim();
+  const catalogHtml=catalogImage&&!existImgs.includes(catalogImage)
+    ?`<div class="img-prev-item"><img src="${escapeHtml(catalogImage)}"><span class="catalog-preview-badge">קטלוג</span><button class="img-prev-del" onclick="removeCatalogImage()">✕</button></div>`:'';
+  const existingHtml=existImgs.map((u,i)=>`<div class="img-prev-item"><img src="${escapeHtml(u)}"><button class="img-prev-del" onclick="removeExist(${i})">✕</button></div>`).join('');
+  const newHtml=newFiles.map((f,i)=>`<div class="img-prev-item"><img src="${URL.createObjectURL(f)}"><button class="img-prev-del" onclick="removeNew(${i})">✕</button></div>`).join('');
+  document.getElementById('imgPreview').innerHTML=catalogHtml+existingHtml+newHtml;
+}
+function removeCatalogImage(){aiMeta={...aiMeta,catalogImage:''};renderPreview();}
+function removeExist(i){
+  const removed=existImgs[i];
+  existImgs.splice(i,1);
+  if(removed&&removed===aiMeta.catalogImage)aiMeta={...aiMeta,catalogImage:''};
+  renderPreview();
+}
 function removeNew(i){newFiles.splice(i,1);renderPreview();}
 function previewImgs(input){newFiles=[...newFiles,...Array.from(input.files)];input.value='';renderPreview();}
 
@@ -1351,7 +1445,7 @@ async function identifyCoin(){
     if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
     if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
     if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
-    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
     const res=document.getElementById('aiResult');res.style.display='block';
     const priceText=d.priceStatus==='matched'
       ?`💰 $${d.value} לפי ${d.priceSource||'מחיר שוק'}`
@@ -1440,7 +1534,8 @@ async function refreshFormPrice(btn){
     const d=await requestMarketPrice(formCardData());
     if(d.priceStatus==='matched'){
       const newPrice=parseFloat(d.value);priceEl.value=d.value;
-      aiMeta={...aiMeta,catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+      aiMeta={...aiMeta,catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',catalogImage:d.catalogImage||aiMeta.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+      renderPreview();
       const trend=Number.isFinite(oldPrice)?(newPrice>oldPrice?'up':newPrice<oldPrice?'down':'same'):'same';
       replayEffect(priceEl,`price-${trend}`);showMoneyBurst(priceEl,trend);
       toast(trend==='up'?`📈 המחיר עלה ל-$${d.value}!`:trend==='down'?`📉 המחיר ירד ל-$${d.value}`:`✅ המחיר נשאר $${d.value}`);
@@ -1458,7 +1553,7 @@ async function refreshSavedPrice(id,btn){
   try{
     const d=await requestMarketPrice(c);
     if(d.priceStatus!=='matched'){toast('לא נמצא מחיר ודאי לקלף הזה');return;}
-    const priceMeta={value:d.value,catalogCardId:d.catalogCardId||c.catalogCardId||'',tcgplayerProductId:d.tcgplayerProductId||c.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+    const priceMeta={value:d.value,catalogCardId:d.catalogCardId||c.catalogCardId||'',catalogImage:d.catalogImage||c.catalogImage||'',tcgplayerProductId:d.tcgplayerProductId||c.tcgplayerProductId||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
     const r=await fetch(`${API}/cards/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(priceMeta)});
     if(!r.ok)throw new Error('save');
     const newPrice=parseFloat(d.value);
@@ -1495,7 +1590,7 @@ async function saveCard(){
   const btn=document.getElementById('saveBtn');btn.textContent='⏳ שומר...';btn.disabled=true;
   const saveEditId=editId;
   const cardId=saveEditId||String(Date.now());
-  const previewUrl=newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||'');
+  const previewUrl=aiMeta.catalogImage||(newFiles[0]?URL.createObjectURL(newFiles[0]):(existImgs[0]||''));
   const baseData={id:cardId,name,pokemon:document.getElementById('fPokemon').value,set:document.getElementById('fSet').value,number:document.getElementById('fNumber').value,year:document.getElementById('fYear').value,condition:document.getElementById('fCondition').value,language:document.getElementById('fLanguage').value,rarity:document.getElementById('fRarity').value,value:document.getElementById('fValue').value,images:'',comments:'',...aiMeta};
   if(!saveEditId){
     pendingSave=baseData;
@@ -1503,7 +1598,7 @@ async function saveCard(){
   }
   try{
     const urls=[];for(const f of newFiles){const u=await uploadFile(f);if(u)urls.push(u);}
-    const data={...baseData,images:[...existImgs,...urls].join('|')};
+    const data={...baseData,images:uniqueImageUrls([aiMeta.catalogImage,...existImgs,...urls]).join('|')};
     const saveResponse=saveEditId
       ?await fetch(`${API}/cards/${saveEditId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
       :await fetch(`${API}/cards`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
@@ -1552,7 +1647,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 
 ['fNumber','fLanguage'].forEach(id=>{
   const field=document.getElementById(id);
-  const clearExactMatch=()=>{aiMeta={...aiMeta,catalogCardId:'',tcgplayerProductId:'',priceCheckedAt:''};};
+  const clearExactMatch=()=>{aiMeta={...aiMeta,catalogCardId:'',catalogImage:'',tcgplayerProductId:'',priceCheckedAt:''};renderPreview();};
   field.addEventListener('input',clearExactMatch);
   field.addEventListener('change',clearExactMatch);
 });
