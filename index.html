@@ -163,9 +163,6 @@
         display: none;
       }
       .header-stats-row { position: relative; z-index: 4; }
-      .header-stats-box {
-        backdrop-filter: blur(3px);
-      }
     }
 
     /* ===== TOOLBAR ===== */
@@ -223,86 +220,74 @@
     .reset-btn { margin: 14px 16px; width: calc(100% - 32px); padding: 11px; border: 1px solid #1e2d5a; border-radius: 10px; background: #0f1730; font-family: inherit; font-size: 0.88em; font-weight: 700; cursor: pointer; color: #7891c8; }
 
     /* ===== GRID ===== */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 12px; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; gap: 10px; padding: 12px; }
 
     /* ===== POKEMON CARD ===== */
     .poke-card {
-      --holo-strength: .46;
-      --holo-hover-strength: .66;
+      --holo-strength: .28;
+      --holo-hover-strength: .48;
       background: linear-gradient(160deg, #0f1730 0%, #080d1f 100%);
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
       transition: transform 0.15s, box-shadow 0.15s;
       min-width: 0; cursor: pointer; position: relative;
+      contain: layout paint style; isolation: isolate;
     }
     .poke-card:active { transform: scale(0.96); }
-    .poke-card.holo { --holo-strength: .53; --holo-hover-strength: .71; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
-    .poke-card.ultra { --holo-strength: .58; --holo-hover-strength: .76; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
-    .poke-card.secret { --holo-strength: .63; --holo-hover-strength: .80; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
-    .poke-card.ultra::after, .poke-card.secret::after {
-      content: ''; position: absolute; inset: 0; border-radius: 14px;
-      background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.04) 50%, transparent 70%);
-      animation: shimmer 3s ease-in-out infinite; pointer-events: none;
-    }
-    @keyframes shimmer { 0%,100%{opacity:0} 50%{opacity:1} }
+    .poke-card.holo { --holo-strength: .34; --holo-hover-strength: .55; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
+    .poke-card.ultra { --holo-strength: .38; --holo-hover-strength: .62; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
+    .poke-card.secret { --holo-strength: .42; --holo-hover-strength: .67; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
 
     :root {
-      --holo-x: 50%;
-      --holo-y: 46%;
-      --holo-angle: 125deg;
+      --holo-shift-x: 0%;
+      --holo-shift-y: 0%;
+      --holo-rotate: 0deg;
     }
-    .card-img-wrap { width: 100%; aspect-ratio: 5/7; position: relative; overflow: hidden; background: #050a18; }
+    .card-img-wrap { width: 100%; aspect-ratio: 5/7; position: relative; overflow: hidden; background: #050a18; contain: paint; isolation: isolate; }
     .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; transition: transform 0.3s; }
     .poke-card:active .card-img-wrap img { transform: scale(1.03); }
     .card-holo-effect {
-      position: absolute; inset: -1px; z-index: 2; pointer-events: none;
-      border-radius: inherit; opacity: var(--holo-strength, .43); mix-blend-mode: screen;
+      position: absolute; inset: -22%; z-index: 2; pointer-events: none;
+      border-radius: 18%; opacity: var(--holo-strength, .28); mix-blend-mode: screen;
       background:
-        linear-gradient(var(--holo-angle),
-          transparent 0 17%,
-          rgba(255,228,94,.14) 23%,
-          rgba(255,89,205,.46) 31%,
-          rgba(98,214,255,.52) 39%,
-          rgba(255,255,255,.88) 47%,
-          rgba(170,116,255,.52) 54%,
-          rgba(255,222,83,.43) 62%,
-          rgba(80,229,255,.39) 69%,
-          transparent 79% 100%),
-        repeating-linear-gradient(135deg,
-          rgba(255,88,205,.17) 0 11%,
-          rgba(255,224,90,.14) 11% 22%,
-          rgba(85,216,255,.18) 22% 33%,
-          rgba(165,112,255,.18) 33% 44%),
-        linear-gradient(135deg,
-          transparent 18%, rgba(255,255,255,.13) 44%,
-          rgba(255,255,255,.04) 55%, transparent 76%);
-      background-size: 230% 230%, 175% 175%, 210% 210%;
-      background-position:
-        var(--holo-x) var(--holo-y),
-        calc(100% - var(--holo-x)) calc(100% - var(--holo-y)),
-        var(--holo-x) var(--holo-y);
-      filter: saturate(1.3) contrast(1.04);
-      transform: translateZ(0); will-change: background-position, opacity;
-      transition: opacity .22s ease;
+        linear-gradient(118deg,
+          transparent 0 14%,
+          rgba(59,226,255,.06) 18%,
+          rgba(86,214,255,.38) 21%,
+          rgba(255,255,255,.64) 24%,
+          rgba(255,100,221,.29) 27%,
+          transparent 31% 40%,
+          rgba(255,225,91,.09) 43%,
+          rgba(255,190,69,.34) 46%,
+          rgba(255,255,255,.52) 49%,
+          rgba(151,103,255,.30) 52%,
+          transparent 56% 66%,
+          rgba(129,140,248,.08) 69%,
+          rgba(70,226,255,.30) 72%,
+          rgba(255,255,255,.43) 75%,
+          rgba(255,99,188,.25) 78%,
+          transparent 82% 100%),
+        linear-gradient(145deg,
+          transparent 16%, rgba(255,72,205,.13) 34%, transparent 48%,
+          rgba(78,224,255,.11) 63%, transparent 80%),
+        radial-gradient(circle at 48% 45%, rgba(255,255,255,.13), transparent 42%);
+      transform: translate3d(var(--holo-shift-x), var(--holo-shift-y), 0)
+        rotate(var(--holo-rotate)) scale(1.24);
+      transform-origin: center;
+      backface-visibility: hidden;
+      transition: opacity .2s ease, transform .12s linear;
     }
     .card-holo-effect::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit;
-      background:
-        linear-gradient(125deg,
-          transparent 0 38%,
-          rgba(255,245,196,.18) 43%,
-          rgba(255,255,255,.78) 49%,
-          rgba(161,238,255,.25) 54%,
-          transparent 61% 100%),
-        repeating-linear-gradient(135deg,
-          rgba(255,255,255,.10) 0 1px,
-          transparent 1px 8px);
-      background-size: 240% 240%, 100% 100%;
-      background-position: var(--holo-x) var(--holo-y), center;
-      opacity: .78; mix-blend-mode: screen;
+      background: repeating-linear-gradient(118deg,
+        transparent 0 22px,
+        rgba(255,255,255,.075) 23px 24px,
+        transparent 25px 44px);
+      opacity: .46; mix-blend-mode: screen;
     }
-    .poke-card:active .card-holo-effect { opacity: .78; }
+    .holo-in-view .card-holo-effect { will-change: transform; }
+    .poke-card:active .card-holo-effect { opacity: .62; }
     .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
     .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
@@ -313,11 +298,15 @@
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { --holo-strength: .58; --holo-hover-strength: .72; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; }
+    .detail-carousel { --holo-strength: .37; --holo-hover-strength: .58; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
     @media (hover: hover) and (pointer: fine) {
       .card-holo-effect { opacity: 0; }
       .poke-card:hover .card-holo-effect,
-      .detail-carousel:hover .card-holo-effect { opacity: var(--holo-hover-strength, .68); }
+      .detail-carousel:hover .card-holo-effect {
+        opacity: var(--holo-hover-strength, .52);
+        will-change: transform, opacity;
+      }
+      .holo-in-view .card-holo-effect { will-change: auto; }
     }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
     .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
@@ -335,7 +324,7 @@
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
-    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; backdrop-filter: blur(4px); }
+    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; }
     .rarity-common { background: rgba(55,65,81,0.85); color: #9ca3af; }
     .rarity-uncommon { background: rgba(6,78,59,0.85); color: #6ee7b7; }
     .rarity-rare { background: rgba(30,58,138,0.85); color: #93c5fd; }
@@ -344,7 +333,7 @@
     .rarity-secret { background: rgba(136,19,55,0.85); color: #fda4af; }
 
     .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); }
-    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.75); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; backdrop-filter: blur(4px); }
+    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; }
 
     .card-body { padding: 7px 8px 5px; }
     .card-name { font-weight: 800; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e2e8f0; margin-bottom: 2px; }
@@ -660,9 +649,7 @@
     }
 
     /* ===== PLAYFUL INTERACTIONS ===== */
-    .poke-card { animation: cardEnter 0.42s cubic-bezier(.2,.9,.25,1) both; }
-    .poke-card:nth-child(2n) { animation-delay: 0.035s; }
-    .poke-card:nth-child(3n) { animation-delay: 0.07s; }
+    .poke-card.is-entering { animation: cardEnter 0.36s cubic-bezier(.2,.9,.25,1) both; }
     .poke-card.deleting {
       z-index: 20; pointer-events: none;
       animation: cardEscape 0.62s cubic-bezier(.4,0,.8,.2) forwards;
@@ -706,7 +693,7 @@
       display: flex; align-items: center; justify-content: center; gap: 7px;
       color: #fff; font-family: inherit; font-size: .82em; font-weight: 900;
       cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,.48);
-      backdrop-filter: blur(9px); transition: transform .16s, filter .16s;
+      transition: transform .16s, filter .16s;
     }
     .floating-action:active { transform: scale(.92); filter: brightness(1.18); }
     .floating-action.scan {
@@ -764,9 +751,9 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
-      .card-holo-effect { transition: none; }
+      .card-holo-effect { transition: none; transform: scale(1.24); }
     }
 
     /* ===== HITIM ACCOUNT & LOCAL APP ===== */
@@ -1020,7 +1007,7 @@
 <div class="toolbar">
   <div class="search-box">
     <span style="color:#3d4f7a;font-size:0.9em">🔍</span>
-    <input type="text" id="searchInput" placeholder="חיפוש קלף..." oninput="render()">
+    <input type="text" id="searchInput" placeholder="חיפוש קלף..." oninput="scheduleRender()">
   </div>
   <button class="filter-btn" id="filterBtn" onclick="openPanel()">⚙️ סינון</button>
   <div class="cols-control">
@@ -1309,6 +1296,9 @@ let pendingSave=null;
 let currentAccess=null;
 let deferredInstallPrompt=null;
 let dailyPriceRefreshRunning=false;
+let renderFrame=0;
+let hasRenderedCards=false;
+const cardNodeCache=new Map();
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
@@ -1394,62 +1384,114 @@ function setHeaderStat(id,value){
   const el=document.getElementById(id);
   if(!el)return;
   const text=String(value);
-  el.textContent=text;
-  el.style.fontSize=text.length>=7?'0.72em':text.length>=6?'0.82em':text.length>=5?'0.98em':'1.18em';
+  const size=text.length>=7?'0.72em':text.length>=6?'0.82em':text.length>=5?'0.98em':'1.18em';
+  if(el.textContent!==text)el.textContent=text;
+  if(el.style.fontSize!==size)el.style.fontSize=size;
+}
+
+function scheduleRender(){
+  if(renderFrame)return;
+  renderFrame=requestAnimationFrame(()=>{renderFrame=0;render();});
+}
+
+function compactImageKey(value){
+  const text=String(value||'');
+  const middle=Math.max(0,Math.floor(text.length/2)-14);
+  return `${text.length}:${text.slice(middle,middle+28)}:${text.slice(-28)}`;
+}
+
+function cardRenderSignature(card,commentCount){
+  return JSON.stringify([
+    card.name,card.pokemon,card.rarity,card.value,commentCount,
+    compactImageKey(card.catalogLocalImage),compactImageKey(card.catalogImage),
+    compactImageKey(card.images)
+  ]);
+}
+
+function cardImageMarkup(card,imgs,index,commentCount){
+  const badge=commentCount?`<div class="comments-badge">💬 ${commentCount}</div>`:'';
+  const rarityLabel=escapeHtml(card.rarity?(RARITY_HE[card.rarity]||card.rarity):'');
+  const imageLoading=index<Math.max(4,cols*2)?'loading="eager" fetchpriority="high"':'loading="lazy" fetchpriority="low"';
+  const imageAttrs=`${imageLoading} decoding="async" alt="${escapeHtml(card.name||card.pokemon||'קלף פוקימון')}"`;
+  if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
+  if(imgs.length>1){
+    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs}></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
+  }
+  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs}><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+}
+
+function getCardNode(card,index){
+  const id=String(card.id);
+  const imgs=cardImageUrls(card);
+  const commentCount=(comments[id]||[]).length;
+  const signature=cardRenderSignature(card,commentCount);
+  let cached=cardNodeCache.get(id);
+  const isNew=!cached;
+  if(!cached){
+    cached={node:document.createElement('div'),signature:''};
+    cardNodeCache.set(id,cached);
+    cached.node.dataset.cardId=id;
+    cached.node.onclick=()=>openDetail(id);
+  }
+  if(cached.signature!==signature){
+    const entering=cached.node.classList.contains('is-entering');
+    cached.node.className=`poke-card ${rarityClass(card.rarity)}${entering?' is-entering':''}`;
+    cached.node.innerHTML=`${cardImageMarkup(card,imgs,index,commentCount)}
+      <div class="card-body">
+        <div class="card-name">${escapeHtml(card.name||card.pokemon||'—')}</div>
+        <div class="card-row"><span class="card-value">${card.value?'$'+escapeHtml(card.value):''}</span></div>
+      </div>`;
+    cached.signature=signature;
+  }
+  if(isNew&&hasRenderedCards&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    cached.node.classList.add('is-entering');
+    cached.node.addEventListener('animationend',()=>cached.node.classList.remove('is-entering'),{once:true});
+  }
+  return cached.node;
 }
 
 function render(){
+  if(renderFrame){cancelAnimationFrame(renderFrame);renderFrame=0;}
   const list=getFiltered();
-  const total=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
-  const rareCount=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
-  const topVal=cards.reduce((m,c)=>Math.max(m,parseFloat(c.value)||0),0);
+  const totalValue=cards.reduce((sum,card)=>sum+(parseFloat(card.value)||0),0);
+  const rareCount=cards.filter(card=>['Holo Rare','Ultra Rare','Secret Rare'].includes(card.rarity)).length;
   setHeaderStat('statsCards',cards.length);
-  const totalValH=cards.reduce((s,c)=>s+(parseFloat(c.value)||0),0);
-  const rareCountH=cards.filter(c=>['Holo Rare','Ultra Rare','Secret Rare'].includes(c.rarity)).length;
-  setHeaderStat('statsTotalHeader','$'+Math.round(totalValH));
-  setHeaderStat('statsRareHeader',rareCountH);
-  applyGrid();
-  const grid=document.getElementById('grid');grid.innerHTML='';
-  if(!list.length&&cards.length){grid.innerHTML='<div class="no-results">😕 לא נמצאו קלפים</div>';}
-  list.forEach(c=>{
-    const imgs=cardImageUrls(c);
-    const cc=comments[String(c.id)]||[];
-    const badge=cc.length?`<div class="comments-badge">💬 ${cc.length}</div>`:'';
-    const rarityLabel=escapeHtml(c.rarity?(RARITY_HE[c.rarity]||c.rarity):'');
-    const imgHtml=imgs.length
-      ?(imgs.length>1
-        ?`<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" loading="lazy"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`
-        :`<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" loading="lazy"><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(c.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`)
-      :`<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
-    const div=document.createElement('div');
-    div.className=`poke-card ${rarityClass(c.rarity)}`;
-    div.dataset.cardId=String(c.id);
-    div.onclick=()=>openDetail(c.id);
-    div.innerHTML=`${imgHtml}
-      <div class="card-body">
-        <div class="card-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
-        <div class="card-row">
-          <span class="card-value">${c.value?'$'+escapeHtml(c.value):''}</span>
-        </div>
-      </div>`;
-    grid.appendChild(div);
-  });
+  setHeaderStat('statsTotalHeader','$'+Math.round(totalValue));
+  setHeaderStat('statsRareHeader',rareCount);
+  const grid=document.getElementById('grid');
+  const fragment=document.createDocumentFragment();
+  if(!list.length&&cards.length){
+    const empty=document.createElement('div');empty.className='no-results';empty.textContent='😕 לא נמצאו קלפים';fragment.appendChild(empty);
+  }
+  const cardNodes=list.map((card,index)=>getCardNode(card,index));
+  cardNodes.forEach(node=>fragment.appendChild(node));
   if(pendingSave){
     const saving=document.createElement('div');
     saving.className='saving-card';saving.id='savingCard';
     saving.innerHTML='<div class="saving-mini-ball"></div><div>שומר את הקלף...</div>';
-    grid.appendChild(saving);
+    fragment.appendChild(saving);
   }
   const add=document.createElement('div');add.className='add-card';add.onclick=openAdd;
   add.innerHTML='<div class="add-icon">＋</div><div class="add-label">הוסף קלף</div>';
-  grid.appendChild(add);
+  fragment.appendChild(add);
+  grid.replaceChildren(fragment);
+  holoTrackedSurfaces.forEach(surface=>{if(!surface.isConnected)untrackHoloSurface(surface);});
+  cardNodes.forEach(trackHoloSurface);
+
+  const storedIds=new Set(cards.map(card=>String(card.id)));
+  cardNodeCache.forEach((cached,id)=>{
+    if(storedIds.has(id))return;
+    untrackHoloSurface(cached.node);
+    cardNodeCache.delete(id);
+  });
+  hasRenderedCards=true;
 }
 
 function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const imgs=cardImageUrls(c);
   const imgHtml=imgs.length
-    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" decoding="async" alt="${escapeHtml(c.name||c.pokemon||'קלף פוקימון')}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
   const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
@@ -1480,14 +1522,19 @@ function openDetail(id){
   detailBody.querySelector('[data-detail-action="price"]').onclick=event=>refreshSavedPrice(c.id,event.currentTarget);
   detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
   document.getElementById('detailOverlay').classList.add('open');
+  trackHoloSurface(detailBody.querySelector('.detail-carousel'));
 }
 function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
 function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
-  const idx=Math.round(track.scrollLeft/track.offsetWidth);
-  const dots=track.parentElement.querySelectorAll('.carousel-dot');
-  dots.forEach((d,i)=>d.classList.toggle('active',i===idx));
+  if(track._dotsFrame)return;
+  track._dotsFrame=requestAnimationFrame(()=>{
+    track._dotsFrame=0;
+    const idx=Math.round(track.scrollLeft/track.offsetWidth);
+    const dots=track.parentElement.querySelectorAll('.carousel-dot');
+    dots.forEach((dot,i)=>dot.classList.toggle('active',i===idx));
+  });
 }
 
 let holoFrame=0;
@@ -1495,14 +1542,63 @@ let holoPendingPosition=null;
 let holoOrientationBase=null;
 let holoMotionAttached=false;
 let holoPermissionAsked=false;
+let holoMotionPosition={x:50,y:46};
+let holoLastPosition={x:50,y:46};
+const holoVisibleSurfaces=new Set();
+const holoTrackedSurfaces=new Set();
+const holoObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{
+  entries.forEach(entry=>{
+    const surface=entry.target;
+    if(entry.isIntersecting){
+      holoVisibleSurfaces.add(surface);
+      surface.classList.add('holo-in-view');
+      applyHoloStyles(surface,holoLastPosition.x,holoLastPosition.y);
+    }else{
+      holoVisibleSurfaces.delete(surface);
+      surface.classList.remove('holo-in-view');
+    }
+  });
+},{rootMargin:'80px 0px',threshold:0});
 
 function clampHolo(value,min,max){return Math.max(min,Math.min(max,value));}
 function isDesktopHolo(){return window.matchMedia('(hover: hover) and (pointer: fine)').matches;}
 
-function applyHoloPosition(x,y,scope=document.documentElement){
+function trackHoloSurface(surface){
+  if(!surface)return;
+  if(!surface.querySelector('.card-holo-effect')){untrackHoloSurface(surface);return;}
+  if(holoTrackedSurfaces.has(surface))return;
+  holoTrackedSurfaces.add(surface);
+  if(holoObserver){holoObserver.observe(surface);return;}
+  holoVisibleSurfaces.add(surface);
+  surface.classList.add('holo-in-view');
+  applyHoloStyles(surface,holoLastPosition.x,holoLastPosition.y);
+}
+
+function untrackHoloSurface(surface){
+  if(!surface||!holoTrackedSurfaces.has(surface))return;
+  holoObserver?.unobserve(surface);
+  holoTrackedSurfaces.delete(surface);
+  holoVisibleSurfaces.delete(surface);
+  surface.classList.remove('holo-in-view');
+}
+
+function applyHoloStyles(surface,x,y){
+  if(!surface?.isConnected)return;
+  const shiftX=(x-50)*.18;
+  const shiftY=(y-46)*.13;
+  const rotate=(x-50)*.035+(y-46)*.012;
+  const key=`${shiftX.toFixed(2)}|${shiftY.toFixed(2)}|${rotate.toFixed(2)}`;
+  if(surface._holoStyleKey===key)return;
+  surface._holoStyleKey=key;
+  surface.style.setProperty('--holo-shift-x',`${shiftX.toFixed(2)}%`);
+  surface.style.setProperty('--holo-shift-y',`${shiftY.toFixed(2)}%`);
+  surface.style.setProperty('--holo-rotate',`${rotate.toFixed(2)}deg`);
+}
+
+function applyHoloPosition(x,y,scope=null){
   holoPendingPosition={
-    x:clampHolo(Number(x)||50,4,96),
-    y:clampHolo(Number(y)||46,4,96),
+    x:clampHolo(Number(x)||50,8,92),
+    y:clampHolo(Number(y)||46,8,92),
     scope
   };
   if(holoFrame)return;
@@ -1510,21 +1606,26 @@ function applyHoloPosition(x,y,scope=document.documentElement){
     holoFrame=0;
     const next=holoPendingPosition;
     if(!next)return;
-    next.scope.style.setProperty('--holo-x',`${next.x.toFixed(1)}%`);
-    next.scope.style.setProperty('--holo-y',`${next.y.toFixed(1)}%`);
-    next.scope.style.setProperty('--holo-angle',`${(94+next.x*.56).toFixed(1)}deg`);
+    holoPendingPosition=null;
+    holoLastPosition={x:next.x,y:next.y};
+    const targets=next.scope?[next.scope]:Array.from(holoVisibleSurfaces);
+    targets.forEach(surface=>applyHoloStyles(surface,next.x,next.y));
   });
 }
 
 function handleHoloOrientation(event){
-  if(isDesktopHolo())return;
+  if(isDesktopHolo()||document.visibilityState!=='visible')return;
   if(event.gamma==null||event.beta==null)return;
   if(!holoOrientationBase)holoOrientationBase={gamma:event.gamma,beta:event.beta};
   let dx=event.gamma-holoOrientationBase.gamma;
   let dy=event.beta-holoOrientationBase.beta;
   const angle=Number(window.screen?.orientation?.angle??window.orientation??0);
   if(Math.abs(angle)===90){const swap=dx;dx=dy;dy=-swap;}
-  applyHoloPosition(50+dx*1.85,46+dy*1.3);
+  const targetX=clampHolo(50+dx*1.7,8,92);
+  const targetY=clampHolo(46+dy*1.15,8,92);
+  holoMotionPosition.x+=(targetX-holoMotionPosition.x)*.24;
+  holoMotionPosition.y+=(targetY-holoMotionPosition.y)*.24;
+  applyHoloPosition(holoMotionPosition.x,holoMotionPosition.y);
 }
 
 function attachHoloMotion(){
@@ -1560,15 +1661,18 @@ function handleHoloPointer(event){
   applyHoloPosition(
     ((event.clientX-rect.left)/rect.width)*100,
     ((event.clientY-rect.top)/rect.height)*100,
-    isDesktopHolo()?surface:document.documentElement
+    isDesktopHolo()?surface:null
   );
 }
 
 function initHoloEffect(){
   if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
   document.addEventListener('pointerdown',handleHoloPointer,{passive:true});
-  document.addEventListener('pointermove',handleHoloPointer,{passive:true});
-  if(isDesktopHolo()||typeof DeviceOrientationEvent==='undefined')return;
+  if(isDesktopHolo()){
+    document.addEventListener('pointermove',handleHoloPointer,{passive:true});
+    return;
+  }
+  if(typeof DeviceOrientationEvent==='undefined')return;
   if(typeof DeviceOrientationEvent.requestPermission==='function'){
     const askForMotion=event=>{
       if(!holoSurfaceFromEvent(event))return;
@@ -1579,7 +1683,10 @@ function initHoloEffect(){
   }else{
     attachHoloMotion();
   }
-  window.addEventListener('orientationchange',()=>{holoOrientationBase=null;},{passive:true});
+  window.addEventListener('orientationchange',()=>{
+    holoOrientationBase=null;
+    holoMotionPosition={x:50,y:46};
+  },{passive:true});
 }
 
 function escapeHtml(value){
