@@ -10,6 +10,7 @@ import json
 import re
 import base64
 import requests
+import threading
 import time
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -86,7 +87,7 @@ def _tcgdex_image_url(card):
     return f"{image_url}/high.webp"
 
 
-def _fetch_tcgdex_card(language, card_id, timeout=8):
+def _fetch_tcgdex_card(language, card_id, timeout=6):
     try:
         response = requests.get(
             f"https://api.tcgdex.net/v2/{language}/cards/{card_id}",
@@ -95,6 +96,63 @@ def _fetch_tcgdex_card(language, card_id, timeout=8):
         return response.json() if response.ok else None
     except (requests.RequestException, ValueError, TypeError):
         return None
+
+
+_tcgdex_sets_cache = {}
+_tcgdex_sets_lock = threading.Lock()
+
+
+def _tcgdex_sets(language):
+    now = time.monotonic()
+    with _tcgdex_sets_lock:
+        cached = _tcgdex_sets_cache.get(language)
+        if cached and now - cached[0] < 12 * 60 * 60:
+            return cached[1]
+    response = requests.get(
+        f"https://api.tcgdex.net/v2/{language}/sets",
+        timeout=6
+    )
+    response.raise_for_status()
+    sets = response.json() or []
+    with _tcgdex_sets_lock:
+        _tcgdex_sets_cache[language] = (now, sets)
+    return sets
+
+
+def _tcgdex_candidate_set_ids(language, card_info):
+    """Translate printed abbreviations such as TWM to TCGdex IDs such as sv06."""
+    set_code = re.sub(
+        r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper()
+    )
+    set_name = str(card_info.get("set") or "").strip()
+    _, printed_count = _card_number_parts(card_info.get("number"))
+    try:
+        sets = _tcgdex_sets(language)
+    except (requests.RequestException, ValueError, TypeError):
+        return []
+
+    scored = []
+    for item in sets:
+        item_id = str(item.get("id") or "")
+        normalized_id = re.sub(r"[^A-Z0-9]", "", item_id.upper())
+        official_count = str((item.get("cardCount") or {}).get("official") or "")
+        name_score = SequenceMatcher(
+            None,
+            set_name.casefold(),
+            str(item.get("name") or "").casefold()
+        ).ratio() if set_name else 0
+        code_match = bool(set_code and normalized_id == set_code)
+        count_match = bool(printed_count and official_count == printed_count)
+        score = (3 if code_match else 0) + (2 * name_score) + (1 if count_match else 0)
+        if code_match or name_score >= 0.82 or (count_match and name_score >= 0.68):
+            scored.append((score, name_score, item_id))
+    scored.sort(reverse=True)
+    if not scored:
+        return []
+    best = scored[0]
+    if len(scored) > 1 and best[0] - scored[1][0] < 0.18 and not set_code:
+        return []
+    return [best[2]]
 
 def _tcgplayer_image_url(product_id):
     product_id = str(product_id or "").strip()
@@ -334,6 +392,7 @@ def _localized_tcgdex_price(card_info):
     """Look up the exact non-English printing and normalize its price to USD."""
     language = str(card_info.get("language") or "").strip().lower()
     language_codes = {
+        "": "en", "english": "en",
         "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
         "french": "fr", "german": "de", "spanish": "es",
         "italian": "it", "portuguese": "pt", "thai": "th",
@@ -358,10 +417,15 @@ def _localized_tcgdex_price(card_info):
             direct_ids.append(catalog_card_id)
         if set_code and raw_local_id:
             direct_ids.append(f"{set_code.lower()}-{raw_local_id}")
+        if raw_local_id:
+            direct_ids.extend(
+                f"{set_id}-{raw_local_id}"
+                for set_id in _tcgdex_candidate_set_ids(lang, card_info)
+            )
         for direct_id in dict.fromkeys(direct_ids):
             response = requests.get(
                 f"https://api.tcgdex.net/v2/{lang}/cards/{direct_id}",
-                timeout=8
+                timeout=6
             )
             if response.ok:
                 detail = response.json()
@@ -378,7 +442,7 @@ def _localized_tcgdex_price(card_info):
                 search = requests.get(
                     f"https://api.tcgdex.net/v2/{lang}/cards",
                     params={"localId": query_id},
-                    timeout=8
+                    timeout=6
                 )
                 search.raise_for_status()
                 candidates = [
@@ -822,177 +886,143 @@ def _tcgplayer_marketplace_price(card_info):
         return {"value": "", "priceStatus": "service-unavailable"}
 
 
+_price_result_cache = {}
+_price_cache_lock = threading.Lock()
+
+
+def _price_cache_key(card_info):
+    """Use only identity and printing fields that can change a market price."""
+    values = (
+        card_info.get("catalogCardId"),
+        card_info.get("setCode"),
+        card_info.get("number"),
+        _english_card_name(card_info.get("name") or card_info.get("pokemon")),
+        card_info.get("language"),
+        card_info.get("finish"),
+        card_info.get("rarity"),
+    )
+    return "|".join(str(value or "").strip().casefold() for value in values)
+
+
+def _cached_market_price(cache_key):
+    now = time.monotonic()
+    with _price_cache_lock:
+        cached = _price_result_cache.get(cache_key)
+        if not cached or cached[0] <= now:
+            if cached:
+                _price_result_cache.pop(cache_key, None)
+            return None
+        return dict(cached[1])
+
+
+def _remember_market_price(cache_key, result):
+    status = result.get("priceStatus")
+    ttl = 30 * 60 if status == "matched" else (
+        45 if status == "service-unavailable" else 5 * 60
+    )
+    with _price_cache_lock:
+        _price_result_cache[cache_key] = (
+            time.monotonic() + ttl,
+            dict(result),
+        )
+    return result
+
+
 def _market_price_for_card(card_info):
-    """Find a verified market price across localized and English catalogs."""
+    """Return the first verified exact price instead of waiting for every source."""
+    cache_key = _price_cache_key(card_info)
+    cached = _cached_market_price(cache_key)
+    if cached is not None:
+        cached["priceCache"] = "hit"
+        return cached
+
     catalog_image = str(card_info.get("catalogImage") or "").strip()
-    sources = {
-        "localized": _localized_tcgdex_price,
-        "primary": _pokemon_tcg_api_price,
-        "marketplace": _tcgplayer_marketplace_price,
-    }
-    source_results = {}
-    with ThreadPoolExecutor(max_workers=3) as executor:
+    language = str(card_info.get("language") or "english").strip().lower()
+    card_number, _ = _card_number_parts(card_info.get("number"))
+    has_exact_identity = bool(
+        card_info.get("catalogCardId")
+        or (card_info.get("setCode") and card_number)
+    )
+    direct_result = None
+
+    # A set code plus collector number resolves to one TCGdex card and already
+    # contains TCGplayer/Cardmarket pricing. This is the fastest and safest path.
+    if has_exact_identity:
+        direct_result = _localized_tcgdex_price(card_info)
+        catalog_image = direct_result.get("catalogImage") or catalog_image
+        if direct_result.get("priceStatus") == "matched":
+            result = _with_catalog_image(direct_result, catalog_image)
+            return _remember_market_price(cache_key, result)
+
+    sources = {}
+    if not has_exact_identity:
+        sources["tcgdex"] = _localized_tcgdex_price
+    if language in ("", "english"):
+        sources["pokemon-tcg"] = _pokemon_tcg_api_price
+        sources["tcgplayer"] = _tcgplayer_marketplace_price
+    elif language == "japanese":
+        sources["tcgplayer-jp"] = _tcgplayer_marketplace_price
+
+    source_results = []
+    matched = None
+    if sources:
+        executor = ThreadPoolExecutor(max_workers=min(3, len(sources)))
         futures = {
             executor.submit(source, card_info): name
             for name, source in sources.items()
         }
-        for future in as_completed(futures):
-            name = futures[future]
-            try:
-                source_results[name] = future.result()
-            except Exception:
-                source_results[name] = {
-                    "value": "", "priceStatus": "service-unavailable"
-                }
+        try:
+            for future in as_completed(futures):
+                try:
+                    result = future.result()
+                except Exception:
+                    result = {"value": "", "priceStatus": "service-unavailable"}
+                source_results.append(result)
+                catalog_image = result.get("catalogImage") or catalog_image
+                if result.get("priceStatus") == "matched":
+                    matched = result
+                    break
+        finally:
+            if matched is not None:
+                for future in futures:
+                    future.cancel()
+                executor.shutdown(wait=False, cancel_futures=True)
+            else:
+                executor.shutdown(wait=True)
 
-    for source_name in ("localized", "primary", "marketplace"):
-        result = source_results[source_name]
-        catalog_image = result.get("catalogImage") or catalog_image
-        if result.get("priceStatus") == "matched":
-            return _with_catalog_image(result, catalog_image)
+    if matched is not None:
+        result = _with_catalog_image(matched, catalog_image)
+        return _remember_market_price(cache_key, result)
 
-    english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
-    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
-    set_name = str(card_info.get("set") or "").strip()
-
-    # The printed collector number is the primary identifier. Names and set
-    # text are supporting signals only, since AI can translate or misread them.
-    if not card_number:
-        return _with_catalog_image(
-            {"value": "", "priceStatus": "missing-collector-number"},
-            catalog_image
+    candidates = ([direct_result] if direct_result else []) + source_results
+    candidates = [result for result in candidates if result]
+    preferred_statuses = (
+        "variant-ambiguous", "ambiguous", "price-unavailable", "not-found",
+        "missing-collector-number", "missing-identifiers", "service-unavailable"
+    )
+    for status in preferred_statuses:
+        fallback = next(
+            (result for result in candidates if result.get("priceStatus") == status),
+            None
         )
+        if fallback:
+            result = _with_catalog_image(fallback, catalog_image)
+            return _remember_market_price(cache_key, result)
 
-    try:
-        search = requests.get(
-            "https://api.tcgdex.net/v2/en/cards",
-            params={"name": english_name},
-            timeout=8
-        )
-        search.raise_for_status()
-        candidates = [
-            c for c in search.json()
-            if _clean_card_number(c.get("localId")) == card_number
-            and SequenceMatcher(
-                None,
-                str(c.get("name") or "").lower(),
-                english_name.lower()
-            ).ratio() >= 0.88
-        ]
-
-        if not candidates:
-            return _with_catalog_image(
-                {"value": "", "priceStatus": "not-found"},
-                catalog_image
-            )
-
-        candidate_ids = [candidate["id"] for candidate in candidates[:8]]
-        with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
-            details = [
-                detail for detail in executor.map(
-                    lambda card_id: _fetch_tcgdex_card("en", card_id),
-                    candidate_ids
-                ) if detail
-            ]
-
-        if not details:
-            return _with_catalog_image(
-                {"value": "", "priceStatus": "not-found"},
-                catalog_image
-            )
-
-        # The denominator printed on cards (for example 095/086) is often a
-        # stronger set identifier than a translated or AI-read set name.
-        if printed_set_count.isdigit():
-            count_matches = [
-                d for d in details
-                if str(((d.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
-            ]
-            if count_matches:
-                details = count_matches
-
-        # If the collector number still maps to several sets, use the English
-        # name and set as supporting signals. Never choose on name alone.
-        if len(details) > 1:
-            scored = []
-            for detail in details:
-                detail_name = str(detail.get("name") or "")
-                detail_set = str((detail.get("set") or {}).get("name") or "")
-                name_score = SequenceMatcher(
-                    None, english_name.lower(), detail_name.lower()
-                ).ratio() if english_name else 0
-                set_score = SequenceMatcher(
-                    None, set_name.lower(), detail_set.lower()
-                ).ratio() if set_name else 0
-                score = (name_score * 0.65) + (set_score * 0.35)
-                scored.append((score, detail))
-            scored.sort(key=lambda item: item[0], reverse=True)
-            best_score, best_card = scored[0]
-            second_score = scored[1][0] if len(scored) > 1 else 0
-            if best_score < 0.58 or best_score - second_score < 0.08:
-                return _with_catalog_image(
-                    {"value": "", "priceStatus": "ambiguous"},
-                    catalog_image
-                )
-            card = best_card
-        else:
-            card = details[0]
-
-        catalog_image = _tcgdex_image_url(card) or catalog_image
-        tcgplayer = (card.get("pricing") or {}).get("tcgplayer") or {}
-        price_variants = {
-            key: value for key, value in tcgplayer.items()
-            if isinstance(value, dict) and value.get("marketPrice") is not None
-        }
-        if not price_variants:
-            return _with_catalog_image({
-                "value": "",
-                "priceStatus": "price-unavailable",
-                "marketCardId": card.get("id", "")
-            }, catalog_image)
-
-        finish = str(card_info.get("finish") or "").lower()
-        rarity = str(card_info.get("rarity") or "").lower()
-        preferred = []
-        if "reverse" in finish:
-            preferred = ["reverse-holofoil", "reverse"]
-        elif "holo" in finish or "holo" in rarity:
-            preferred = ["holofoil", "holo"]
-        elif "first" in finish:
-            preferred = ["1st-edition", "1st-edition-holofoil"]
-        else:
-            preferred = ["normal", "unlimited"]
-
-        chosen_key = next((key for key in preferred if key in price_variants), None)
-        if not chosen_key and len(price_variants) == 1:
-            chosen_key = next(iter(price_variants))
-        if not chosen_key:
-            return _with_catalog_image({
-                "value": "",
-                "priceStatus": "variant-ambiguous",
-                "marketCardId": card.get("id", "")
-            }, catalog_image)
-
-        price = float(price_variants[chosen_key]["marketPrice"])
-        return _with_catalog_image({
-            "value": f"{price:.2f}".rstrip("0").rstrip("."),
-            "priceStatus": "matched",
-            "priceSource": "TCGplayer",
-            "priceVariant": chosen_key,
-            "priceUpdatedAt": tcgplayer.get("updated", ""),
-            "marketCardId": card.get("id", "")
-        }, catalog_image)
-    except (requests.RequestException, ValueError, TypeError, KeyError):
-        # Identification must keep working even when the free price service is
-        # unavailable. A blank value is safer than an invented price.
-        return _with_catalog_image(
-            {"value": "", "priceStatus": "service-unavailable"},
-            catalog_image
-        )
+    result = _with_catalog_image(
+        {"value": "", "priceStatus": "not-found"},
+        catalog_image
+    )
+    return _remember_market_price(cache_key, result)
 
 @app.get("/health")
 def health():
-    return {"ok": True, "app": "Hitim", "authConfigured": public_auth_config()["configured"]}
+    return {
+        "ok": True,
+        "app": "Hitim",
+        "build": "fast-identify-v3",
+        "authConfigured": public_auth_config()["configured"],
+    }
 
 
 @app.get("/auth/config")
@@ -1245,37 +1275,37 @@ async def upload_image(file: UploadFile = File(...), authorization: str = Header
 async def identify(
     front: UploadFile = File(...),
     back: UploadFile = File(None),
-    authorization: str = Header(None)
+    authorization: str = Header(None),
+    mode: str = "quick"
 ):
     await asyncio.to_thread(require_access, authorization)
+    mode = "deep" if str(mode).lower() == "deep" else "quick"
 
     def compress(raw):
         if not raw or len(raw) > 18 * 1024 * 1024:
             raise ValueError("invalid image size")
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
-        img.thumbnail((1024, 1024), Image.LANCZOS)
+        img.thumbnail((960, 960), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=82, optimize=True)
+        img.save(buf, format="JPEG", quality=80, optimize=True)
         return base64.b64encode(buf.getvalue()).decode()
 
     try:
         front_raw = await front.read()
-        back_raw = await back.read() if back else None
+        # The back is useful for a deep condition check, not for fast identity.
+        back_raw = await back.read() if back and mode == "deep" else None
         front_b64 = await asyncio.to_thread(compress, front_raw)
         back_b64 = await asyncio.to_thread(compress, back_raw) if back_raw else None
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="התמונה אינה תקינה או גדולה מדי") from exc
 
-    prompt = """Identify the exact Pokemon TCG card in the attached photo. Return JSON only.
-
-Use the printed collector number as the primary identifier. Read the complete number exactly as printed near the bottom (for example 025/102), preserving leading zeros and letters. Never copy the example or guess an unreadable number; return an empty string instead. Use the name and set symbol only as supporting evidence.
-
-For cards in Japanese, Chinese, Korean, or any other language, identify the official English card name. Set both `name` and `pokemon` to: Official English Name (Hebrew transliteration of only the card name). Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex. Put the exact original printed name in `printedName`. Keep all other fields in English.
-
-Read the official English set name, printed set code (such as SV11W, SV2a, S12a or SM10), year, language, rarity, finish and visible physical condition. Do not estimate a price.
-
-Use exactly these fields and allowed labels:
-{"name":"","printedName":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""
+    prompt = """Identify this exact Pokemon TCG card. Be fast and literal.
+The printed collector number is the primary identifier. Copy the complete number exactly as printed near the bottom, preserving leading zeros, letters and the denominator. Never invent an unreadable value. Read the printed set code/symbol and official set name as supporting identifiers.
+For every language, return the official English card name in `name`, the original printed name in `printedName`, and a Hebrew transliteration of only the card name in `hebrewName`. Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex.
+Classify `finish` only when visible. Do not estimate a price."""
+    if mode == "deep":
+        prompt += """
+This is an optional deep pass. Also read the release year, rarity, and visible physical condition. Use Near Mint unless visible wear clearly supports another condition."""
     content = [
         {"type": "text", "text": prompt},
         {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{front_b64}"}}
@@ -1286,8 +1316,75 @@ Use exactly these fields and allowed labels:
             "image_url": {"url": f"data:image/jpeg;base64,{back_b64}"}
         })
 
+    properties = {
+        "name": {"type": "string"},
+        "printedName": {"type": "string"},
+        "hebrewName": {"type": "string"},
+        "set": {"type": "string"},
+        "setCode": {"type": "string"},
+        "number": {"type": "string"},
+        "language": {
+            "type": "string",
+            "enum": [
+                "English", "Japanese", "Chinese", "Korean", "French",
+                "German", "Spanish", "Italian", "Portuguese", "Thai",
+                "Indonesian", "Hebrew", "Other"
+            ]
+        },
+        "finish": {
+            "type": "string",
+            "enum": ["", "normal", "holofoil", "reverse-holofoil", "first-edition"]
+        },
+    }
+    if mode == "deep":
+        properties.update({
+            "year": {"type": "string"},
+            "condition": {
+                "type": "string",
+                "enum": ["Mint", "Near Mint", "Excellent", "Good", "Poor"]
+            },
+            "rarity": {
+                "type": "string",
+                "enum": [
+                    "Common", "Uncommon", "Rare", "Holo Rare",
+                    "Ultra Rare", "Secret Rare"
+                ]
+            },
+        })
+    schema = {
+        "type": "object",
+        "properties": properties,
+        "required": list(properties),
+        "additionalProperties": False,
+    }
+
     def request_identification():
         try:
+            primary_model = os.environ.get(
+                "OPENROUTER_MODEL",
+                "google/gemma-4-26b-a4b-it:free"
+            )
+            request_body = {
+                "model": primary_model,
+                "messages": [{"role": "user", "content": content}],
+                "temperature": 0,
+                "max_tokens": 420 if mode == "deep" else 240,
+                "provider": {
+                    "allow_fallbacks": True,
+                    "require_parameters": True,
+                    "sort": "latency"
+                },
+                "response_format": {
+                    "type": "json_schema",
+                    "json_schema": {
+                        "name": f"pokemon_card_{mode}",
+                        "strict": True,
+                        "schema": schema
+                    }
+                }
+            }
+            if primary_model != "openrouter/free":
+                request_body["models"] = ["openrouter/free"]
             response = requests.post(
                 "https://openrouter.ai/api/v1/chat/completions",
                 headers={
@@ -1296,14 +1393,8 @@ Use exactly these fields and allowed labels:
                     "HTTP-Referer": "https://pokemon-collection-ecru.vercel.app",
                     "X-Title": "Hitim"
                 },
-                json={
-                    "model": os.environ.get("OPENROUTER_MODEL", "openrouter/free"),
-                    "messages": [{"role": "user", "content": content}],
-                    "temperature": 0,
-                    "max_tokens": 550,
-                    "response_format": {"type": "json_object"}
-                },
-                timeout=(8, 32)
+                json=request_body,
+                timeout=(6, 32 if mode == "deep" else 24)
             )
             response.raise_for_status()
             result = response.json()
@@ -1320,6 +1411,16 @@ Use exactly these fields and allowed labels:
                 or str(identified.get("number") or "").strip()
             ):
                 raise ValueError("card was not identified")
+            english_name = str(identified.get("name") or "").strip()
+            hebrew_name = str(identified.pop("hebrewName", "") or "").strip()
+            display_name = english_name
+            if hebrew_name and hebrew_name not in english_name:
+                display_name = f"{english_name} ({hebrew_name})"
+            identified["name"] = display_name
+            identified["pokemon"] = display_name
+            identified.setdefault("year", "")
+            identified.setdefault("condition", "")
+            identified.setdefault("rarity", "")
             return identified
         except requests.Timeout as exc:
             raise HTTPException(status_code=504, detail="הזיהוי מתעכב כרגע — נסה שוב") from exc
@@ -1331,5 +1432,9 @@ Use exactly these fields and allowed labels:
     identified = await asyncio.to_thread(request_identification)
     # Pricing is intentionally a separate request. A slow free market source
     # must never turn a successful card identification into a failed scan.
-    identified.update({"value": "", "priceStatus": "pending"})
+    identified.update({
+        "value": "",
+        "priceStatus": "pending",
+        "identificationMode": mode,
+    })
     return identified
