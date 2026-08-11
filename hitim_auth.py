@@ -1,4 +1,7 @@
 import os
+import hashlib
+import threading
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -6,6 +9,9 @@ from fastapi import HTTPException
 
 
 ACCESS_TABLE = "access_requests"
+ACCESS_CACHE_TTL_SECONDS = 5 * 60
+_access_cache = {}
+_access_cache_lock = threading.Lock()
 
 
 def _supabase_settings():
@@ -48,6 +54,17 @@ def _bearer_token(authorization):
     if not token:
         raise HTTPException(status_code=401, detail="Invalid session")
     return token
+
+
+def _access_cache_key(authorization):
+    token = _bearer_token(authorization)
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def _remember_access(authorization, access):
+    with _access_cache_lock:
+        _access_cache[_access_cache_key(authorization)] = (time.monotonic(), access)
+    return access
 
 
 def verified_user(authorization):
@@ -145,9 +162,16 @@ def ensure_access_request(authorization):
     now = datetime.now(timezone.utc).isoformat()
 
     if existing:
-        updates = {"email": user["email"], "updated_at": now}
-        if is_admin:
+        updates = {}
+        if str(existing.get("email") or "").strip().lower() != user["email"]:
+            updates["email"] = user["email"]
+        if is_admin and (
+            existing.get("status") != "approved" or existing.get("role") != "admin"
+        ):
             updates.update({"status": "approved", "role": "admin"})
+        if not updates:
+            return _remember_access(authorization, _normalized_access(existing))
+        updates["updated_at"] = now
         rows = _service_request(
             "PATCH",
             ACCESS_TABLE,
@@ -155,7 +179,10 @@ def ensure_access_request(authorization):
             json=updates,
             headers=_service_headers("return=representation"),
         )
-        return _normalized_access((rows or [existing])[0])
+        return _remember_access(
+            authorization,
+            _normalized_access((rows or [existing])[0])
+        )
 
     row = {
         "user_id": user["id"],
@@ -172,11 +199,20 @@ def ensure_access_request(authorization):
         json=row,
         headers=_service_headers("return=representation"),
     )
-    return _normalized_access((rows or [row])[0])
+    return _remember_access(authorization, _normalized_access((rows or [row])[0]))
 
 
 def require_access(authorization, admin=False):
-    access = ensure_access_request(authorization)
+    cache_key = _access_cache_key(authorization)
+    now = time.monotonic()
+    with _access_cache_lock:
+        cached = _access_cache.get(cache_key)
+        if cached and now - cached[0] < ACCESS_CACHE_TTL_SECONDS:
+            access = cached[1]
+        else:
+            access = None
+    if access is None:
+        access = ensure_access_request(authorization)
     if access["status"] != "approved":
         raise HTTPException(status_code=403, detail="Access is waiting for administrator approval")
     if admin and access["role"] != "admin":
@@ -211,6 +247,7 @@ def update_access_user(authorization, user_id, status):
         json={"status": status, "updated_at": datetime.now(timezone.utc).isoformat()},
         headers=_service_headers("return=representation"),
     )
+    _invalidate_access_cache(user_id)
     return _normalized_access(rows[0])
 
 
@@ -219,6 +256,7 @@ def remove_access_user(authorization, user_id):
     require_access(authorization, admin=True)
     current = _access_row(user_id)
     if not current:
+        _invalidate_access_cache(user_id)
         return {"ok": True}
     if str(current.get("email") or "").lower() == settings["admin"]:
         raise HTTPException(status_code=400, detail="The Hitim administrator cannot be removed")
@@ -228,4 +266,17 @@ def remove_access_user(authorization, user_id):
         params={"user_id": f"eq.{user_id}"},
         headers=_service_headers("return=minimal"),
     )
+    _invalidate_access_cache(user_id)
     return {"ok": True}
+
+
+def _invalidate_access_cache(user_id):
+    """Drop cached authorization after an administrator changes a user."""
+    user_id = str(user_id or "")
+    with _access_cache_lock:
+        stale = [
+            key for key, (_, access) in _access_cache.items()
+            if str(access.get("userId") or "") == user_id
+        ]
+        for key in stale:
+            _access_cache.pop(key, None)
