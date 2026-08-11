@@ -1,11 +1,11 @@
-const CACHE_NAME = 'hitim-shell-v2';
+const CACHE_NAME = 'hitim-shell-v3';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/hitim-icon.svg',
-  '/hitim-icon-192.png',
-  '/hitim-icon-512.png',
+  '/hitim-icon-02.svg',
+  '/hitim-icon-193.png',
+  '/hitim-icon-513.png',
   '/hitim-db.js',
   '/hitim-auth.js'
 ];
