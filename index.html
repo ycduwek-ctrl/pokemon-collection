@@ -9,8 +9,8 @@
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/hitim-icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/hitim-icon-192.png">
+  <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/hitim-icon-193.png">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1153,7 +1153,7 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-purple" id="identifyBtn" onclick="identifyCoin()">✨ זהה קלף</button>
+        <button class="btn btn-purple" id="identifyBtn" onclick="identifyCoin()">⚡ זיהוי מהיר</button>
         <div class="ai-result" id="aiResult"></div>
       </div>
 
@@ -1184,6 +1184,8 @@
           <select id="fRarity"><option value="Common">Common (רגיל)</option><option value="Uncommon">Uncommon (לא נפוץ)</option><option value="Rare">Rare (נדיר)</option><option value="Holo Rare">Holo Rare (נדיר מבריק)</option><option value="Ultra Rare">Ultra Rare (נדיר במיוחד)</option><option value="Secret Rare">Secret Rare (נדיר סודי)</option></select>
         </div>
       </div>
+      <button type="button" class="btn btn-purple" id="deepIdentifyBtn" style="display:none;margin-top:12px" onclick="deepIdentifyCurrent()">🔎 זיהוי מעמיק מהתמונה</button>
+      <div class="ai-result" id="deepIdentifyResult"></div>
 
       <div class="fg" style="margin-top:12px">
         <label>תמונות</label>
@@ -1300,7 +1302,7 @@ let dailyPriceRefreshRunning=false;
 let dailyPriceRefreshTimer=0;
 let identificationInFlight=0;
 let quickPriceInFlight=0;
-let quickPriceChain=Promise.resolve();
+let quickPriceQueue=[];
 let editorPriceToken=0;
 let renderFrame=0;
 let hasRenderedCards=false;
@@ -1743,7 +1745,7 @@ function quickOverlayClick(e){
 }
 function resetQuickIdentify(){
   quickSessionToken++;
-  quickPriceChain=Promise.resolve();
+  quickPriceQueue=[];
   quickScans.forEach(scan=>{if(scan.url)URL.revokeObjectURL(scan.url);});
   quickScans=[];quickProcessing=false;
   ['quickFrontCamera','quickGalleryInput'].forEach(id=>{
@@ -1822,11 +1824,13 @@ function renderQuickScans(){
   }).join('');
 }
 
-async function requestIdentification(frontFile,backFile=null){
+async function requestIdentification(frontFile,backFile=null,mode='quick'){
   const fd=new FormData();fd.append('front',frontFile);if(backFile)fd.append('back',backFile);
   identificationInFlight++;
   try{
-    const response=await HitimAuth.fetch('/identify',{method:'POST',body:fd,timeoutMs:50000});
+    const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
+      method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
+    });
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
     return data;
@@ -1836,24 +1840,34 @@ async function requestIdentification(frontFile,backFile=null){
 }
 
 function queueQuickScanPrice(scan,token){
-  quickPriceChain=quickPriceChain.catch(()=>{}).then(async()=>{
-    if(token!==quickSessionToken||!quickScans.includes(scan))return;
+  quickPriceQueue.push({scan,token});
+  pumpQuickPriceQueue();
+}
+
+function pumpQuickPriceQueue(){
+  while(quickPriceInFlight<2&&quickPriceQueue.length){
+    const job=quickPriceQueue.shift();
+    if(job.token!==quickSessionToken||!quickScans.includes(job.scan))continue;
     quickPriceInFlight++;
-    try{
-      const result=await requestMarketPrice(scan.data);
-      if(token!==quickSessionToken||!quickScans.includes(scan))return;
-      Object.assign(scan.data,result);
-      scan.priceStatus=result.priceStatus||'price-unavailable';
-      const parsed=parseFloat(result.value);
-      scan.value=scan.priceStatus==='matched'&&Number.isFinite(parsed)?parsed:null;
-    }catch(error){
-      if(token!==quickSessionToken||!quickScans.includes(scan))return;
-      scan.priceStatus='service-unavailable';scan.value=null;
-    }finally{
-      quickPriceInFlight=Math.max(0,quickPriceInFlight-1);
-    }
-    renderQuickScans();
-  });
+    (async()=>{
+      const {scan,token}=job;
+      try{
+        const result=await requestMarketPrice(scan.data);
+        if(token!==quickSessionToken||!quickScans.includes(scan))return;
+        Object.assign(scan.data,result);
+        scan.priceStatus=result.priceStatus||'price-unavailable';
+        const parsed=parseFloat(result.value);
+        scan.value=scan.priceStatus==='matched'&&Number.isFinite(parsed)?parsed:null;
+      }catch(error){
+        if(token!==quickSessionToken||!quickScans.includes(scan))return;
+        scan.priceStatus='service-unavailable';scan.value=null;
+      }finally{
+        quickPriceInFlight=Math.max(0,quickPriceInFlight-1);
+        renderQuickScans();
+        pumpQuickPriceQueue();
+      }
+    })();
+  }
 }
 
 async function processQuickQueue(){
@@ -1958,6 +1972,8 @@ function openAdd(){
   document.getElementById('aiSection').style.display='';document.getElementById('deleteBtn').style.display='none';
   document.getElementById('commentsSection').style.display='none';document.getElementById('aiFrontPrev').style.display='none';
   document.getElementById('aiBackPrev').style.display='none';document.getElementById('aiResult').style.display='none';
+  document.getElementById('deepIdentifyBtn').style.display='none';
+  document.getElementById('deepIdentifyResult').style.display='none';
   document.getElementById('overlay').classList.add('open');
 }
 
@@ -1972,6 +1988,8 @@ function openEdit(id){
   document.getElementById('fCondition').value=c.condition||'Mint';document.getElementById('fRarity').value=c.rarity||'Common';
   document.getElementById('fLanguage').value=c.language||'English';document.getElementById('fImages').value='';
   document.getElementById('aiSection').style.display='none';document.getElementById('deleteBtn').style.display='';
+  document.getElementById('deepIdentifyBtn').style.display=cardPhotoUrls(c).length?'':'none';
+  document.getElementById('deepIdentifyResult').style.display='none';
   renderPreview();renderComments(id);document.getElementById('commentsSection').style.display='';
   document.getElementById('overlay').classList.add('open');
 }
@@ -1983,6 +2001,7 @@ function renderPreview(){
   const existingHtml=existImgs.map((u,i)=>`<div class="img-prev-item"><img src="${escapeHtml(u)}"><button class="img-prev-del" onclick="removeExist(${i})">✕</button></div>`).join('');
   const newHtml=newFiles.map((f,i)=>`<div class="img-prev-item"><img src="${URL.createObjectURL(f)}"><button class="img-prev-del" onclick="removeNew(${i})">✕</button></div>`).join('');
   document.getElementById('imgPreview').innerHTML=catalogHtml+existingHtml+newHtml;
+  document.getElementById('deepIdentifyBtn').style.display=editId&&(newFiles.length||existImgs.length)?'':'none';
 }
 function removeCatalogImage(){aiMeta={...aiMeta,catalogImage:'',catalogLocalImage:''};renderPreview();}
 function removeExist(i){
@@ -2010,6 +2029,27 @@ function showCaptureSuccess(){
   });
 }
 
+function applyIdentificationToEditor(d){
+  if(d.name||d.pokemon){
+    document.getElementById('fName').value=d.name||d.pokemon;
+    document.getElementById('fPokemon').value=d.pokemon||d.name;
+  }
+  if(d.number)document.getElementById('fNumber').value=d.number;
+  if(d.set)document.getElementById('fSet').value=d.set;
+  if(d.year)document.getElementById('fYear').value=d.year;
+  if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
+  if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
+  if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
+  aiMeta={
+    ...aiMeta,
+    setCode:d.setCode||aiMeta.setCode||'',
+    catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',
+    catalogImage:d.catalogImage||aiMeta.catalogImage||'',
+    tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',
+    finish:d.finish||aiMeta.finish||''
+  };
+}
+
 async function identifyCoin(){
   if(!aiFront){toast('העלה תמונת פנים של הקלף');return;}
   const priceToken=++editorPriceToken;
@@ -2018,13 +2058,9 @@ async function identifyCoin(){
   let identifiedOk=false;
   try{
     const d=await requestIdentification(aiFront,aiBack);
-    document.getElementById('fName').value=d.name||'';document.getElementById('fPokemon').value=d.pokemon||'';
-    document.getElementById('fNumber').value=d.number||'';document.getElementById('fSet').value=d.set||'';
-    document.getElementById('fYear').value=d.year||'';document.getElementById('fValue').value=d.value||'';
-    if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
-    if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
-    if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
-    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',catalogLocalImage:'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
+    applyIdentificationToEditor(d);
+    document.getElementById('fValue').value='';
+    aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
     const res=document.getElementById('aiResult');res.style.display='block';
     res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
@@ -2034,7 +2070,35 @@ async function identifyCoin(){
   finally{
     document.getElementById('aiLoading').classList.remove('show');
     if(identifiedOk)await showCaptureSuccess();
-    btn.textContent='✨ זהה קלף';btn.disabled=false;
+    btn.textContent='⚡ זיהוי מהיר';btn.disabled=false;
+  }
+}
+
+async function deepIdentifyCurrent(){
+  if(!editId||(!newFiles.length&&!existImgs.length)){toast('אין צילום מקורי לזיהוי מעמיק');return;}
+  const btn=document.getElementById('deepIdentifyBtn');
+  const resultNode=document.getElementById('deepIdentifyResult');
+  const priceToken=++editorPriceToken;
+  btn.disabled=true;btn.textContent='🔍 בודק לעומק...';
+  resultNode.style.display='block';resultNode.textContent='קורא שנה, מצב, נדירות ופרטי הדפסה...';
+  document.getElementById('aiLoading').classList.add('show');
+  try{
+    let file=newFiles[0]||null;
+    if(!file){
+      const response=await fetch(existImgs[0]);
+      if(!response.ok)throw new Error('לא הצלחנו לפתוח את צילום הקלף');
+      const blob=await response.blob();
+      file=new File([blob],'card-photo.webp',{type:blob.type||'image/webp'});
+    }
+    const d=await requestIdentification(file,null,'deep');
+    applyIdentificationToEditor(d);
+    resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
+    resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+  }catch(error){
+    resultNode.textContent=error.message||'הזיהוי המעמיק לא הושלם';
+  }finally{
+    document.getElementById('aiLoading').classList.remove('show');
+    btn.disabled=false;btn.textContent='🔎 זיהוי מעמיק מהתמונה';
   }
 }
 
@@ -2046,8 +2110,8 @@ async function requestMarketPrice(cardData){
   return await r.json();
 }
 
-async function resolveEditorPrice(cardData,token){
-  const resultNode=document.getElementById('aiResult');
+async function resolveEditorPrice(cardData,token,resultNodeId='aiResult'){
+  const resultNode=document.getElementById(resultNodeId);
   try{
     const result=await requestMarketPrice(cardData);
     if(token!==editorPriceToken)return;
@@ -2252,7 +2316,7 @@ function priceRefreshDue(card){
 }
 
 async function refreshDuePrices(){
-  if(identificationInFlight||quickProcessing||quickPriceInFlight){
+  if(identificationInFlight||quickProcessing||quickPriceInFlight||quickPriceQueue.length){
     scheduleDailyPriceRefresh(30000);return;
   }
   if(dailyPriceRefreshRunning||!navigator.onLine||!cards.length)return;
