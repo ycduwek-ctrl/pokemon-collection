@@ -224,8 +224,8 @@
 
     /* ===== POKEMON CARD ===== */
     .poke-card {
-      --holo-rest-strength: .07;
-      --holo-active-strength: .64;
+      --holo-strength: .28;
+      --holo-hover-strength: .48;
       background: linear-gradient(160deg, #0f1730 0%, #080d1f 100%);
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
@@ -233,11 +233,12 @@
       transition: transform 0.15s, box-shadow 0.15s;
       min-width: 0; cursor: pointer; position: relative;
       contain: layout paint style; isolation: isolate;
+      content-visibility: auto; contain-intrinsic-size: auto 360px;
     }
     .poke-card:active { transform: scale(0.96); }
-    .poke-card.holo { --holo-rest-strength: .09; --holo-active-strength: .70; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
-    .poke-card.ultra { --holo-rest-strength: .10; --holo-active-strength: .76; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
-    .poke-card.secret { --holo-rest-strength: .11; --holo-active-strength: .80; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
+    .poke-card.holo { --holo-strength: .34; --holo-hover-strength: .55; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
+    .poke-card.ultra { --holo-strength: .38; --holo-hover-strength: .62; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
+    .poke-card.secret { --holo-strength: .42; --holo-hover-strength: .67; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
 
     :root {
       --holo-shift-x: 0%;
@@ -249,92 +250,62 @@
     .poke-card:active .card-img-wrap img { transform: scale(1.03); }
     .card-holo-effect {
       position: absolute; inset: -22%; z-index: 2; pointer-events: none;
-      border-radius: 18%; opacity: var(--holo-rest-strength, .07); mix-blend-mode: screen;
+      border-radius: 18%; opacity: var(--holo-strength, .28); mix-blend-mode: screen;
       background:
         linear-gradient(118deg,
-          transparent 0 7%,
-          rgba(46,231,255,.10) 10%,
-          rgba(44,221,255,.66) 13%,
-          rgba(255,255,255,.30) 15%,
-          rgba(255,76,214,.58) 18%,
-          transparent 22% 29%,
-          rgba(255,219,72,.10) 32%,
-          rgba(255,198,53,.62) 35%,
-          rgba(255,255,255,.27) 37%,
-          rgba(135,92,246,.55) 40%,
-          transparent 44% 52%,
-          rgba(91,231,255,.09) 55%,
-          rgba(52,211,255,.60) 58%,
-          rgba(255,255,255,.28) 60%,
-          rgba(255,92,193,.54) 63%,
-          transparent 67% 75%,
-          rgba(255,228,88,.08) 78%,
-          rgba(255,187,45,.55) 81%,
-          rgba(255,255,255,.25) 83%,
-          rgba(113,104,255,.52) 86%,
-          transparent 90% 100%),
-        repeating-linear-gradient(118deg,
-          transparent 0 30px,
-          rgba(70,235,255,.13) 32px 35px,
-          rgba(255,83,211,.11) 36px 39px,
-          rgba(255,213,74,.10) 40px 42px,
-          transparent 44px 72px),
-        radial-gradient(circle at 48% 45%, rgba(255,255,255,.12), transparent 44%);
+          transparent 0 14%,
+          rgba(59,226,255,.06) 18%,
+          rgba(86,214,255,.38) 21%,
+          rgba(255,255,255,.64) 24%,
+          rgba(255,100,221,.29) 27%,
+          transparent 31% 40%,
+          rgba(255,225,91,.09) 43%,
+          rgba(255,190,69,.34) 46%,
+          rgba(255,255,255,.52) 49%,
+          rgba(151,103,255,.30) 52%,
+          transparent 56% 66%,
+          rgba(129,140,248,.08) 69%,
+          rgba(70,226,255,.30) 72%,
+          rgba(255,255,255,.43) 75%,
+          rgba(255,99,188,.25) 78%,
+          transparent 82% 100%),
+        linear-gradient(145deg,
+          transparent 16%, rgba(255,72,205,.13) 34%, transparent 48%,
+          rgba(78,224,255,.11) 63%, transparent 80%),
+        radial-gradient(circle at 48% 45%, rgba(255,255,255,.13), transparent 42%);
       transform: translate3d(var(--holo-shift-x), var(--holo-shift-y), 0)
         rotate(var(--holo-rotate)) scale(1.24);
       transform-origin: center;
       backface-visibility: hidden;
-      transition: opacity .44s ease, transform .1s linear;
+      transition: opacity .2s ease, transform .12s linear;
     }
     .card-holo-effect::after {
       content: ''; position: absolute; inset: 0; border-radius: inherit;
-      background: linear-gradient(118deg,
-        transparent 0 25%,
-        rgba(255,218,69,.20) 29%,
-        rgba(255,255,255,.24) 32%,
-        rgba(139,92,246,.24) 35%,
-        transparent 40% 65%,
-        rgba(42,223,255,.20) 69%,
-        rgba(255,255,255,.21) 72%,
-        rgba(255,79,202,.22) 75%,
-        transparent 80% 100%);
-      opacity: .88; mix-blend-mode: screen;
+      background: repeating-linear-gradient(118deg,
+        transparent 0 22px,
+        rgba(255,255,255,.075) 23px 24px,
+        transparent 25px 44px);
+      opacity: .46; mix-blend-mode: screen;
     }
     .holo-in-view .card-holo-effect { will-change: transform; }
-    .holo-moving .card-holo-effect {
-      opacity: var(--holo-active-strength, .66);
-      transition: opacity .12s ease-out, transform .08s linear;
-    }
-    .poke-card:active .card-holo-effect,
-    .detail-carousel:active .card-holo-effect { opacity: var(--holo-active-strength, .70); }
-    .card-carousel-track {
-      position: relative; z-index: 1; display: flex; width: 100%; height: 100%;
-      overflow-x: auto; overflow-y: hidden; direction: ltr;
-      scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
-      touch-action: manipulation; -webkit-overflow-scrolling: touch;
-      scrollbar-width: none; contain: layout paint;
-    }
+    .poke-card:active .card-holo-effect { opacity: .62; }
+    .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
-    .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; direction: rtl; scroll-snap-align: start; scroll-snap-stop: always; }
-    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; pointer-events: none; user-select: none; -webkit-user-drag: none; }
-    .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; pointer-events: none; }
+    .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
+    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; }
+    .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; }
     .carousel-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4); }
     .carousel-dot.active { background: #fbbf24; width: 14px; border-radius: 3px; }
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { --holo-rest-strength: .08; --holo-active-strength: .74; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
+    .detail-carousel { --holo-strength: .37; --holo-hover-strength: .58; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
     @media (hover: hover) and (pointer: fine) {
       .card-holo-effect { opacity: 0; }
-      .holo-moving .card-holo-effect { opacity: 0; }
       .poke-card:hover .card-holo-effect,
       .detail-carousel:hover .card-holo-effect {
-        opacity: var(--holo-rest-strength, .07);
+        opacity: var(--holo-hover-strength, .52);
         will-change: transform, opacity;
-      }
-      .poke-card.holo-moving:hover .card-holo-effect,
-      .detail-carousel.holo-moving:hover .card-holo-effect {
-        opacity: var(--holo-active-strength, .70);
       }
       .holo-in-view .card-holo-effect { will-change: auto; }
     }
@@ -354,7 +325,7 @@
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
-    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; pointer-events: none; }
+    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; }
     .rarity-common { background: rgba(55,65,81,0.85); color: #9ca3af; }
     .rarity-uncommon { background: rgba(6,78,59,0.85); color: #6ee7b7; }
     .rarity-rare { background: rgba(30,58,138,0.85); color: #93c5fd; }
@@ -362,8 +333,8 @@
     .rarity-ultra { background: rgba(120,53,15,0.85); color: #fcd34d; }
     .rarity-secret { background: rgba(136,19,55,0.85); color: #fda4af; }
 
-    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); pointer-events: none; }
-    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; pointer-events: none; }
+    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); }
+    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; }
 
     .card-body { padding: 7px 8px 5px; }
     .card-name { font-weight: 800; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e2e8f0; margin-bottom: 2px; }
@@ -388,23 +359,9 @@
     .add-label { font-size: 0.72em; color: #3d4f7a; font-weight: 700; margin-top: 6px; }
 
     /* ===== MODAL ===== */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.88); z-index: 200; display: none; align-items: flex-end; }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: flex-end; backdrop-filter: blur(4px); }
     .overlay.open { display: flex; }
     .modal { background: #080d1f; border-radius: 22px 22px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; border-top: 2px solid #f59e0b55; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); }
-    #detailOverlay {
-      display: flex; visibility: hidden; opacity: 0; pointer-events: none;
-      transition: opacity .18s ease, visibility 0s linear .24s;
-    }
-    #detailOverlay.open {
-      visibility: visible; opacity: 1; pointer-events: auto;
-      transition: opacity .18s ease;
-    }
-    #detailOverlay .modal {
-      animation: none; opacity: 0; transform: translate3d(0,20px,0);
-      transition: transform .24s cubic-bezier(.2,.85,.25,1), opacity .18s ease;
-      will-change: transform, opacity;
-    }
-    #detailOverlay.open .modal { opacity: 1; transform: translate3d(0,0,0); }
     .modal-handle { width: 36px; height: 4px; background: #1e2d5a; border-radius: 2px; margin: 12px auto 0; }
     .modal-head { padding: 14px 18px 10px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1a2040; }
     .modal-title { font-size: 1em; font-weight: 800; color: #fbbf24; }
@@ -798,7 +755,6 @@
       .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
       .card-holo-effect { transition: none; transform: scale(1.24); }
-      #detailOverlay, #detailOverlay .modal { transition: none; }
     }
 
     /* ===== HITIM ACCOUNT & LOCAL APP ===== */
@@ -1312,7 +1268,7 @@
   <div class="ai-loading-box">
     <div class="pokeball-loader"></div>
     <div class="ai-loading-title">מזהה את הקלף...</div>
-    <div class="ai-loading-sub">בודק שם, סדרה ומחיר שוק</div>
+    <div class="ai-loading-sub">קורא שם, מספר אספן וסדרה</div>
   </div>
 </div>
 <div class="capture-success" id="captureSuccess" aria-hidden="true">
@@ -1341,9 +1297,13 @@ let pendingSave=null;
 let currentAccess=null;
 let deferredInstallPrompt=null;
 let dailyPriceRefreshRunning=false;
+let dailyPriceRefreshTimer=0;
+let identificationInFlight=0;
+let quickPriceInFlight=0;
+let quickPriceChain=Promise.resolve();
+let editorPriceToken=0;
 let renderFrame=0;
 let hasRenderedCards=false;
-let detailOpenFrame=0;
 const cardNodeCache=new Map();
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
@@ -1457,13 +1417,17 @@ function cardRenderSignature(card,commentCount){
 function cardImageMarkup(card,imgs,index,commentCount){
   const badge=commentCount?`<div class="comments-badge">💬 ${commentCount}</div>`:'';
   const rarityLabel=escapeHtml(card.rarity?(RARITY_HE[card.rarity]||card.rarity):'');
-  const imageLoading=index<Math.max(4,cols*2)?'loading="eager" fetchpriority="high"':'loading="lazy" fetchpriority="low"';
-  const imageAttrs=`${imageLoading} decoding="async" alt="${escapeHtml(card.name||card.pokemon||'קלף פוקימון')}"`;
+  const imageAttrs=slideIndex=>{
+    const priority=slideIndex===0&&index<Math.max(4,cols*2)
+      ?'loading="eager" fetchpriority="high"'
+      :'loading="lazy" fetchpriority="low"';
+    return `${priority} decoding="async" alt="${escapeHtml(card.name||card.pokemon||'קלף פוקימון')}"`;
+  };
   if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
   if(imgs.length>1){
-    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs}></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
+    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)}></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
   }
-  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs}><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)}><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
 }
 
 function getCardNode(card,index){
@@ -1533,81 +1497,51 @@ function render(){
   hasRenderedCards=true;
 }
 
-function detailRenderSignature(card,imgs,cardComments){
-  return JSON.stringify([
-    card.id,card.name,card.pokemon,card.set,card.number,card.year,card.value,
-    card.rarity,card.condition,card.language,
-    imgs.map(compactImageKey),cardComments
-  ]);
-}
-
 function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const imgs=cardImageUrls(c);
+  const imgHtml=imgs.length
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" decoding="async" alt="${escapeHtml(c.name||c.pokemon||'קלף פוקימון')}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
-  const renderKey=detailRenderSignature(c,imgs,cc);
+  const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
   const detailBody=document.getElementById('detailBody');
-  if(detailBody.dataset.renderKey!==renderKey){
-    untrackHoloSurface(detailBody.querySelector('.detail-carousel'));
-    const imgHtml=imgs.length
-      ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map((u,i)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" loading="${i===0?'eager':'lazy'}" fetchpriority="${i===0?'high':'low'}" decoding="async" alt="${escapeHtml(c.name||c.pokemon||'קלף פוקימון')}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
-      :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
-    const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
-    detailBody.innerHTML=`
-      ${imgHtml}
-      <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
-      <div class="detail-set">${escapeHtml(c.set||'')}${c.number?' #'+escapeHtml(c.number):''}</div>
-      <div class="detail-badges">
-        ${c.rarity?`<span class="detail-badge">⭐ ${escapeHtml(RARITY_HE[c.rarity]||c.rarity)}</span>`:''}
-        ${c.condition?`<span class="detail-badge">🏷️ ${escapeHtml(CONDITION_HE[c.condition]||c.condition)}</span>`:''}
-        ${c.language?`<span class="detail-badge">🌐 ${escapeHtml(LANGUAGE_HE[c.language]||c.language)}</span>`:''}
-      </div>
-      <div class="detail-grid">
-        <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+escapeHtml(c.value):'—'}</div></div>
-        <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${escapeHtml(c.year||'—')}</div></div>
-        <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${escapeHtml(c.pokemon||'—')}</div></div>
-        <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${escapeHtml(c.set||'—')}</div></div>
-      </div>
-      <div class="detail-actions">
-        <button class="card-btn" data-detail-action="edit">✏️ עריכה</button>
-        <button class="card-btn" data-detail-action="price">🔄 רענן מחיר</button>
-        <button class="card-btn" data-detail-action="share">🔗 שתף</button>
-      </div>
-      ${commentsHtml?`<div class="detail-comments"><div class="detail-comments-title">💬 הערות</div>${commentsHtml}</div>`:''}
-    `;
-    detailBody.querySelector('[data-detail-action="edit"]').onclick=()=>{closeDetail();openEdit(c.id);};
-    detailBody.querySelector('[data-detail-action="price"]').onclick=event=>refreshSavedPrice(c.id,event.currentTarget);
-    detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
-    detailBody.dataset.renderKey=renderKey;
-  }
-  const overlay=document.getElementById('detailOverlay');
-  const modal=overlay.querySelector('.modal');
-  cancelAnimationFrame(detailOpenFrame);
-  overlay.classList.remove('open');
-  modal.scrollTop=0;
-  const firstImage=detailBody.querySelector('img');
-  if(firstImage?.decode)firstImage.decode().catch(()=>{});
-  detailOpenFrame=requestAnimationFrame(()=>{
-    detailOpenFrame=0;
-    overlay.classList.add('open');
-    trackHoloSurface(detailBody.querySelector('.detail-carousel'));
-  });
+  detailBody.innerHTML=`
+    ${imgHtml}
+    <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
+    <div class="detail-set">${escapeHtml(c.set||'')}${c.number?' #'+escapeHtml(c.number):''}</div>
+    <div class="detail-badges">
+      ${c.rarity?`<span class="detail-badge">⭐ ${escapeHtml(RARITY_HE[c.rarity]||c.rarity)}</span>`:''}
+      ${c.condition?`<span class="detail-badge">🏷️ ${escapeHtml(CONDITION_HE[c.condition]||c.condition)}</span>`:''}
+      ${c.language?`<span class="detail-badge">🌐 ${escapeHtml(LANGUAGE_HE[c.language]||c.language)}</span>`:''}
+    </div>
+    <div class="detail-grid">
+      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+escapeHtml(c.value):'—'}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${escapeHtml(c.year||'—')}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${escapeHtml(c.pokemon||'—')}</div></div>
+      <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${escapeHtml(c.set||'—')}</div></div>
+    </div>
+    <div class="detail-actions">
+      <button class="card-btn" data-detail-action="edit">✏️ עריכה</button>
+      <button class="card-btn" data-detail-action="price">🔄 רענן מחיר</button>
+      <button class="card-btn" data-detail-action="share">🔗 שתף</button>
+    </div>
+    ${commentsHtml?`<div class="detail-comments"><div class="detail-comments-title">💬 הערות</div>${commentsHtml}</div>`:''}
+  `;
+  detailBody.querySelector('[data-detail-action="edit"]').onclick=()=>{closeDetail();openEdit(c.id);};
+  detailBody.querySelector('[data-detail-action="price"]').onclick=event=>refreshSavedPrice(c.id,event.currentTarget);
+  detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
+  document.getElementById('detailOverlay').classList.add('open');
+  trackHoloSurface(detailBody.querySelector('.detail-carousel'));
 }
-function closeDetail(){
-  cancelAnimationFrame(detailOpenFrame);detailOpenFrame=0;
-  document.getElementById('detailOverlay').classList.remove('open');
-}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
 function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
   if(track._dotsFrame)return;
   track._dotsFrame=requestAnimationFrame(()=>{
     track._dotsFrame=0;
-    const width=track.clientWidth||track.offsetWidth;
-    if(!width)return;
-    const idx=Math.max(0,Math.round(Math.abs(track.scrollLeft)/width));
-    if(track._activeDot===idx)return;
-    track._activeDot=idx;
+    const idx=Math.round(track.scrollLeft/track.offsetWidth);
     const dots=track.parentElement.querySelectorAll('.carousel-dot');
     dots.forEach((dot,i)=>dot.classList.toggle('active',i===idx));
   });
@@ -1620,10 +1554,8 @@ let holoMotionAttached=false;
 let holoPermissionAsked=false;
 let holoMotionPosition={x:50,y:46};
 let holoLastPosition={x:50,y:46};
-let holoIdleTimer=0;
 const holoVisibleSurfaces=new Set();
 const holoTrackedSurfaces=new Set();
-const holoActiveSurfaces=new Set();
 const holoObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{
   entries.forEach(entry=>{
     const surface=entry.target;
@@ -1633,9 +1565,7 @@ const holoObserver=typeof IntersectionObserver==='undefined'?null:new Intersecti
       applyHoloStyles(surface,holoLastPosition.x,holoLastPosition.y);
     }else{
       holoVisibleSurfaces.delete(surface);
-      holoActiveSurfaces.delete(surface);
       surface.classList.remove('holo-in-view');
-      surface.classList.remove('holo-moving');
     }
   });
 },{rootMargin:'80px 0px',threshold:0});
@@ -1659,25 +1589,7 @@ function untrackHoloSurface(surface){
   holoObserver?.unobserve(surface);
   holoTrackedSurfaces.delete(surface);
   holoVisibleSurfaces.delete(surface);
-  holoActiveSurfaces.delete(surface);
   surface.classList.remove('holo-in-view');
-  surface.classList.remove('holo-moving');
-}
-
-function settleHolo(){
-  clearTimeout(holoIdleTimer);holoIdleTimer=0;
-  holoActiveSurfaces.forEach(surface=>surface.classList.remove('holo-moving'));
-  holoActiveSurfaces.clear();
-}
-
-function wakeHolo(targets){
-  targets.forEach(surface=>{
-    if(!surface?.isConnected)return;
-    holoActiveSurfaces.add(surface);
-    surface.classList.add('holo-moving');
-  });
-  clearTimeout(holoIdleTimer);
-  holoIdleTimer=setTimeout(settleHolo,240);
 }
 
 function applyHoloStyles(surface,x,y){
@@ -1693,12 +1605,11 @@ function applyHoloStyles(surface,x,y){
   surface.style.setProperty('--holo-rotate',`${rotate.toFixed(2)}deg`);
 }
 
-function applyHoloPosition(x,y,scope=null,activate=true){
-  const shouldActivate=Boolean(activate||holoPendingPosition?.activate);
+function applyHoloPosition(x,y,scope=null){
   holoPendingPosition={
     x:clampHolo(Number(x)||50,8,92),
     y:clampHolo(Number(y)||46,8,92),
-    scope,activate:shouldActivate
+    scope
   };
   if(holoFrame)return;
   holoFrame=requestAnimationFrame(()=>{
@@ -1709,7 +1620,6 @@ function applyHoloPosition(x,y,scope=null,activate=true){
     holoLastPosition={x:next.x,y:next.y};
     const targets=next.scope?[next.scope]:Array.from(holoVisibleSurfaces);
     targets.forEach(surface=>applyHoloStyles(surface,next.x,next.y));
-    if(next.activate)wakeHolo(targets);
   });
 }
 
@@ -1723,10 +1633,9 @@ function handleHoloOrientation(event){
   if(Math.abs(angle)===90){const swap=dx;dx=dy;dy=-swap;}
   const targetX=clampHolo(50+dx*1.7,8,92);
   const targetY=clampHolo(46+dy*1.15,8,92);
-  const movement=Math.hypot(targetX-holoMotionPosition.x,targetY-holoMotionPosition.y);
   holoMotionPosition.x+=(targetX-holoMotionPosition.x)*.24;
   holoMotionPosition.y+=(targetY-holoMotionPosition.y)*.24;
-  applyHoloPosition(holoMotionPosition.x,holoMotionPosition.y,null,movement>.55);
+  applyHoloPosition(holoMotionPosition.x,holoMotionPosition.y);
 }
 
 function attachHoloMotion(){
@@ -1762,8 +1671,7 @@ function handleHoloPointer(event){
   applyHoloPosition(
     ((event.clientX-rect.left)/rect.width)*100,
     ((event.clientY-rect.top)/rect.height)*100,
-    isDesktopHolo()?surface:null,
-    true
+    isDesktopHolo()?surface:null
   );
 }
 
@@ -1789,9 +1697,6 @@ function initHoloEffect(){
     holoOrientationBase=null;
     holoMotionPosition={x:50,y:46};
   },{passive:true});
-  document.addEventListener('visibilitychange',()=>{
-    if(document.visibilityState!=='visible')settleHolo();
-  });
 }
 
 function escapeHtml(value){
@@ -1838,6 +1743,7 @@ function quickOverlayClick(e){
 }
 function resetQuickIdentify(){
   quickSessionToken++;
+  quickPriceChain=Promise.resolve();
   quickScans.forEach(scan=>{if(scan.url)URL.revokeObjectURL(scan.url);});
   quickScans=[];quickProcessing=false;
   ['quickFrontCamera','quickGalleryInput'].forEach(id=>{
@@ -1886,16 +1792,20 @@ function renderQuickScans(){
   list.innerHTML=quickScans.map(scan=>{
     let body='';
     if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
-    else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה ובודק מחיר...</div>';
+    else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה קלף...</div>';
     else if(scan.status==='error')body='<div class="quick-scan-status error">לא הצלחנו לזהות — אפשר לצלם שוב</div>';
     else {
-      const price=scan.priceStatus==='matched'&&Number.isFinite(scan.value)?'$'+scan.value.toFixed(2):'מחיר לא נמצא';
+      const price=scan.priceStatus==='pending'
+        ?'<span class="quick-mini-ball"></span>בודק מחיר...'
+        :scan.priceStatus==='matched'&&Number.isFinite(scan.value)
+          ?'$'+scan.value.toFixed(2)
+          :'מחיר לא נמצא';
       body=`<div class="quick-scan-name">${escapeHtml(scan.name||'קלף לא מזוהה')}</div>
         <div class="quick-scan-price">${price}</div>`;
     }
     const thumb=scan.status==='done'&&scan.data?.catalogImage
       ?scan.data.catalogImage:scan.url;
-    const addButton=scan.status==='done'
+    const addButton=scan.status==='done'&&scan.priceStatus!=='pending'
       ?`<button class="quick-add${scan.saving?' saving':''}${scan.added?' added':''}"
           onclick="addQuickScanToGallery('${scan.id}')"
           aria-label="${scan.added?'נוסף לאוסף':'הוסף לאוסף'}"
@@ -1911,6 +1821,41 @@ function renderQuickScans(){
     </div>`;
   }).join('');
 }
+
+async function requestIdentification(frontFile,backFile=null){
+  const fd=new FormData();fd.append('front',frontFile);if(backFile)fd.append('back',backFile);
+  identificationInFlight++;
+  try{
+    const response=await HitimAuth.fetch('/identify',{method:'POST',body:fd,timeoutMs:50000});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
+    return data;
+  }finally{
+    identificationInFlight=Math.max(0,identificationInFlight-1);
+  }
+}
+
+function queueQuickScanPrice(scan,token){
+  quickPriceChain=quickPriceChain.catch(()=>{}).then(async()=>{
+    if(token!==quickSessionToken||!quickScans.includes(scan))return;
+    quickPriceInFlight++;
+    try{
+      const result=await requestMarketPrice(scan.data);
+      if(token!==quickSessionToken||!quickScans.includes(scan))return;
+      Object.assign(scan.data,result);
+      scan.priceStatus=result.priceStatus||'price-unavailable';
+      const parsed=parseFloat(result.value);
+      scan.value=scan.priceStatus==='matched'&&Number.isFinite(parsed)?parsed:null;
+    }catch(error){
+      if(token!==quickSessionToken||!quickScans.includes(scan))return;
+      scan.priceStatus='service-unavailable';scan.value=null;
+    }finally{
+      quickPriceInFlight=Math.max(0,quickPriceInFlight-1);
+    }
+    renderQuickScans();
+  });
+}
+
 async function processQuickQueue(){
   if(quickProcessing)return;
   quickProcessing=true;
@@ -1921,17 +1866,14 @@ async function processQuickQueue(){
       if(!scan)break;
       scan.status='processing';renderQuickScans();
       try{
-        const fd=new FormData();fd.append('front',scan.file);
-        const response=await HitimAuth.fetch('/identify',{method:'POST',body:fd});
-        const data=await response.json();
-        if(!response.ok||data.error)throw new Error(data.error||'identify');
+        const data=await requestIdentification(scan.file);
         if(token!==quickSessionToken)return;
         scan.status='done';
         scan.name=data.name||data.pokemon||'קלף לא מזוהה';
-        scan.priceStatus=data.priceStatus||'';
-        const parsed=parseFloat(data.value);
-        scan.value=data.priceStatus==='matched'&&Number.isFinite(parsed)?parsed:null;
+        scan.priceStatus='pending';
+        scan.value=null;
         scan.data=data;
+        queueQuickScanPrice(scan,token);
       }catch(error){
         if(token!==quickSessionToken)return;
         scan.status='error';scan.error=String(error);
@@ -2007,6 +1949,7 @@ function saveComments(){
 }
 
 function openAdd(){
+  editorPriceToken++;
   editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};
   document.getElementById('modalTitle').textContent='➕ הוספת קלף';
   ['fName','fPokemon','fNumber','fSet','fYear','fValue'].forEach(id=>document.getElementById(id).value='');
@@ -2069,28 +2012,25 @@ function showCaptureSuccess(){
 
 async function identifyCoin(){
   if(!aiFront){toast('העלה תמונת פנים של הקלף');return;}
+  const priceToken=++editorPriceToken;
   const btn=document.getElementById('identifyBtn');btn.textContent='🔍 מזהה...';btn.disabled=true;
   document.getElementById('aiLoading').classList.add('show');
   let identifiedOk=false;
   try{
-    const fd=new FormData();fd.append('front',aiFront);if(aiBack)fd.append('back',aiBack);
-    const r=await HitimAuth.fetch('/identify',{method:'POST',body:fd});const d=await r.json();
-    if(!r.ok||d.error){toast('שגיאה: '+(d.detail||d.error||'הזיהוי לא הצליח'));return;}
+    const d=await requestIdentification(aiFront,aiBack);
     document.getElementById('fName').value=d.name||'';document.getElementById('fPokemon').value=d.pokemon||'';
     document.getElementById('fNumber').value=d.number||'';document.getElementById('fSet').value=d.set||'';
     document.getElementById('fYear').value=d.year||'';document.getElementById('fValue').value=d.value||'';
     if(d.condition&&CONDITIONS.includes(d.condition))document.getElementById('fCondition').value=d.condition;
     if(d.rarity&&RARITIES.includes(d.rarity))document.getElementById('fRarity').value=d.rarity;
     if(d.language&&LANGUAGES.includes(d.language))document.getElementById('fLanguage').value=d.language;
-    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',catalogLocalImage:'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',priceCheckedAt:new Date().toISOString()};
+    aiMeta={setCode:d.setCode||'',catalogCardId:d.catalogCardId||'',catalogImage:d.catalogImage||'',catalogLocalImage:'',tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
     const res=document.getElementById('aiResult');res.style.display='block';
-    const priceText=d.priceStatus==='matched'
-      ?`💰 $${escapeHtml(d.value)} לפי ${escapeHtml(d.priceSource||'מחיר שוק')}`
-      :'💰 לא נמצא מחיר ודאי — אפשר להזין ידנית';
-    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>${priceText}`;
+    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
     identifiedOk=true;
-  }catch(e){toast('שגיאת זיהוי');}
+    resolveEditorPrice(d,priceToken);
+  }catch(e){toast(e.message||'שגיאת זיהוי');}
   finally{
     document.getElementById('aiLoading').classList.remove('show');
     if(identifiedOk)await showCaptureSuccess();
@@ -2101,9 +2041,35 @@ async function identifyCoin(){
 async function uploadFile(f){return HitimDB.imageFileToDataUrl(f);}
 
 async function requestMarketPrice(cardData){
-  const r=await HitimAuth.fetch('/price',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cardData)});
+  const r=await HitimAuth.fetch('/price',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(cardData),timeoutMs:38000});
   if(!r.ok)throw new Error('price');
   return await r.json();
+}
+
+async function resolveEditorPrice(cardData,token){
+  const resultNode=document.getElementById('aiResult');
+  try{
+    const result=await requestMarketPrice(cardData);
+    if(token!==editorPriceToken)return;
+    const matched=result.priceStatus==='matched';
+    if(matched)document.getElementById('fValue').value=result.value||'';
+    aiMeta={
+      ...aiMeta,
+      catalogCardId:result.catalogCardId||aiMeta.catalogCardId||'',
+      catalogImage:result.catalogImage||aiMeta.catalogImage||'',
+      tcgplayerProductId:result.tcgplayerProductId||aiMeta.tcgplayerProductId||'',
+      priceSource:result.priceSource||'',priceUpdatedAt:result.priceUpdatedAt||'',
+      priceCheckedAt:new Date().toISOString()
+    };
+    const priceText=matched
+      ?`💰 $${escapeHtml(result.value)} לפי ${escapeHtml(result.priceSource||'מחיר שוק')}`
+      :'💰 לא נמצא מחיר ודאי — אפשר להזין ידנית';
+    resultNode.innerHTML=`✅ <b>${escapeHtml(cardData.name||cardData.pokemon)}</b> | ${escapeHtml(cardData.set||'')} | ${escapeHtml(cardData.rarity||'')}<br>${priceText}`;
+    renderPreview();
+  }catch(error){
+    if(token!==editorPriceToken)return;
+    resultNode.innerHTML=`✅ <b>${escapeHtml(cardData.name||cardData.pokemon)}</b> | ${escapeHtml(cardData.set||'')} | ${escapeHtml(cardData.rarity||'')}<br>💰 בדיקת המחיר מתעכבת — אפשר לרענן אחר כך`;
+  }
 }
 
 function replayEffect(el,className){
@@ -2286,6 +2252,9 @@ function priceRefreshDue(card){
 }
 
 async function refreshDuePrices(){
+  if(identificationInFlight||quickProcessing||quickPriceInFlight){
+    scheduleDailyPriceRefresh(30000);return;
+  }
   if(dailyPriceRefreshRunning||!navigator.onLine||!cards.length)return;
   const due=cards.filter(card=>priceRefreshDue(card)&&card.number&&(card.name||card.pokemon));
   if(!due.length)return;
@@ -2321,13 +2290,22 @@ async function refreshDuePrices(){
         }
       }
     };
-    await Promise.all(Array.from({length:Math.min(2,due.length)},worker));
+    await worker();
     render();
     if(changed)toast(`💰 ${changed} מחירים השתנו בעדכון היומי`);
     else if(matched)console.debug(`Hitim refreshed ${matched} market prices`);
   }finally{
     dailyPriceRefreshRunning=false;
   }
+}
+
+function scheduleDailyPriceRefresh(delay=60000){
+  clearTimeout(dailyPriceRefreshTimer);
+  dailyPriceRefreshTimer=setTimeout(()=>{
+    const run=()=>refreshDuePrices();
+    if('requestIdleCallback' in window)requestIdleCallback(run,{timeout:5000});
+    else run();
+  },delay);
 }
 
 function setHeaderMenuOpen(open,returnFocus=false){
@@ -2532,22 +2510,22 @@ HitimAuth.init(async access=>{
   currentAccess=access;
   document.getElementById('adminMenuBtn').hidden=access.role!=='admin';
   document.getElementById('legacyImportSection').hidden=access.role!=='admin';
-  await HitimDB.requestPersistence();
   await load();
-  refreshDuePrices();
+  HitimDB.requestPersistence().catch(()=>{});
+  scheduleDailyPriceRefresh(90000);
 });
-window.addEventListener('online',()=>refreshDuePrices());
+window.addEventListener('online',()=>scheduleDailyPriceRefresh(20000));
 document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     HitimAuth.refreshAccess();
-    refreshDuePrices();
+    scheduleDailyPriceRefresh(30000);
   }
 });
 setInterval(()=>{
   if(document.visibilityState==='visible'&&navigator.onLine)HitimAuth.refreshAccess();
 },5*60*1000);
 setInterval(()=>{
-  if(document.visibilityState==='visible'&&navigator.onLine)refreshDuePrices();
+  if(document.visibilityState==='visible'&&navigator.onLine)scheduleDailyPriceRefresh(5000);
 },60*60*1000);
 </script>
 </body>
