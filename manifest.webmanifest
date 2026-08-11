@@ -12,13 +12,13 @@
   "theme_color": "#12063a",
   "icons": [
     {
-      "src": "/hitim-icon-192.png",
+      "src": "/hitim-icon-193.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/hitim-icon-512.png",
+      "src": "/hitim-icon-513.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
