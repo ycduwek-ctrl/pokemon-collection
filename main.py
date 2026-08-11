@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import gspread
 from google.oauth2.service_account import Credentials
 from PIL import Image, ImageOps
+import asyncio
 import io
 import os
 import json
@@ -84,6 +85,17 @@ def _tcgdex_image_url(card):
         return image_url
     return f"{image_url}/high.webp"
 
+
+def _fetch_tcgdex_card(language, card_id, timeout=8):
+    try:
+        response = requests.get(
+            f"https://api.tcgdex.net/v2/{language}/cards/{card_id}",
+            timeout=timeout
+        )
+        return response.json() if response.ok else None
+    except (requests.RequestException, ValueError, TypeError):
+        return None
+
 def _tcgplayer_image_url(product_id):
     product_id = str(product_id or "").strip()
     if product_id.endswith(".0"):
@@ -122,7 +134,7 @@ def _pokemon_tcg_api_price(card_info):
                 "select": "id,name,number,set,rarity,images,tcgplayer"
             },
             headers=headers,
-            timeout=15
+            timeout=10
         )
         response.raise_for_status()
         candidates = [
@@ -235,7 +247,7 @@ def _enrich_identification_from_catalog(card_info):
         search = requests.get(
             f"https://api.tcgdex.net/v2/{lang}/cards",
             params={"localId": card_number},
-            timeout=12
+            timeout=8
         )
         search.raise_for_status()
         candidates = [
@@ -257,13 +269,15 @@ def _enrich_identification_from_catalog(card_info):
             return card_info
 
         details = []
-        for candidate in candidates[:12]:
-            response = requests.get(
-                f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
-                timeout=12
-            )
-            if response.ok:
-                details.append(response.json())
+        candidate_ids = [candidate["id"] for candidate in candidates[:8]]
+        if candidate_ids:
+            with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
+                details = [
+                    detail for detail in executor.map(
+                        lambda card_id: _fetch_tcgdex_card(lang, card_id),
+                        candidate_ids
+                    ) if detail
+                ]
 
         if printed_set_count.isdigit():
             count_matches = [
@@ -347,7 +361,7 @@ def _localized_tcgdex_price(card_info):
         for direct_id in dict.fromkeys(direct_ids):
             response = requests.get(
                 f"https://api.tcgdex.net/v2/{lang}/cards/{direct_id}",
-                timeout=12
+                timeout=8
             )
             if response.ok:
                 detail = response.json()
@@ -364,7 +378,7 @@ def _localized_tcgdex_price(card_info):
                 search = requests.get(
                     f"https://api.tcgdex.net/v2/{lang}/cards",
                     params={"localId": query_id},
-                    timeout=12
+                    timeout=8
                 )
                 search.raise_for_status()
                 candidates = [
@@ -385,13 +399,15 @@ def _localized_tcgdex_price(card_info):
                 if code_matches:
                     candidates = code_matches
 
-            for candidate in candidates[:24]:
-                response = requests.get(
-                    f"https://api.tcgdex.net/v2/{lang}/cards/{candidate['id']}",
-                    timeout=12
-                )
-                if response.ok:
-                    details.append(response.json())
+            candidate_ids = [candidate["id"] for candidate in candidates[:8]]
+            if candidate_ids:
+                with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
+                    details = [
+                        detail for detail in executor.map(
+                            lambda card_id: _fetch_tcgdex_card(lang, card_id),
+                            candidate_ids
+                        ) if detail
+                    ]
 
         if printed_set_count.isdigit() and not catalog_card_id:
             count_matches = [
@@ -531,7 +547,7 @@ def _cached_tcgplayer_json(cache, key, url, params, ttl_seconds):
         url,
         params=params,
         headers=_TCGPLAYER_PUBLIC_HEADERS,
-        timeout=15
+        timeout=8
     )
     response.raise_for_status()
     payload = response.json()
@@ -597,7 +613,7 @@ def _tcgplayer_marketplace_price(card_info):
                 "https://mp-search-api.tcgplayer.com/v2/product/"
                 f"{stored_product_id}/details",
                 headers=_TCGPLAYER_PUBLIC_HEADERS,
-                timeout=12
+                timeout=8
             )
             if response.ok:
                 detail = response.json()
@@ -809,20 +825,31 @@ def _tcgplayer_marketplace_price(card_info):
 def _market_price_for_card(card_info):
     """Find a verified market price across localized and English catalogs."""
     catalog_image = str(card_info.get("catalogImage") or "").strip()
-    localized = _localized_tcgdex_price(card_info)
-    catalog_image = localized.get("catalogImage") or catalog_image
-    if localized.get("priceStatus") == "matched":
-        return _with_catalog_image(localized, catalog_image)
+    sources = {
+        "localized": _localized_tcgdex_price,
+        "primary": _pokemon_tcg_api_price,
+        "marketplace": _tcgplayer_marketplace_price,
+    }
+    source_results = {}
+    with ThreadPoolExecutor(max_workers=3) as executor:
+        futures = {
+            executor.submit(source, card_info): name
+            for name, source in sources.items()
+        }
+        for future in as_completed(futures):
+            name = futures[future]
+            try:
+                source_results[name] = future.result()
+            except Exception:
+                source_results[name] = {
+                    "value": "", "priceStatus": "service-unavailable"
+                }
 
-    primary = _pokemon_tcg_api_price(card_info)
-    catalog_image = primary.get("catalogImage") or catalog_image
-    if primary.get("priceStatus") == "matched":
-        return _with_catalog_image(primary, catalog_image)
-
-    marketplace = _tcgplayer_marketplace_price(card_info)
-    catalog_image = marketplace.get("catalogImage") or catalog_image
-    if marketplace.get("priceStatus") == "matched":
-        return _with_catalog_image(marketplace, catalog_image)
+    for source_name in ("localized", "primary", "marketplace"):
+        result = source_results[source_name]
+        catalog_image = result.get("catalogImage") or catalog_image
+        if result.get("priceStatus") == "matched":
+            return _with_catalog_image(result, catalog_image)
 
     english_name = _english_card_name(card_info.get("name") or card_info.get("pokemon"))
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
@@ -840,7 +867,7 @@ def _market_price_for_card(card_info):
         search = requests.get(
             "https://api.tcgdex.net/v2/en/cards",
             params={"name": english_name},
-            timeout=12
+            timeout=8
         )
         search.raise_for_status()
         candidates = [
@@ -859,14 +886,14 @@ def _market_price_for_card(card_info):
                 catalog_image
             )
 
-        details = []
-        for candidate in candidates[:8]:
-            response = requests.get(
-                f"https://api.tcgdex.net/v2/en/cards/{candidate['id']}",
-                timeout=12
-            )
-            if response.ok:
-                details.append(response.json())
+        candidate_ids = [candidate["id"] for candidate in candidates[:8]]
+        with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
+            details = [
+                detail for detail in executor.map(
+                    lambda card_id: _fetch_tcgdex_card("en", card_id),
+                    candidate_ids
+                ) if detail
+            ]
 
         if not details:
             return _with_catalog_image(
@@ -1220,70 +1247,89 @@ async def identify(
     back: UploadFile = File(None),
     authorization: str = Header(None)
 ):
-    require_access(authorization)
-    def compress(f):
-        img = ImageOps.exif_transpose(Image.open(io.BytesIO(f))).convert("RGB")
-        img.thumbnail((1200, 1200), Image.LANCZOS)
+    await asyncio.to_thread(require_access, authorization)
+
+    def compress(raw):
+        if not raw or len(raw) > 18 * 1024 * 1024:
+            raise ValueError("invalid image size")
+        img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+        img.thumbnail((1024, 1024), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=90)
+        img.save(buf, format="JPEG", quality=82, optimize=True)
         return base64.b64encode(buf.getvalue()).decode()
 
-    front_b64 = compress(await front.read())
+    try:
+        front_raw = await front.read()
+        back_raw = await back.read() if back else None
+        front_b64 = await asyncio.to_thread(compress, front_raw)
+        back_b64 = await asyncio.to_thread(compress, back_raw) if back_raw else None
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="התמונה אינה תקינה או גדולה מדי") from exc
+
+    prompt = """Identify the exact Pokemon TCG card in the attached photo. Return JSON only.
+
+Use the printed collector number as the primary identifier. Read the complete number exactly as printed near the bottom (for example 025/102), preserving leading zeros and letters. Never copy the example or guess an unreadable number; return an empty string instead. Use the name and set symbol only as supporting evidence.
+
+For cards in Japanese, Chinese, Korean, or any other language, identify the official English card name. Set both `name` and `pokemon` to: Official English Name (Hebrew transliteration of only the card name). Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex. Put the exact original printed name in `printedName`. Keep all other fields in English.
+
+Read the official English set name, printed set code (such as SV11W, SV2a, S12a or SM10), year, language, rarity, finish and visible physical condition. Do not estimate a price.
+
+Use exactly these fields and allowed labels:
+{"name":"","printedName":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""
     content = [
-        {"type":"text","text":"""אתה מומחה לקלפי פוקימון (Pokemon TCG). זהה את הקלף בתמונה בדייקנות ובדוק היטב את כל הפרטים הנראים על הקלף עצמו.
-
-קרא את פרטי הקלף, אך את השם החזר בפורמט קבוע:
-- גם אם הקלף ביפנית, סינית או שפה אחרת, זהה את השם הרשמי באנגלית
-- בשדה name כתוב: English Card Name (תעתיק/תרגום השם לעברית)
-- דוגמה: Toxtricity VMAX (טוקסטריסיטי VMAX)
-- תרגם או תעתק לעברית רק את שם הקלף. אל תתרגם לעברית סדרה, מצב, שפה, נדירות או פרטים אחרים
-- שמור סימוני קלף כמו V, VMAX, VSTAR, GX, EX ו-ex כפי שהם
-
-הזיהוי חייב להתחיל ממספר האספן (Collector Number):
-- חפש בפינה התחתונה של הקלף את המספר המודפס בפורמט מספר/גודל-סדרה, למשל 025/102
-- העתק את שני חלקי המספר בדיוק, כולל אפסים מובילים ואותיות אם קיימות
-- אל תשתמש במספר מדוגמה ואל תנחש. אם המספר אינו קריא, החזר number ריק
-- השתמש במספר האספן כנתון הראשי לזיהוי הקלף והסדרה; השם והסמל הם אימות נוסף
-
-קרא ישירות מהקלף:
-- את השם המדויק כפי שהוא מודפס בשפת המקור החזר בשדה printedName
-- את השם הרשמי באנגלית החזר בשדות name ו-pokemon, גם אם הוא מודפס על הקלף בשפה אחרת
-- מספר האספן המלא בפינה התחתונה
-- קוד הסדרה הקצר שמודפס ליד מספר האספן, למשל SV11W, SV2a, S12a או SM10. החזר אותו בשדה setCode; אם אינו קריא החזר מחרוזת ריקה
-- שם הסדרה הרשמי באנגלית (Base Set, Jungle, Fossil, Team Rocket וכו׳), גם אם הקלף בשפה אחרת
-- שנת ההוצאה אם מופיעה
-- נדירות לפי הסמל (♦=Common, ♦♦=Uncommon, ★=Rare, ★H=Holo Rare)
-- גימור הקלף: normal / holofoil / reverse-holofoil / first-edition
-- שפת הטקסט
-- מצב פיזי של הקלף
-
-אל תנחש מחיר ואל תחזיר הערכת שווי. המחיר יילקח לאחר הזיהוי ממאגר מחירי שוק.
-
-החזר JSON בלבד:
-{"name":"","printedName":"","pokemon":"","set":"","setCode":"","number":"","year":"","condition":"Mint/Near Mint/Excellent/Good/Poor","language":"English/Japanese/Chinese/Korean/French/German/Spanish/Italian/Portuguese/Thai/Indonesian/Hebrew/Other","rarity":"Common/Uncommon/Rare/Holo Rare/Ultra Rare/Secret Rare","finish":"normal/holofoil/reverse-holofoil/first-edition"}"""},
-        {"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{front_b64}"}}
+        {"type": "text", "text": prompt},
+        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{front_b64}"}}
     ]
-    if back:
-        back_b64 = compress(await back.read())
-        content.append({"type":"image_url","image_url":{"url":f"data:image/jpeg;base64,{back_b64}"}})
+    if back_b64:
+        content.append({
+            "type": "image_url",
+            "image_url": {"url": f"data:image/jpeg;base64,{back_b64}"}
+        })
 
-    res = requests.post(
-        "https://openrouter.ai/api/v1/chat/completions",
-        headers={"Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}","Content-Type":"application/json"},
-        json={
-            "model": "openrouter/auto",
-            "messages": [{"role": "user", "content": content}],
-            "max_tokens": 900
-        },
-        timeout=30
-    )
-    result = res.json()
-    if "error" in result:
-        return {"error": result["error"]["message"]}
-    text = result["choices"][0]["message"]["content"].strip()
-    text = re.sub(r'```json|```','',text).strip()
-    match = re.search(r'\{.*\}', text, re.DOTALL)
-    identified = json.loads(match.group() if match else text)
-    identified = _enrich_identification_from_catalog(identified)
-    identified.update(_market_price_for_card(identified))
+    def request_identification():
+        try:
+            response = requests.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}",
+                    "Content-Type": "application/json",
+                    "HTTP-Referer": "https://pokemon-collection-ecru.vercel.app",
+                    "X-Title": "Hitim"
+                },
+                json={
+                    "model": os.environ.get("OPENROUTER_MODEL", "openrouter/free"),
+                    "messages": [{"role": "user", "content": content}],
+                    "temperature": 0,
+                    "max_tokens": 550,
+                    "response_format": {"type": "json_object"}
+                },
+                timeout=(8, 32)
+            )
+            response.raise_for_status()
+            result = response.json()
+            if result.get("error"):
+                raise ValueError(str((result.get("error") or {}).get("message") or "provider error"))
+            answer = result["choices"][0]["message"]["content"]
+            if not isinstance(answer, str):
+                raise ValueError("empty model response")
+            answer = re.sub(r"```json|```", "", answer).strip()
+            match = re.search(r"\{.*\}", answer, re.DOTALL)
+            identified = json.loads(match.group() if match else answer)
+            if not isinstance(identified, dict) or not (
+                str(identified.get("name") or "").strip()
+                or str(identified.get("number") or "").strip()
+            ):
+                raise ValueError("card was not identified")
+            return identified
+        except requests.Timeout as exc:
+            raise HTTPException(status_code=504, detail="הזיהוי מתעכב כרגע — נסה שוב") from exc
+        except requests.RequestException as exc:
+            raise HTTPException(status_code=503, detail="שירות הזיהוי אינו זמין כרגע") from exc
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+            raise HTTPException(status_code=422, detail="לא הצלחנו לקרוא את פרטי הקלף מהתמונה") from exc
+
+    identified = await asyncio.to_thread(request_identification)
+    # Pricing is intentionally a separate request. A slow free market source
+    # must never turn a successful card identification into a failed scan.
+    identified.update({"value": "", "priceStatus": "pending"})
     return identified
