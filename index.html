@@ -1861,16 +1861,7 @@ function renderQuickScans(){
     if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
     else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה קלף...</div>';
     else if(scan.status==='error')body='<div class="quick-scan-status error">לא הצלחנו לזהות — אפשר לצלם שוב</div>';
-    else if(scan.data?.needsConfirmation){
-      const choices=(scan.data.matchCandidates||[]).map((candidate,index)=>
-        `<button class="match-choice" onclick="chooseQuickCandidate('${scan.id}',${index})">
-          <img src="${escapeHtml(candidate.catalogImage||scan.url)}" alt="">
-          ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}
-        </button>`).join('');
-      body=`<div class="quick-scan-name">נדרשת בחירה קצרה</div>
-        <div class="match-choice-note">לא נציג תמונה או מחיר לפני אימות</div>
-        <div class="match-choices">${choices||'<span class="quick-scan-status error">צלם שוב מקרוב ובאור טוב</span>'}</div>`;
-    }else {
+    else {
       const price=scan.priceStatus==='pending'
         ?'<span class="quick-mini-ball"></span>בודק מחיר...'
         :scan.priceStatus==='matched'&&Number.isFinite(scan.value)
@@ -1881,8 +1872,7 @@ function renderQuickScans(){
     }
     const thumb=scan.status==='done'&&scan.data?.catalogImage
       ?scan.data.catalogImage:scan.url;
-    const addButton=scan.status==='done'&&scan.data?.identityConfidence==='catalog'&&
-      !scan.data?.needsConfirmation&&scan.priceStatus!=='pending'
+    const addButton=scan.status==='done'&&scan.priceStatus!=='pending'
       ?`<button class="quick-add${scan.saving?' saving':''}${scan.added?' added':''}"
           onclick="addQuickScanToGallery('${scan.id}')"
           aria-label="${scan.added?'נוסף לאוסף':'הוסף לאוסף'}"
@@ -1897,17 +1887,6 @@ function renderQuickScans(){
       </div>
     </div>`;
   }).join('');
-}
-
-function chooseQuickCandidate(scanId,index){
-  const scan=quickScans.find(item=>item.id===scanId);
-  const candidate=scan?.data?.matchCandidates?.[index];
-  if(!scan||!candidate)return;
-  scan.data={...scan.data,...candidate,matchCandidates:[],needsConfirmation:false,identityConfidence:'catalog'};
-  scan.name=candidate.name||candidate.pokemon||'קלף מזוהה';
-  scan.priceStatus='pending';scan.value=null;
-  renderQuickScans();
-  queueQuickScanPrice(scan,quickSessionToken);
 }
 
 async function prepareIdentificationImage(file){
@@ -1949,7 +1928,7 @@ async function requestIdentification(frontFile,backFile=null,mode='quick'){
   identificationInFlight++;
   try{
     const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
-      method:'POST',body:fd,timeoutMs:mode==='deep'?50000:42000
+      method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
@@ -2007,14 +1986,7 @@ async function processQuickQueue(){
         scan.priceStatus='pending';
         scan.value=null;
         scan.data=data;
-        if(data.needsConfirmation){
-          scan.priceStatus='awaiting-confirmation';
-        }else if(data.identityConfidence==='catalog'){
-          queueQuickScanPrice(scan,token);
-        }else{
-          scan.name='לא נמצאה התאמה בטוחה';
-          scan.priceStatus='identity-unverified';
-        }
+        queueQuickScanPrice(scan,token);
       }catch(error){
         if(token!==quickSessionToken)return;
         scan.status='error';scan.error=String(error);
@@ -2212,26 +2184,14 @@ async function identifyCoin(){
   let identifiedOk=false;
   try{
     const d=await requestIdentification(aiFront,aiBack);
+    applyIdentificationToEditor(d);
     document.getElementById('fValue').value='';
-    aiMeta={...aiMeta,catalogCardId:'',catalogImage:'',catalogLocalImage:'',tcgplayerProductId:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:'',identityConfidence:'unverified'};
+    aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
     const res=document.getElementById('aiResult');res.style.display='block';
-    if(aiFront&&!newFiles.includes(aiFront))newFiles.unshift(aiFront);
-    if(aiBack&&!newFiles.includes(aiBack))newFiles.push(aiBack);
-    if(d.needsConfirmation&&(d.matchCandidates||[]).length){
-      editorCandidateOptions=d.matchCandidates;
-      editorCandidateResultNodeId='aiResult';
-      res.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
-    }else if(d.identityConfidence==='catalog'){
-      editorCandidateOptions=[];
-      applyIdentificationToEditor(d);
-      res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר מדויק של ההדפסה...`;
-      resolveEditorPrice(d,priceToken);
-    }else{
-      editorCandidateOptions=[];
-      res.innerHTML=`⚠️ <b>לא נמצאה התאמה בטוחה</b><br>צלם את הקלף ישר, מקרוב ובאור טוב. לא שמנו תמונה או מחיר של קלף אחר.`;
-    }
-    renderPreview();
+    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
+    if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
     identifiedOk=true;
+    resolveEditorPrice(d,priceToken);
   }catch(e){toast(e.message||'שגיאת זיהוי');}
   finally{
     document.getElementById('aiLoading').classList.remove('show');
@@ -2257,17 +2217,9 @@ async function deepIdentifyCurrent(){
       file=new File([blob],'card-photo.webp',{type:blob.type||'image/webp'});
     }
     const d=await requestIdentification(file,null,'deep');
-    if(d.needsConfirmation&&(d.matchCandidates||[]).length){
-      editorCandidateOptions=d.matchCandidates;
-      editorCandidateResultNodeId='deepIdentifyResult';
-      resultNode.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
-    }else if(d.identityConfidence==='catalog'){
-      applyIdentificationToEditor(d);
-      resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
-      resolveEditorPrice(d,priceToken,'deepIdentifyResult');
-    }else{
-      resultNode.innerHTML='⚠️ לא נמצאה התאמה בטוחה. לא שינינו את פרטי הקלף.';
-    }
+    applyIdentificationToEditor(d);
+    resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
+    resolveEditorPrice(d,priceToken,'deepIdentifyResult');
   }catch(error){
     resultNode.textContent=error.message||'הזיהוי המעמיק לא הושלם';
   }finally{
