@@ -395,7 +395,7 @@ def _pokemon_tcg_api_price(card_info):
         return {"value": "", "priceStatus": "service-unavailable"}
 
 
-def _enrich_identification_from_catalog(card_info, source_image=None):
+def _experimental_enrich_identification_from_catalog(card_info, source_image=None):
     """Turn OCR/AI hints into a verified catalog record; never trust them blindly."""
     language = str(card_info.get("language") or "").strip().lower()
     language_codes = {
@@ -558,6 +558,123 @@ def _enrich_identification_from_catalog(card_info, source_image=None):
         card_info["visualMatchScore"] = top["visualScore"]
         card_info["needsConfirmation"] = False
         card_info.pop("matchCandidates", None)
+        return card_info
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        return card_info
+
+
+def _enrich_identification_from_catalog(card_info):
+    """Resolve a printing quickly from language, set code and collector number."""
+    language = str(card_info.get("language") or "").strip().lower()
+    language_codes = {
+        "english": "en",
+        "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
+        "french": "fr", "german": "de", "spanish": "es",
+        "italian": "it", "portuguese": "pt", "thai": "th",
+        "indonesian": "id"
+    }
+    lang = language_codes.get(language)
+    if not lang:
+        return card_info
+
+    raw_local_id = re.sub(
+        r"[^A-Za-z0-9]", "", str(card_info.get("number") or "").split("/", 1)[0]
+    )
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
+    if not card_number:
+        return card_info
+    set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
+    printed_name = str(card_info.get("printedName") or "").strip()
+
+    try:
+        details = []
+        if set_code and raw_local_id:
+            direct = _fetch_tcgdex_card(lang, f"{set_code.lower()}-{raw_local_id}", timeout=4)
+            if direct and _clean_card_number(direct.get("localId")) == card_number:
+                details = [direct]
+
+        if details:
+            candidates = []
+        else:
+            search = requests.get(
+                f"https://api.tcgdex.net/v2/{lang}/cards",
+                params={"localId": raw_local_id or card_number},
+                timeout=5
+            )
+            search.raise_for_status()
+            candidates = [
+                card for card in search.json()
+                if _clean_card_number(card.get("localId")) == card_number
+            ]
+        if set_code:
+            code_matches = [
+                card for card in candidates
+                if re.sub(
+                    r"[^A-Z0-9]", "",
+                    str(card.get("id") or "").rsplit("-", 1)[0].upper()
+                ) == set_code
+            ]
+            if code_matches:
+                candidates = code_matches
+        elif len(candidates) > 12:
+            return card_info
+
+        candidate_ids = [candidate["id"] for candidate in candidates[:6]]
+        if not details and candidate_ids:
+            with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
+                details = [
+                    detail for detail in executor.map(
+                        lambda card_id: _fetch_tcgdex_card(lang, card_id),
+                        candidate_ids
+                    ) if detail
+                ]
+
+        if printed_set_count.isdigit():
+            count_matches = [
+                card for card in details
+                if str(((card.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
+            ]
+            if count_matches:
+                details = count_matches
+
+        if len(details) > 1 and printed_name:
+            scored = sorted(
+                [
+                    (
+                        SequenceMatcher(
+                            None,
+                            printed_name.casefold(),
+                            str(card.get("name") or "").casefold()
+                        ).ratio(),
+                        card
+                    )
+                    for card in details
+                ],
+                key=lambda item: item[0],
+                reverse=True
+            )
+            if scored[0][0] >= 0.72 and (
+                len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.10
+            ):
+                details = [scored[0][1]]
+
+        if len(details) != 1:
+            return card_info
+        card = details[0]
+        card_set = card.get("set") or {}
+        official_count = str((card_set.get("cardCount") or {}).get("official") or "")
+        resolved_code = str(card.get("id") or "").rsplit("-", 1)[0]
+        card_info["setCode"] = resolved_code
+        card_info["catalogCardId"] = card.get("id", "")
+        catalog_image = _tcgdex_image_url(card)
+        if catalog_image:
+            card_info["catalogImage"] = catalog_image
+        if official_count:
+            card_info["number"] = f"{card.get('localId', card_number)}/{official_count}"
+        if not card_info.get("set"):
+            card_info["set"] = card_set.get("name", "")
+        if not card_info.get("rarity") and card.get("rarity"):
+            card_info["rarity"] = card["rarity"]
         return card_info
     except (requests.RequestException, ValueError, TypeError, KeyError):
         return card_info
@@ -1105,8 +1222,6 @@ def _remember_market_price(cache_key, result):
 
 def _market_price_for_card(card_info):
     """Return the first verified exact price instead of waiting for every source."""
-    if str(card_info.get("identityConfidence") or "").lower() == "unverified":
-        return {"value": "", "priceStatus": "identity-unverified"}
     cache_key = _price_cache_key(card_info)
     cached = _cached_market_price(cache_key)
     if cached is not None:
@@ -1197,7 +1312,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "catalog-verified-v5",
+        "build": "stable-identify-v6",
         "authConfigured": public_auth_config()["configured"],
     }
 
@@ -1465,19 +1580,19 @@ async def identify(
         img.thumbnail((960, 960), Image.LANCZOS)
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=80, optimize=True)
-        return base64.b64encode(buf.getvalue()).decode(), img
+        return base64.b64encode(buf.getvalue()).decode()
 
     try:
         front_raw = await front.read()
         # The back is useful for a deep condition check, not for fast identity.
         back_raw = await back.read() if back and mode == "deep" else None
-        front_b64, front_image = await asyncio.to_thread(compress, front_raw)
-        back_b64 = (await asyncio.to_thread(compress, back_raw))[0] if back_raw else None
+        front_b64 = await asyncio.to_thread(compress, front_raw)
+        back_b64 = await asyncio.to_thread(compress, back_raw) if back_raw else None
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=400, detail="התמונה אינה תקינה או גדולה מדי") from exc
 
     prompt = """Identify this exact Pokemon TCG card. Be fast and literal.
-The printed collector number is the primary identifier. Copy the complete number exactly as printed near the bottom, preserving leading zeros, letters and the denominator. Return up to three plausible readings in `numberCandidates`, best first. Never invent an unreadable value. Read the printed set code/symbol and official set name as supporting identifiers.
+The printed collector number is the primary identifier. Copy the complete number exactly as printed near the bottom, preserving leading zeros, letters and the denominator. Never invent an unreadable value. Read the printed set code/symbol and official set name as supporting identifiers.
 For every language, return the official English card name in `name`, the original printed name in `printedName`, and a Hebrew transliteration of only the card name in `hebrewName`. Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex.
 Classify `finish` only when visible. Do not estimate a price."""
     if mode == "deep":
@@ -1500,9 +1615,6 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
         "set": {"type": "string"},
         "setCode": {"type": "string"},
         "number": {"type": "string"},
-        "numberCandidates": {
-            "type": "array", "items": {"type": "string"}, "maxItems": 3
-        },
         "language": {
             "type": "string",
             "enum": [
@@ -1548,7 +1660,7 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
                 "model": primary_model,
                 "messages": [{"role": "user", "content": content}],
                 "temperature": 0,
-                "max_tokens": 440 if mode == "deep" else 280,
+                "max_tokens": 420 if mode == "deep" else 240,
                 "provider": {
                     "allow_fallbacks": True,
                     "require_parameters": True,
@@ -1592,7 +1704,7 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
             ):
                 raise ValueError("card was not identified")
             english_name = str(identified.get("name") or "").strip()
-            hebrew_name = str(identified.get("hebrewName", "") or "").strip()
+            hebrew_name = str(identified.pop("hebrewName", "") or "").strip()
             display_name = english_name
             if hebrew_name and hebrew_name not in english_name:
                 display_name = f"{english_name} ({hebrew_name})"
@@ -1612,14 +1724,14 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
     identified = await asyncio.to_thread(request_identification)
     try:
         identified = await asyncio.wait_for(
-            asyncio.to_thread(_enrich_identification_from_catalog, identified, front_image),
-            timeout=12
+            asyncio.to_thread(_enrich_identification_from_catalog, identified),
+            timeout=5
         )
     except asyncio.TimeoutError:
         # Catalog verification improves certainty but must not block a valid scan.
         pass
     identified["identityConfidence"] = (
-        "catalog" if identified.get("catalogCardId") else "unverified"
+        "catalog" if identified.get("catalogCardId") else "ai"
     )
     # Pricing is intentionally a separate request. A slow free market source
     # must never turn a successful card identification into a failed scan.
