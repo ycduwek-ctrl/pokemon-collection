@@ -23,7 +23,7 @@
       border-bottom: 2px solid #f59e0b55;
       box-shadow: 0 4px 30px rgba(0,0,0,0.7);
       overflow: visible;
-      min-height: 140px;
+      min-height: 112px;
     }
     .header::before {
       content: '';
@@ -33,17 +33,19 @@
       pointer-events: none;
     }
     .header-inner {
-      display: flex; align-items: stretch; justify-content: space-between;
-      position: relative; z-index: 2; min-height: 140px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; z-index: 2; min-height: 112px;
     }
     .header-left {
-      display: flex; flex-direction: column; justify-content: center;
-      align-items: center; padding: 12px 0 12px 16px; flex: 1; gap: 5px;
+      display: contents;
     }
-    .header-logo { display: flex; flex-direction: column; align-items: center; width: 100%; }
+    .header-logo {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      display: flex; align-items: center; z-index: 5;
+    }
     .header-title {
       display: flex; align-items: center; justify-content: center; gap: 5px;
-      width: 100%; font-size: 1.92em; font-weight: 900; line-height: 1;
+      width: auto; font-size: 2.05em; font-weight: 900; line-height: 1;
       text-align: center;
     }
     .header-title-text {
@@ -55,7 +57,7 @@
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
     }
     .header-title-icon {
-      width: 29px; height: 29px; flex: 0 0 29px; border-radius: 8px;
+      width: 38px; height: 38px; flex: 0 0 38px; border-radius: 10px;
       object-fit: cover;
       box-shadow: 0 0 11px rgba(251,191,36,0.5);
       animation: titleBall 2.2s ease-in-out infinite;
@@ -68,11 +70,11 @@
       75% { transform: translateY(-1px) rotate(-5deg); }
     }
     .header-stats-row {
-      display: flex; gap: 11px; justify-content: center;
-      width: 100%; margin-top: 7px; padding-bottom: 17px;
+      display: flex; gap: 7px; justify-content: center;
+      width: auto; margin: 0; padding: 0 0 13px;
     }
     .header-stats-box {
-      width: 58px; height: 58px; flex: 0 0 58px;
+      width: 52px; height: 52px; flex: 0 0 52px;
       position: relative;
       display: flex; align-items: center; justify-content: center;
       border: 2px solid rgba(251,191,36,0.78); border-radius: 50%;
@@ -86,8 +88,8 @@
       text-align: center;
     }
     .stats-num {
-      max-width: 50px; overflow: hidden;
-      font-size: 1.18em; font-weight: 900; color: #fff; line-height: 1;
+      max-width: 46px; overflow: hidden;
+      font-size: 1.02em; font-weight: 900; color: #fff; line-height: 1;
       text-shadow: 0 2px 7px rgba(5,10,24,0.9);
     }
     .stats-label {
@@ -95,11 +97,7 @@
       font-size: 0.56em; line-height: 1; color: #cbd5e1; font-weight: 700;
       white-space: nowrap; text-shadow: 0 1px 5px #050a18;
     }
-    .header-hero-img {
-      width: 142px; flex-shrink: 0;
-      position: relative; overflow: visible;
-      display: flex; align-items: center; justify-content: center;
-    }
+    .header-hero-img { display: none; }
     .header-hero-img img {
       width: 106px; height: 106px; max-height: none;
       object-fit: cover; object-position: center;
@@ -118,44 +116,21 @@
     .header-stars {
       position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
       background: linear-gradient(to right, transparent, #f59e0b, #fbbf24, #f59e0b, transparent);
-      z-index: 3;
+      z-index: 1;
     }
     @media (max-width: 480px) {
-      .header-inner { position: relative; }
-      .header-inner::after {
-        content: '';
-        position: absolute; inset: 0; z-index: 3; pointer-events: none;
-        background: linear-gradient(
-          to right,
-          transparent 0%,
-          rgba(18,6,58,0.22) 11%,
-          rgba(18,6,58,0.78) 27%,
-          rgba(18,6,58,0.97) 43%,
-          #12063a 58%,
-          rgba(18,6,58,0.88) 100%
-        );
-      }
-      .header-left {
-        position: relative; z-index: 4;
-        width: 100%; padding-left: 105px;
-      }
       .header-title {
-        font-size: 1.86em;
+        font-size: 1.78em;
         white-space: nowrap;
         filter: drop-shadow(0 0 10px rgba(251,191,36,0.5));
         text-shadow: 0 2px 14px #12063a;
       }
-      .header-hero-img {
-        position: absolute; left: 5px; bottom: 0;
-        width: 125px; height: 140px; z-index: 2;
-      }
-      .header-hero-img img {
-        width: 98px; height: 98px; max-height: none; border-radius: 24px;
-      }
-      .header-hero-img::after {
-        display: none;
-      }
-      .header-stats-row { position: relative; z-index: 4; }
+      .header-logo { left: 11px; }
+      .header-title-icon { width: 34px; height: 34px; flex-basis: 34px; }
+      .header-stats-row { position: relative; z-index: 4; gap: 5px; transform: translateX(6px); }
+      .header-stats-box { width: 44px; height: 44px; flex-basis: 44px; }
+      .stats-num { max-width: 40px; font-size: .92em; }
+      .stats-label { top: calc(100% + 3px); font-size: .52em; }
     }
 
     /* ===== TOOLBAR ===== */
@@ -164,7 +139,7 @@
       display: flex; align-items: center; gap: 8px;
       border-bottom: 1px solid #1a2040;
     }
-    .quick-identify-bar { padding: 8px 14px 0; background: #080d1f; }
+    .quick-identify-bar { display: none; }
     .quick-identify-btn {
       width: 100%; border: 1px solid rgba(167,139,250,0.5); border-radius: 13px;
       padding: 9px 12px; color: #f8fafc; cursor: pointer; font-family: inherit;
@@ -413,6 +388,18 @@
     .quick-scan-price { color: #fbbf24; font-size: .88em; font-weight: 900; margin-top: 3px; }
     .quick-scan-status { color: #7891c8; font-size: .7em; font-weight: 700; display: flex; align-items: center; gap: 6px; }
     .quick-scan-status.error { color: #fda4af; }
+    .match-choice-note { color: #fbbf24; font-size: .7em; font-weight: 800; margin: 4px 0 6px; }
+    .match-choices { display: flex; gap: 6px; overflow-x: auto; padding: 2px 1px 5px; scrollbar-width: none; }
+    .match-choices::-webkit-scrollbar { display: none; }
+    .match-choice {
+      flex: 0 0 70px; padding: 4px; border-radius: 9px; cursor: pointer;
+      color: #c4b5fd; background: #111a37; border: 1px solid #33436f;
+      font: 700 .58em 'Heebo',sans-serif; line-height: 1.2; text-align: center;
+    }
+    .match-choice img { width: 38px; height: 53px; display: block; margin: 0 auto 3px; border-radius: 4px; object-fit: cover; }
+    .editor-match-choices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin-top: 9px; }
+    .editor-match-choices .match-choice { width: 100%; min-height: 104px; }
+    .editor-match-choices .match-choice img { width: 48px; height: 67px; }
     .quick-mini-ball {
       width: 18px; height: 18px; flex: 0 0 18px; border-radius: 5px;
       background: url('/hitim-icon-193.png') center/cover no-repeat;
@@ -798,40 +785,40 @@
     .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
 
     .header-menu {
-      position: absolute; top: 8px; right: 8px; z-index: 120;
+      position: absolute; top: 28px; right: 12px; z-index: 220;
       direction: rtl;
     }
     .header-menu-toggle {
-      width: 38px; height: 38px; padding: 0; border-radius: 50%;
+      width: 54px; height: 54px; padding: 0; border-radius: 50%;
       border: 1px solid rgba(251,191,36,.42); background: rgba(5,10,24,.72);
       color: #f8fafc; cursor: pointer; display: grid; place-content: center; gap: 4px;
       backdrop-filter: blur(9px); box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.08);
     }
     .header-menu-toggle span {
-      display: block; width: 17px; height: 2px; border-radius: 3px; background: currentColor;
+      display: block; width: 23px; height: 3px; border-radius: 3px; background: currentColor;
       transition: transform .2s ease, opacity .16s ease;
     }
     .header-menu.open .header-menu-toggle span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
     .header-menu.open .header-menu-toggle span:nth-child(2) { opacity: 0; }
     .header-menu.open .header-menu-toggle span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
     .header-menu-panel {
-      position: absolute; top: 45px; right: 0; width: 178px; padding: 7px;
+      position: absolute; top: 62px; right: 0; width: min(76vw, 260px); padding: 9px;
       display: grid; gap: 5px; border-radius: 15px;
       border: 1px solid rgba(251,191,36,.3);
       background: linear-gradient(145deg, rgba(15,23,48,.98), rgba(18,6,58,.98));
       box-shadow: 0 18px 38px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06);
       opacity: 0; visibility: hidden; pointer-events: none;
       transform: translateY(-7px) scale(.96); transform-origin: top right;
-      max-height: min(70vh, 360px); overflow-y: auto;
+      z-index: 240; max-height: min(70vh, 410px); overflow-y: auto;
       transition: opacity .18s ease, transform .18s ease, visibility .18s;
     }
     .header-menu.open .header-menu-panel {
       opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1);
     }
     .header-menu-item {
-      min-height: 40px; padding: 7px 10px; border-radius: 10px;
+      min-height: 52px; padding: 10px 13px; border-radius: 13px;
       border: 1px solid transparent; background: rgba(255,255,255,.035);
-      color: #e2e8f0; cursor: pointer; font: 800 .78em 'Heebo',sans-serif;
+      color: #e2e8f0; cursor: pointer; font: 800 .9em 'Heebo',sans-serif;
       display: flex; align-items: center; gap: 9px; text-align: right;
     }
     .header-menu-item:hover, .header-menu-item:focus-visible {
@@ -1332,6 +1319,8 @@ let identificationInFlight=0;
 let quickPriceInFlight=0;
 let quickPriceQueue=[];
 let editorPriceToken=0;
+let editorCandidateOptions=[];
+let editorCandidateResultNodeId='aiResult';
 let renderFrame=0;
 let hasRenderedCards=false;
 const cardNodeCache=new Map();
@@ -1825,7 +1814,16 @@ function renderQuickScans(){
     if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
     else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה קלף...</div>';
     else if(scan.status==='error')body='<div class="quick-scan-status error">לא הצלחנו לזהות — אפשר לצלם שוב</div>';
-    else {
+    else if(scan.data?.needsConfirmation){
+      const choices=(scan.data.matchCandidates||[]).map((candidate,index)=>
+        `<button class="match-choice" onclick="chooseQuickCandidate('${scan.id}',${index})">
+          <img src="${escapeHtml(candidate.catalogImage||scan.url)}" alt="">
+          ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}
+        </button>`).join('');
+      body=`<div class="quick-scan-name">נדרשת בחירה קצרה</div>
+        <div class="match-choice-note">לא נציג תמונה או מחיר לפני אימות</div>
+        <div class="match-choices">${choices||'<span class="quick-scan-status error">צלם שוב מקרוב ובאור טוב</span>'}</div>`;
+    }else {
       const price=scan.priceStatus==='pending'
         ?'<span class="quick-mini-ball"></span>בודק מחיר...'
         :scan.priceStatus==='matched'&&Number.isFinite(scan.value)
@@ -1836,7 +1834,8 @@ function renderQuickScans(){
     }
     const thumb=scan.status==='done'&&scan.data?.catalogImage
       ?scan.data.catalogImage:scan.url;
-    const addButton=scan.status==='done'&&scan.priceStatus!=='pending'
+    const addButton=scan.status==='done'&&scan.data?.identityConfidence==='catalog'&&
+      !scan.data?.needsConfirmation&&scan.priceStatus!=='pending'
       ?`<button class="quick-add${scan.saving?' saving':''}${scan.added?' added':''}"
           onclick="addQuickScanToGallery('${scan.id}')"
           aria-label="${scan.added?'נוסף לאוסף':'הוסף לאוסף'}"
@@ -1851,6 +1850,17 @@ function renderQuickScans(){
       </div>
     </div>`;
   }).join('');
+}
+
+function chooseQuickCandidate(scanId,index){
+  const scan=quickScans.find(item=>item.id===scanId);
+  const candidate=scan?.data?.matchCandidates?.[index];
+  if(!scan||!candidate)return;
+  scan.data={...scan.data,...candidate,matchCandidates:[],needsConfirmation:false,identityConfidence:'catalog'};
+  scan.name=candidate.name||candidate.pokemon||'קלף מזוהה';
+  scan.priceStatus='pending';scan.value=null;
+  renderQuickScans();
+  queueQuickScanPrice(scan,quickSessionToken);
 }
 
 async function prepareIdentificationImage(file){
@@ -1892,7 +1902,7 @@ async function requestIdentification(frontFile,backFile=null,mode='quick'){
   identificationInFlight++;
   try{
     const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
-      method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
+      method:'POST',body:fd,timeoutMs:mode==='deep'?50000:42000
     });
     const data=await response.json().catch(()=>({}));
     if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
@@ -1950,7 +1960,14 @@ async function processQuickQueue(){
         scan.priceStatus='pending';
         scan.value=null;
         scan.data=data;
-        queueQuickScanPrice(scan,token);
+        if(data.needsConfirmation){
+          scan.priceStatus='awaiting-confirmation';
+        }else if(data.identityConfidence==='catalog'){
+          queueQuickScanPrice(scan,token);
+        }else{
+          scan.name='לא נמצאה התאמה בטוחה';
+          scan.priceStatus='identity-unverified';
+        }
       }catch(error){
         if(token!==quickSessionToken)return;
         scan.status='error';scan.error=String(error);
@@ -1984,7 +2001,7 @@ async function addQuickScanToGallery(id){
       catalogLocalImage,
       tcgplayerProductId:d.tcgplayerProductId||'',finish:d.finish||'',
       priceSource:d.priceSource||'',priceUpdatedAt:d.priceUpdatedAt||'',
-      priceCheckedAt:new Date().toISOString()
+      priceCheckedAt:new Date().toISOString(),identityConfidence:'catalog'
     };
     await HitimDB.putCard(card);
     scan.added=true;scan.savedId=card.id;
@@ -2027,7 +2044,7 @@ function saveComments(){
 
 function openAdd(){
   editorPriceToken++;
-  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};
+  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';
   document.getElementById('modalTitle').textContent='➕ הוספת קלף';
   ['fName','fPokemon','fNumber','fSet','fYear','fValue'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fCondition').value='Mint';document.getElementById('fRarity').value='Common';document.getElementById('fLanguage').value='English';
@@ -2042,8 +2059,8 @@ function openAdd(){
 
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
-  editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;
-  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',catalogLocalImage:c.catalogLocalImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||''};
+  editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';
+  aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',catalogLocalImage:c.catalogLocalImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||'',identityConfidence:c.identityConfidence||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
   document.getElementById('fNumber').value=c.number||'';document.getElementById('fSet').value=c.set||'';
@@ -2109,8 +2126,35 @@ function applyIdentificationToEditor(d){
     catalogCardId:d.catalogCardId||aiMeta.catalogCardId||'',
     catalogImage:d.catalogImage||aiMeta.catalogImage||'',
     tcgplayerProductId:d.tcgplayerProductId||aiMeta.tcgplayerProductId||'',
-    finish:d.finish||aiMeta.finish||''
+    finish:d.finish||aiMeta.finish||'',
+    identityConfidence:d.identityConfidence||aiMeta.identityConfidence||''
   };
+}
+
+function editorCandidateChoicesHtml(candidates){
+  const choices=(candidates||[]).map((candidate,index)=>
+    `<button type="button" class="match-choice" onclick="confirmEditorCandidate(${index})">
+      <img src="${escapeHtml(candidate.catalogImage||'')}" alt="">
+      ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}
+    </button>`).join('');
+  return `<div class="match-choice-note">מצאנו כמה אפשרויות. בחר את התמונה הזהה לקלף שצילמת:</div>
+    <div class="editor-match-choices">${choices}</div>`;
+}
+
+function confirmEditorCandidate(index){
+  const candidate=editorCandidateOptions[index];
+  if(!candidate)return;
+  const priceToken=++editorPriceToken;
+  const verified={...candidate,identityConfidence:'catalog',needsConfirmation:false,matchCandidates:[]};
+  editorCandidateOptions=[];
+  applyIdentificationToEditor(verified);
+  document.getElementById('fValue').value='';
+  aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:'',identityConfidence:'catalog'};
+  const result=document.getElementById(editorCandidateResultNodeId)||document.getElementById('aiResult');
+  result.style.display='block';
+  result.innerHTML=`✅ <b>${escapeHtml(verified.name||verified.pokemon)}</b> | ${escapeHtml(verified.set||'')}<br>⏳ בודק מחיר מדויק של ההדפסה...`;
+  renderPreview();
+  resolveEditorPrice(verified,priceToken,result.id);
 }
 
 async function identifyCoin(){
@@ -2121,14 +2165,26 @@ async function identifyCoin(){
   let identifiedOk=false;
   try{
     const d=await requestIdentification(aiFront,aiBack);
-    applyIdentificationToEditor(d);
     document.getElementById('fValue').value='';
-    aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
+    aiMeta={...aiMeta,catalogCardId:'',catalogImage:'',catalogLocalImage:'',tcgplayerProductId:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:'',identityConfidence:'unverified'};
     const res=document.getElementById('aiResult');res.style.display='block';
-    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
-    if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
+    if(aiFront&&!newFiles.includes(aiFront))newFiles.unshift(aiFront);
+    if(aiBack&&!newFiles.includes(aiBack))newFiles.push(aiBack);
+    if(d.needsConfirmation&&(d.matchCandidates||[]).length){
+      editorCandidateOptions=d.matchCandidates;
+      editorCandidateResultNodeId='aiResult';
+      res.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
+    }else if(d.identityConfidence==='catalog'){
+      editorCandidateOptions=[];
+      applyIdentificationToEditor(d);
+      res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר מדויק של ההדפסה...`;
+      resolveEditorPrice(d,priceToken);
+    }else{
+      editorCandidateOptions=[];
+      res.innerHTML=`⚠️ <b>לא נמצאה התאמה בטוחה</b><br>צלם את הקלף ישר, מקרוב ובאור טוב. לא שמנו תמונה או מחיר של קלף אחר.`;
+    }
+    renderPreview();
     identifiedOk=true;
-    resolveEditorPrice(d,priceToken);
   }catch(e){toast(e.message||'שגיאת זיהוי');}
   finally{
     document.getElementById('aiLoading').classList.remove('show');
@@ -2154,9 +2210,17 @@ async function deepIdentifyCurrent(){
       file=new File([blob],'card-photo.webp',{type:blob.type||'image/webp'});
     }
     const d=await requestIdentification(file,null,'deep');
-    applyIdentificationToEditor(d);
-    resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
-    resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+    if(d.needsConfirmation&&(d.matchCandidates||[]).length){
+      editorCandidateOptions=d.matchCandidates;
+      editorCandidateResultNodeId='deepIdentifyResult';
+      resultNode.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
+    }else if(d.identityConfidence==='catalog'){
+      applyIdentificationToEditor(d);
+      resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
+      resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+    }else{
+      resultNode.innerHTML='⚠️ לא נמצאה התאמה בטוחה. לא שינינו את פרטי הקלף.';
+    }
   }catch(error){
     resultNode.textContent=error.message||'הזיהוי המעמיק לא הושלם';
   }finally{
