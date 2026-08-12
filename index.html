@@ -70,8 +70,11 @@
       75% { transform: translateY(-1px) rotate(-5deg); }
     }
     .header-stats-row {
+      position: absolute; left: calc(50% + 30px); top: 50%;
+      transform: translate(-50%, -50%);
       display: flex; gap: 7px; justify-content: center;
       width: auto; margin: 0; padding: 0 0 13px;
+      z-index: 4;
     }
     .header-stats-box {
       width: 52px; height: 52px; flex: 0 0 52px;
@@ -82,7 +85,8 @@
         radial-gradient(circle at 35% 28%, rgba(255,255,255,0.16), transparent 28%),
         linear-gradient(145deg, rgba(111,48,208,0.95), rgba(35,18,91,0.98));
       box-shadow:
-        0 0 14px rgba(124,58,237,0.32),
+        0 0 0 3px #2a0f66,
+        0 0 16px rgba(124,58,237,0.42),
         inset 0 0 0 3px rgba(5,10,24,0.24),
         inset 0 -8px 16px rgba(5,10,24,0.25);
       text-align: center;
@@ -127,9 +131,9 @@
       }
       .header-logo { left: 11px; }
       .header-title-icon { width: 34px; height: 34px; flex-basis: 34px; }
-      .header-stats-row { position: relative; z-index: 4; gap: 5px; transform: translateX(6px); }
-      .header-stats-box { width: 44px; height: 44px; flex-basis: 44px; }
-      .stats-num { max-width: 40px; font-size: .92em; }
+      .header-stats-row { left: calc(50% + 28px); gap: 6px; transform: translate(-50%, -50%); }
+      .header-stats-box { width: 50px; height: 50px; flex-basis: 50px; }
+      .stats-num { max-width: 46px; font-size: 1em; }
       .stats-label { top: calc(100% + 3px); font-size: .52em; }
     }
 
