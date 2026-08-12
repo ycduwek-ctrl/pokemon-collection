@@ -189,6 +189,12 @@
     .range-row input { flex: 1; padding: 8px 10px; border: 1px solid #1e2d5a; border-radius: 8px; font-size: 0.85em; font-family: inherit; text-align: center; background: #0f1730; color: #e2e8f0; }
     .range-row input:focus { outline: none; border-color: #f59e0b; }
     .range-sep { color: #3d4f7a; }
+    .sort-select {
+      width: 100%; min-height: 44px; padding: 9px 12px; border-radius: 10px;
+      border: 1px solid #31256d; background: #0f1730; color: #e2e8f0;
+      font: 800 .84em 'Heebo', sans-serif; cursor: pointer; outline: none;
+    }
+    .sort-select:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
     .reset-btn { margin: 14px 16px; width: calc(100% - 32px); padding: 11px; border: 1px solid #1e2d5a; border-radius: 10px; background: #0f1730; font-family: inherit; font-size: 0.88em; font-weight: 700; cursor: pointer; color: #7891c8; }
 
     /* ===== GRID ===== */
@@ -1052,6 +1058,13 @@
     </div>
   </div>
   <div class="panel-section">
+    <h4>↕️ סידור לפי מחיר</h4>
+    <select class="sort-select" id="priceSort" onchange="setPriceSort(this.value)">
+      <option value="price-desc">מהיקר לזול — היקר ביותר למעלה</option>
+      <option value="price-asc">מהזול ליקר — הזול ביותר למעלה</option>
+    </select>
+  </div>
+  <div class="panel-section">
     <h4>📅 טווח שנים</h4>
     <div class="range-row">
       <input type="number" id="yearMin" placeholder="מ-" oninput="updateFilters()">
@@ -1337,6 +1350,7 @@ const RARITY_HE = {'Common':'רגיל','Uncommon':'לא נפוץ','Rare':'נדי
 const CONDITION_HE = {'Mint':'מושלם','Near Mint':'כמעט מושלם','Excellent':'מצוין','Good':'טוב','Poor':'גרוע'};
 const LANGUAGE_HE = {'English':'אנגלית','Japanese':'יפנית','Chinese':'סינית','Korean':'קוריאנית','French':'צרפתית','German':'גרמנית','Spanish':'ספרדית','Italian':'איטלקית','Portuguese':'פורטוגזית','Thai':'תאילנדית','Indonesian':'אינדונזית','Hebrew':'עברית','Other':'אחר'};
 let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
+let priceSort='price-desc';
 
 function rarityClass(r){const map={'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};return map[r]||'';}
 function rarityBadgeClass(r){const map={'Common':'rarity-common','Uncommon':'rarity-uncommon','Rare':'rarity-rare','Holo Rare':'rarity-holo','Ultra Rare':'rarity-ultra','Secret Rare':'rarity-secret'};return map[r]||'rarity-common';}
@@ -1352,8 +1366,15 @@ function initPanel(){
 }
 
 function updateFilters(){updateFilterBtn();render();}
+function setPriceSort(value){
+  priceSort=value==='price-asc'?'price-asc':'price-desc';
+  const select=document.getElementById('priceSort');
+  if(select&&select.value!==priceSort)select.value=priceSort;
+  HitimDB.setSetting('priceSort',priceSort).catch(error=>console.debug('Price sort was not saved',error));
+  updateFilterBtn();render();
+}
 function updateFilterBtn(){
-  const count=selRarities.size+selConditions.size+selLanguages.size+(document.getElementById('valueMin').value?1:0)+(document.getElementById('valueMax').value?1:0)+(document.getElementById('yearMin').value?1:0)+(document.getElementById('yearMax').value?1:0);
+  const count=selRarities.size+selConditions.size+selLanguages.size+(document.getElementById('valueMin').value?1:0)+(document.getElementById('valueMax').value?1:0)+(document.getElementById('yearMin').value?1:0)+(document.getElementById('yearMax').value?1:0)+(priceSort==='price-asc'?1:0);
   const btn=document.getElementById('filterBtn');
   btn.classList.toggle('has-filters',count>0);
   btn.textContent=count>0?`⚙️ סינון (${count})`:'⚙️ סינון';
@@ -1368,13 +1389,14 @@ function renderActiveTags(){
   if(vMin||vMax)tags.push({label:`💰 $${vMin||0}–$${vMax||'∞'}`,remove:()=>{document.getElementById('valueMin').value='';document.getElementById('valueMax').value='';updateFilters();}});
   const yMin=document.getElementById('yearMin').value,yMax=document.getElementById('yearMax').value;
   if(yMin||yMax)tags.push({label:`📅 ${yMin||''}–${yMax||''}`,remove:()=>{document.getElementById('yearMin').value='';document.getElementById('yearMax').value='';updateFilters();}});
+  if(priceSort==='price-asc')tags.push({label:'↗️ מהזול ליקר',remove:()=>setPriceSort('price-desc')});
   if(!tags.length){af.classList.remove('show');return;}
   af.classList.add('show');
   af.innerHTML=tags.map((t,i)=>`<div class="filter-tag">${t.label}<button onclick="rmtag(${i})">✕</button></div>`).join('');
   window._ftags=tags;
 }
 window.rmtag=(i)=>window._ftags[i].remove();
-function resetFilters(){selRarities.clear();selConditions.clear();selLanguages.clear();document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchInput').value='';updateFilters();}
+function resetFilters(){selRarities.clear();selConditions.clear();selLanguages.clear();document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchInput').value='';setPriceSort('price-desc');}
 function openPanel(){document.getElementById('filterPanel').classList.add('open');document.getElementById('panelOverlay').classList.add('open');}
 function closePanel(){document.getElementById('filterPanel').classList.remove('open');document.getElementById('panelOverlay').classList.remove('open');}
 function initCols(){cols=window.innerWidth>=600?3:2;document.getElementById('colsNum').textContent=cols;applyGrid();}
@@ -1385,6 +1407,11 @@ async function load(){
   try{
     cards=await HitimDB.listCards();
     comments=await HitimDB.getSetting('comments',{});
+    const storedSort=await HitimDB.getSetting('priceSort','price-desc');
+    priceSort=storedSort==='price-asc'?'price-asc':'price-desc';
+    const sortSelect=document.getElementById('priceSort');
+    if(sortSelect)sortSelect.value=priceSort;
+    updateFilterBtn();
     render();
   }
   catch(error){
@@ -1393,13 +1420,27 @@ async function load(){
   }
 }
 
+function compareCardsByPrice(first,second){
+  const firstRaw=String(first.value??'').trim();
+  const secondRaw=String(second.value??'').trim();
+  const firstValue=parseFloat(firstRaw);
+  const secondValue=parseFloat(secondRaw);
+  const firstHasPrice=firstRaw!==''&&Number.isFinite(firstValue);
+  const secondHasPrice=secondRaw!==''&&Number.isFinite(secondValue);
+  if(firstHasPrice!==secondHasPrice)return firstHasPrice?-1:1;
+  if(firstHasPrice&&secondHasPrice&&firstValue!==secondValue){
+    return priceSort==='price-asc'?firstValue-secondValue:secondValue-firstValue;
+  }
+  return String(second.localCreatedAt||second.id||'').localeCompare(String(first.localCreatedAt||first.id||''));
+}
+
 function getFiltered(){
   const search=document.getElementById('searchInput').value.trim().toLowerCase();
   const vMin=parseFloat(document.getElementById('valueMin').value)||0;
   const vMax=parseFloat(document.getElementById('valueMax').value)||Infinity;
   const yMin=parseInt(document.getElementById('yearMin').value)||0;
   const yMax=parseInt(document.getElementById('yearMax').value)||9999;
-  return cards.filter(c=>{
+  const filtered=cards.filter(c=>{
     if(search&&!(c.name||'').toLowerCase().includes(search)&&!(c.pokemon||'').toLowerCase().includes(search))return false;
     if(selRarities.size&&!selRarities.has(c.rarity))return false;
     if(selConditions.size&&!selConditions.has(c.condition))return false;
@@ -1408,6 +1449,7 @@ function getFiltered(){
     const yr=parseInt(c.year)||0;if(yr&&(yr<yMin||yr>yMax))return false;
     return true;
   });
+  return filtered.sort(compareCardsByPrice);
 }
 
 function setHeaderStat(id,value){
