@@ -5,18 +5,18 @@
     { "src": "hitim-auth.js", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.webmanifest", "use": "@vercel/static" },
-    { "src": "hitim-icon.svg", "use": "@vercel/static" },
-    { "src": "hitim-icon-192.png", "use": "@vercel/static" },
-    { "src": "hitim-icon-512.png", "use": "@vercel/static" }
+    { "src": "hitim-icon-02.svg", "use": "@vercel/static" },
+    { "src": "hitim-icon-193.png", "use": "@vercel/static" },
+    { "src": "hitim-icon-513.png", "use": "@vercel/static" }
   ],
   "routes": [
     { "src": "/hitim-db.js", "dest": "/hitim-db.js" },
     { "src": "/hitim-auth.js", "dest": "/hitim-auth.js" },
     { "src": "/sw.js", "dest": "/sw.js" },
     { "src": "/manifest.webmanifest", "dest": "/manifest.webmanifest" },
-    { "src": "/hitim-icon.svg", "dest": "/hitim-icon.svg" },
-    { "src": "/hitim-icon-192.png", "dest": "/hitim-icon-192.png" },
-    { "src": "/hitim-icon-512.png", "dest": "/hitim-icon-512.png" },
+    { "src": "/hitim-icon-02.svg", "dest": "/hitim-icon-02.svg" },
+    { "src": "/hitim-icon-193.png", "dest": "/hitim-icon-193.png" },
+    { "src": "/hitim-icon-513.png", "dest": "/hitim-icon-513.png" },
     { "src": "/(.*)", "dest": "index.html" }
   ]
 }

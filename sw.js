@@ -1,11 +1,11 @@
-const CACHE_NAME = 'hitim-shell-v1';
+const CACHE_NAME = 'hitim-shell-v4';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
-  '/hitim-icon.svg',
-  '/hitim-icon-192.png',
-  '/hitim-icon-512.png',
+  '/hitim-icon-02.svg',
+  '/hitim-icon-193.png',
+  '/hitim-icon-513.png',
   '/hitim-db.js',
   '/hitim-auth.js'
 ];
@@ -31,13 +31,18 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then(response => {
+      caches.match('/index.html').then(cached => {
+        const refresh = fetch(request).then(response => {
           const copy = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put('/index.html', copy));
           return response;
-        })
-        .catch(() => caches.match('/index.html'))
+        });
+        if (cached) {
+          event.waitUntil(refresh.catch(() => {}));
+          return cached;
+        }
+        return refresh.catch(() => caches.match('/index.html'));
+      })
     );
     return;
   }
