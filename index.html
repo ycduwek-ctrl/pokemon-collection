@@ -1318,9 +1318,10 @@
 <script src="/hitim-db.js"></script>
 <script src="/hitim-auth.js"></script>
 <script>
-const API = location.hostname === 'pokemon-collection-ecru.vercel.app'
-  ? 'https://pokemon-collection-f4wv.onrender.com'
-  : 'https://hitim-staging.onrender.com';
+// Every public/installed Vercel address must use the same current backend.
+// Preview hostnames previously fell through to an outdated staging service,
+// which made both scan buttons appear broken after frontend updates.
+const API = 'https://pokemon-collection-f4wv.onrender.com';
 window.HITIM_API_URL=API;
 let cards=[], cols=3;
 let editId=null, existImgs=[], newFiles=[], aiFront=null, aiBack=null;
