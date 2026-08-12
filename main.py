@@ -295,6 +295,9 @@ def _enrich_identification_from_catalog(card_info):
     if not lang:
         return card_info
 
+    raw_local_id = re.sub(
+        r"[^A-Za-z0-9]", "", str(card_info.get("number") or "").split("/", 1)[0]
+    )
     card_number, printed_set_count = _card_number_parts(card_info.get("number"))
     if not card_number:
         return card_info
@@ -302,16 +305,25 @@ def _enrich_identification_from_catalog(card_info):
     printed_name = str(card_info.get("printedName") or "").strip()
 
     try:
-        search = requests.get(
-            f"https://api.tcgdex.net/v2/{lang}/cards",
-            params={"localId": card_number},
-            timeout=8
-        )
-        search.raise_for_status()
-        candidates = [
-            card for card in search.json()
-            if _clean_card_number(card.get("localId")) == card_number
-        ]
+        details = []
+        if set_code and raw_local_id:
+            direct = _fetch_tcgdex_card(lang, f"{set_code.lower()}-{raw_local_id}", timeout=4)
+            if direct and _clean_card_number(direct.get("localId")) == card_number:
+                details = [direct]
+
+        if details:
+            candidates = []
+        else:
+            search = requests.get(
+                f"https://api.tcgdex.net/v2/{lang}/cards",
+                params={"localId": raw_local_id or card_number},
+                timeout=5
+            )
+            search.raise_for_status()
+            candidates = [
+                card for card in search.json()
+                if _clean_card_number(card.get("localId")) == card_number
+            ]
         if set_code:
             code_matches = [
                 card for card in candidates
@@ -326,9 +338,8 @@ def _enrich_identification_from_catalog(card_info):
             # Avoid guessing among dozens of foreign sets with the same number.
             return card_info
 
-        details = []
-        candidate_ids = [candidate["id"] for candidate in candidates[:8]]
-        if candidate_ids:
+        candidate_ids = [candidate["id"] for candidate in candidates[:6]]
+        if not details and candidate_ids:
             with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
                 details = [
                     detail for detail in executor.map(
@@ -1020,7 +1031,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "fast-identify-v3",
+        "build": "fast-identify-v4",
         "authConfigured": public_auth_config()["configured"],
     }
 
@@ -1430,6 +1441,17 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
             raise HTTPException(status_code=422, detail="לא הצלחנו לקרוא את פרטי הקלף מהתמונה") from exc
 
     identified = await asyncio.to_thread(request_identification)
+    try:
+        identified = await asyncio.wait_for(
+            asyncio.to_thread(_enrich_identification_from_catalog, identified),
+            timeout=5
+        )
+    except asyncio.TimeoutError:
+        # Catalog verification improves certainty but must not block a valid scan.
+        pass
+    identified["identityConfidence"] = (
+        "catalog" if identified.get("catalogCardId") else "ai"
+    )
     # Pricing is intentionally a separate request. A slow free market source
     # must never turn a successful card identification into a failed scan.
     identified.update({

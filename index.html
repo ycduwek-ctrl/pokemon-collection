@@ -22,7 +22,7 @@
       position: sticky; top: 0; z-index: 100;
       border-bottom: 2px solid #f59e0b55;
       box-shadow: 0 4px 30px rgba(0,0,0,0.7);
-      overflow: hidden;
+      overflow: visible;
       min-height: 140px;
     }
     .header::before {
@@ -54,18 +54,11 @@
       letter-spacing: 1px;
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
     }
-    .header-title-ball {
-      position: relative; width: 25px; height: 25px; flex: 0 0 25px;
-      border: 2px solid #050a18; border-radius: 50%;
-      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
-      box-shadow: 0 0 10px rgba(251,191,36,0.55);
+    .header-title-icon {
+      width: 29px; height: 29px; flex: 0 0 29px; border-radius: 8px;
+      object-fit: cover;
+      box-shadow: 0 0 11px rgba(251,191,36,0.5);
       animation: titleBall 2.2s ease-in-out infinite;
-    }
-    .header-title-ball::after {
-      content: ''; position: absolute; left: 50%; top: 50%;
-      width: 7px; height: 7px; border-radius: 50%;
-      transform: translate(-50%,-50%); background: #f8fafc;
-      border: 2px solid #050a18;
     }
     @keyframes shine { to { background-position: 200% center; } }
     @keyframes titleBall {
@@ -103,16 +96,16 @@
       white-space: nowrap; text-shadow: 0 1px 5px #050a18;
     }
     .header-hero-img {
-      width: 170px; flex-shrink: 0;
+      width: 142px; flex-shrink: 0;
       position: relative; overflow: visible;
-      display: flex; align-items: flex-end; justify-content: center;
+      display: flex; align-items: center; justify-content: center;
     }
     .header-hero-img img {
-      width: 170px; height: auto; max-height: 140px;
-      object-fit: contain; object-position: bottom center;
+      width: 106px; height: 106px; max-height: none;
+      object-fit: cover; object-position: center;
       position: relative; z-index: 2;
-      transform: scaleX(-1);
-      filter: drop-shadow(0 0 18px rgba(245,158,11,0.5)) drop-shadow(4px 0 12px rgba(120,58,237,0.3));
+      border-radius: 26px;
+      filter: drop-shadow(0 0 20px rgba(245,158,11,0.42)) drop-shadow(4px 0 14px rgba(120,58,237,0.35));
     }
     .header-hero-glow {
       position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
@@ -153,11 +146,11 @@
         text-shadow: 0 2px 14px #12063a;
       }
       .header-hero-img {
-        position: absolute; left: -4px; bottom: 0;
-        width: 175px; height: 140px; z-index: 2;
+        position: absolute; left: 5px; bottom: 0;
+        width: 125px; height: 140px; z-index: 2;
       }
       .header-hero-img img {
-        width: 175px; max-height: 140px;
+        width: 98px; height: 98px; max-height: none; border-radius: 24px;
       }
       .header-hero-img::after {
         display: none;
@@ -421,8 +414,8 @@
     .quick-scan-status { color: #7891c8; font-size: .7em; font-weight: 700; display: flex; align-items: center; gap: 6px; }
     .quick-scan-status.error { color: #fda4af; }
     .quick-mini-ball {
-      width: 18px; height: 18px; flex: 0 0 18px; border-radius: 50%; border: 2px solid #050a18;
-      background: linear-gradient(to bottom,#ef4444 0 42%,#050a18 42% 58%,#f8fafc 58%);
+      width: 18px; height: 18px; flex: 0 0 18px; border-radius: 5px;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
       animation: pokeWobble .8s ease-in-out infinite;
     }
     .quick-remove {
@@ -508,7 +501,11 @@
     .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f1730; color: #e2e8f0; border: 1px solid #1e2d5a; padding: 10px 22px; border-radius: 22px; font-size: 0.85em; font-weight: 700; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
     .loading { text-align: center; padding: 60px 0; color: #3d4f7a; grid-column: 1/-1; }
-    .spin { display: inline-block; width: 32px; height: 32px; border: 3px solid #1a2040; border-top-color: #f59e0b; border-radius: 50%; animation: spin 0.7s linear infinite; }
+    .spin {
+      display: inline-block; width: 46px; height: 46px; border: 2px solid #1a2040;
+      border-radius: 13px; background: url('/hitim-icon-193.png') center/cover no-repeat;
+      box-shadow: 0 0 18px rgba(251,191,36,.28); animation: pokeWobble .95s ease-in-out infinite;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
     .loading-text { margin-top: 14px; font-size: 0.85em; font-weight: 700; }
     .no-results { grid-column: 1/-1; text-align: center; padding: 50px; color: #3d4f7a; font-weight: 700; }
@@ -524,18 +521,13 @@
     .ai-loading-box { text-align: center; padding: 28px; }
     .pokeball-loader {
       position: relative; width: 88px; height: 88px; margin: 0 auto 22px;
-      border: 5px solid #080d1f; border-radius: 50%;
-      background: linear-gradient(to bottom, #ef4444 0 44%, #080d1f 44% 56%, #f8fafc 56% 100%);
+      border: 3px solid #080d1f; border-radius: 24px;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
       box-shadow: 0 0 0 5px rgba(245,158,11,0.15), 0 0 34px rgba(245,158,11,0.45);
       animation: pokeWobble 1.05s ease-in-out infinite;
     }
     .pokeball-loader::before {
-      content: ''; position: absolute; left: 50%; top: 50%;
-      width: 27px; height: 27px; border-radius: 50%;
-      transform: translate(-50%,-50%);
-      background: #f8fafc; border: 5px solid #080d1f;
-      box-shadow: inset 0 0 0 5px #cbd5e1, 0 0 14px rgba(251,191,36,0.75);
-      animation: pokePulse 1.05s ease-in-out infinite;
+      display: none;
     }
     .pokeball-loader::after {
       content: ''; position: absolute; inset: -14px;
@@ -571,17 +563,14 @@
     }
     .capture-success.show { display: flex; }
     .capture-core {
-      position: relative; width: 84px; height: 84px; border-radius: 50%;
-      border: 5px solid #080d1f;
-      background: linear-gradient(to bottom, #ef4444 0 44%, #080d1f 44% 56%, #f8fafc 56%);
+      position: relative; width: 84px; height: 84px; border-radius: 23px;
+      border: 4px solid #080d1f;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
       box-shadow: 0 0 45px rgba(251,191,36,0.8);
       animation: capturePop 0.85s cubic-bezier(.16,1.3,.3,1) both;
     }
     .capture-core::before {
-      content: ''; position: absolute; left: 50%; top: 50%;
-      width: 25px; height: 25px; border-radius: 50%;
-      transform: translate(-50%,-50%); background: #fbbf24;
-      border: 5px solid #080d1f; box-shadow: 0 0 24px #fbbf24;
+      display: none;
     }
     .capture-orb {
       --angle: 0deg; --distance: 112px; --orb: #fbbf24;
@@ -627,8 +616,8 @@
       box-shadow: 0 0 24px rgba(245,158,11,0.16);
     }
     .saving-mini-ball {
-      width: 46px; height: 46px; border: 3px solid #050a18; border-radius: 50%;
-      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
+      width: 46px; height: 46px; border: 2px solid #050a18; border-radius: 13px;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
       animation: pokeWobble 1s ease-in-out infinite;
       box-shadow: 0 0 17px rgba(251,191,36,0.55);
     }
@@ -752,7 +741,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-ball, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-icon, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
       .card-holo-effect { transition: none; transform: scale(1.24); }
     }
@@ -776,16 +765,14 @@
       backdrop-filter: blur(18px);
     }
     .auth-ball {
-      width: 72px; height: 72px; margin: 0 auto 11px; border-radius: 50%;
-      border: 5px solid #050a18; position: relative;
-      background: linear-gradient(to bottom, #ef4444 0 43%, #050a18 43% 57%, #f8fafc 57%);
+      width: 78px; height: 78px; margin: 0 auto 11px; border-radius: 22px;
+      border: 3px solid #050a18; position: relative;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
       box-shadow: 0 0 32px rgba(251,191,36,.36);
       animation: titleBall 2.2s ease-in-out infinite;
     }
     .auth-ball::after {
-      content: ''; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
-      border-radius: 50%; transform: translate(-50%,-50%); background: #fff;
-      border: 5px solid #050a18;
+      display: none;
     }
     .auth-brand { font-size: 2.1em; font-weight: 900; color: #fbbf24; line-height: 1; }
     .auth-tagline { color: #94a3b8; font-size: .88em; margin: 8px 0 21px; }
@@ -802,14 +789,16 @@
     .auth-primary:disabled { opacity: .6; cursor: wait; }
     .auth-secondary { margin-top: 9px; color: #c4b5fd; border: 1px solid #47348a; background: #130b31; }
     .auth-spinner {
-      width: 38px; height: 38px; border: 4px solid rgba(167,139,250,.24);
-      border-top-color: #fbbf24; border-radius: 50%; margin: 8px auto 15px;
-      animation: spin .85s linear infinite;
+      width: 48px; height: 48px; border: 2px solid #050a18;
+      border-radius: 14px; margin: 8px auto 15px;
+      background: url('/hitim-icon-193.png') center/cover no-repeat;
+      box-shadow: 0 0 20px rgba(251,191,36,.3);
+      animation: pokeWobble .95s ease-in-out infinite;
     }
     .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
 
     .header-menu {
-      position: absolute; top: 8px; right: 8px; z-index: 12;
+      position: absolute; top: 8px; right: 8px; z-index: 120;
       direction: rtl;
     }
     .header-menu-toggle {
@@ -833,6 +822,7 @@
       box-shadow: 0 18px 38px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06);
       opacity: 0; visibility: hidden; pointer-events: none;
       transform: translateY(-7px) scale(.96); transform-origin: top right;
+      max-height: min(70vh, 360px); overflow-y: auto;
       transition: opacity .18s ease, transform .18s ease, visibility .18s;
     }
     .header-menu.open .header-menu-panel {
@@ -897,6 +887,23 @@
     .admin-user-actions button.danger { color: #fca5a5; border-color: #7f1d1d; }
     .admin-empty { color: #64748b; text-align: center; padding: 25px 10px; font-size: .84em; }
     .privacy-local { color: #6ee7b7; }
+    .install-guide-icon {
+      width: 92px; height: 92px; display: block; margin: 2px auto 14px;
+      border-radius: 25px; box-shadow: 0 0 30px rgba(251,191,36,.32);
+    }
+    .install-steps { display: grid; gap: 9px; counter-reset: install-step; }
+    .install-step {
+      position: relative; padding: 10px 45px 10px 12px; border-radius: 12px;
+      color: #cbd5e1; background: #0f1730; border: 1px solid #1e2d5a;
+      font-size: .8em; line-height: 1.5;
+    }
+    .install-step::before {
+      counter-increment: install-step; content: counter(install-step);
+      position: absolute; right: 11px; top: 50%; transform: translateY(-50%);
+      width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%;
+      color: #160929; background: #fbbf24; font-weight: 900;
+    }
+    .inline-brand-icon { width: 21px; height: 21px; border-radius: 6px; object-fit: cover; vertical-align: middle; }
 
     @media (min-width: 620px) {
       .system-overlay { align-items: center; }
@@ -964,6 +971,14 @@
                 onclick="closeHeaderMenu();openSettingsPanel()">
           <span class="header-menu-icon">⚙️</span><span>הגדרות וגיבוי</span>
         </button>
+        <button class="header-menu-item" id="installMenuBtn" type="button" role="menuitem"
+                onclick="closeHeaderMenu();installHitim()">
+          <span class="header-menu-icon">📲</span><span>התקנת האפליקציה</span>
+        </button>
+        <button class="header-menu-item" type="button" role="menuitem"
+                onclick="closeHeaderMenu();shareHitimInvite()">
+          <span class="header-menu-icon">🔗</span><span>שיתוף Hitim</span>
+        </button>
         <button class="header-menu-item danger" type="button" role="menuitem"
                 onclick="closeHeaderMenu();HitimAuth.signOut()">
           <span class="header-menu-icon">↪</span><span>יציאה</span>
@@ -973,7 +988,7 @@
     <div class="header-left">
       <div class="header-logo">
         <div class="header-title">
-          <span class="header-title-ball" aria-hidden="true"></span>
+          <img class="header-title-icon" src="/hitim-icon-193.png" alt="" aria-hidden="true">
           <span class="header-title-text">Hitim</span>
         </div>
       </div>
@@ -994,15 +1009,14 @@
     </div>
     <div class="header-hero-img">
       <div class="header-hero-glow"></div>
-      <img src="https://res.cloudinary.com/dvxamxm9x/image/upload/hero-complete_drofpi" alt="trainer"
-           onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22100%22 height=%22155%22><text y=%2280%22 font-size=%2270%22>⚡</text></svg>'">
+      <img src="/hitim-icon-513.png" alt="סמל Hitim">
     </div>
   </div>
   <div class="header-stars"></div>
 </div>
 
 <div class="quick-identify-bar">
-  <button class="quick-identify-btn" onclick="openQuickIdentify()">📸 <span>זיהוי מהיר</span> — בדיקה בלי לשמור</button>
+  <button class="quick-identify-btn" onclick="openQuickIdentify()"><img class="inline-brand-icon" src="/hitim-icon-193.png" alt=""> <span>זיהוי מהיר</span> — בדיקה בלי לשמור</button>
 </div>
 
 <div class="toolbar">
@@ -1059,11 +1073,25 @@
 
 <div class="floating-actions" aria-label="פעולות מהירות">
   <button class="floating-action scan" onclick="openQuickCamera()" aria-label="זיהוי מהיר במצלמה">
-    <span class="floating-action-icon">📸</span><span>זיהוי מהיר</span>
+    <img class="inline-brand-icon" src="/hitim-icon-193.png" alt=""><span>זיהוי מהיר</span>
   </button>
   <button class="floating-action add" onclick="openAdd()" aria-label="הוספת קלף">
     <span class="floating-action-icon">＋</span><span>הוסף קלף</span>
   </button>
+</div>
+
+<div class="system-overlay" id="installOverlay" onclick="systemOverlayClick(event,'installOverlay')">
+  <div class="system-panel">
+    <div class="system-head">
+      <h2 id="installGuideTitle">📲 התקנת Hitim</h2>
+      <button class="system-close" onclick="closeSystemPanel('installOverlay')">✕</button>
+    </div>
+    <div class="system-body">
+      <img class="install-guide-icon" src="/hitim-icon-193.png" alt="סמל Hitim">
+      <div class="system-note" id="installGuideNote">כך מתקינים את Hitim כאפליקציה בטלפון.</div>
+      <div class="install-steps" id="installGuideSteps"></div>
+    </div>
+  </div>
 </div>
 
 <div class="grid" id="grid">
@@ -1307,6 +1335,7 @@ let editorPriceToken=0;
 let renderFrame=0;
 let hasRenderedCards=false;
 const cardNodeCache=new Map();
+const identificationFileCache=new WeakMap();
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
@@ -1824,8 +1853,42 @@ function renderQuickScans(){
   }).join('');
 }
 
+async function prepareIdentificationImage(file){
+  if(!file||!file.type?.startsWith('image/'))return file;
+  if(identificationFileCache.has(file))return identificationFileCache.get(file);
+  const task=(async()=>{
+    if(typeof createImageBitmap!=='function'||file.size<700000)return file;
+    let bitmap;
+    try{
+      bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
+      const maxEdge=1152;
+      const scale=Math.min(1,maxEdge/Math.max(bitmap.width,bitmap.height));
+      if(scale===1&&file.size<1200000)return file;
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,Math.round(bitmap.width*scale));
+      canvas.height=Math.max(1,Math.round(bitmap.height*scale));
+      const context=canvas.getContext('2d',{alpha:false});
+      context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+      context.drawImage(bitmap,0,0,canvas.width,canvas.height);
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.84));
+      if(!blob)return file;
+      return new File([blob],'hitim-scan.jpg',{type:'image/jpeg',lastModified:Date.now()});
+    }catch(error){
+      console.debug('Hitim used the original scan image',error);return file;
+    }finally{
+      bitmap?.close?.();
+    }
+  })();
+  identificationFileCache.set(file,task);
+  return task;
+}
+
 async function requestIdentification(frontFile,backFile=null,mode='quick'){
-  const fd=new FormData();fd.append('front',frontFile);if(backFile)fd.append('back',backFile);
+  const [preparedFront,preparedBack]=await Promise.all([
+    prepareIdentificationImage(frontFile),
+    backFile?prepareIdentificationImage(backFile):Promise.resolve(null)
+  ]);
+  const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
   identificationInFlight++;
   try{
     const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
@@ -2539,23 +2602,62 @@ async function removeAdminUser(userId){
 }
 
 function initPwa(){
+  updateInstallButtons();
   window.addEventListener('beforeinstallprompt',event=>{
     event.preventDefault();deferredInstallPrompt=event;
-    document.getElementById('installBtn').hidden=false;
+    updateInstallButtons();
   });
   window.addEventListener('appinstalled',()=>{
-    deferredInstallPrompt=null;document.getElementById('installBtn').hidden=true;toast('📲 Hitim הותקן בהצלחה');
+    deferredInstallPrompt=null;updateInstallButtons();toast('📲 Hitim הותקן בהצלחה');
   });
   if('serviceWorker' in navigator){
     window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(error=>console.debug('Service worker',error)));
   }
 }
 
+function hitimIsInstalled(){
+  return window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone===true;
+}
+
+function updateInstallButtons(){
+  const installed=hitimIsInstalled();
+  const settingsButton=document.getElementById('installBtn');
+  const menuButton=document.getElementById('installMenuBtn');
+  if(settingsButton)settingsButton.hidden=installed;
+  if(menuButton)menuButton.hidden=installed;
+}
+
+function showInstallGuide(){
+  const ua=navigator.userAgent||'';
+  const ios=/iPad|iPhone|iPod/.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const android=/Android/i.test(ua);
+  const title=document.getElementById('installGuideTitle');
+  const note=document.getElementById('installGuideNote');
+  const steps=document.getElementById('installGuideSteps');
+  if(ios){
+    title.textContent='📲 התקנה ב-iPhone או iPad';
+    note.textContent='ב-iPhone מתקינים דרך תפריט השיתוף של הדפדפן.';
+    steps.innerHTML='<div class="install-step">פתח את Hitim ב-Safari.</div><div class="install-step">לחץ על כפתור השיתוף ⎋ בתחתית המסך.</div><div class="install-step">בחר „הוסף למסך הבית” ואז „הוסף”.</div>';
+  }else if(android){
+    title.textContent='📲 התקנה באנדרואיד';
+    note.textContent='אם חלון ההתקנה לא הופיע אוטומטית, מתקינים דרך תפריט Chrome.';
+    steps.innerHTML='<div class="install-step">פתח את תפריט שלוש הנקודות ⋮ ב-Chrome.</div><div class="install-step">בחר „התקנת אפליקציה” או „הוספה למסך הבית”.</div><div class="install-step">אשר את ההתקנה.</div>';
+  }else{
+    title.textContent='📲 התקנת Hitim';
+    note.textContent='הדפדפן עדיין לא הציג חלון התקנה אוטומטי.';
+    steps.innerHTML='<div class="install-step">פתח את תפריט הדפדפן.</div><div class="install-step">בחר „התקנת אפליקציה” או „הוספה למסך הבית”.</div>';
+  }
+  document.getElementById('installOverlay').classList.add('open');
+}
+
 async function installHitim(){
-  if(!deferredInstallPrompt){toast('פתח את תפריט הדפדפן ובחר „הוספה למסך הבית”');return;}
+  if(hitimIsInstalled()){toast('Hitim כבר מותקן במכשיר');return;}
+  if(!deferredInstallPrompt){showInstallGuide();return;}
   deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt=null;document.getElementById('installBtn').hidden=true;
+  const choice=await deferredInstallPrompt.userChoice;
+  deferredInstallPrompt=null;
+  if(choice.outcome==='accepted')toast('📲 ההתקנה התחילה');
+  updateInstallButtons();
 }
 
 function closeModal(){document.getElementById('overlay').classList.remove('open');}
@@ -2577,6 +2679,11 @@ HitimAuth.init(async access=>{
   await load();
   HitimDB.requestPersistence().catch(()=>{});
   scheduleDailyPriceRefresh(90000);
+  const launchAction=new URLSearchParams(location.search).get('action');
+  if(launchAction==='quick-scan'){
+    history.replaceState(null,'',location.pathname);
+    setTimeout(openQuickCamera,120);
+  }
 });
 window.addEventListener('online',()=>scheduleDailyPriceRefresh(20000));
 document.addEventListener('visibilitychange',()=>{

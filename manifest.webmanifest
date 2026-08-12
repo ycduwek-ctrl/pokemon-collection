@@ -8,6 +8,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#050a18",
   "theme_color": "#12063a",
   "icons": [
@@ -15,13 +16,21 @@
       "src": "/hitim-icon-193.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/hitim-icon-513.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "זיהוי קלף מהיר",
+      "short_name": "זיהוי מהיר",
+      "url": "/?action=quick-scan",
+      "icons": [{"src": "/hitim-icon-193.png", "sizes": "192x192", "type": "image/png"}]
     }
   ]
 }
