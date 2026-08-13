@@ -4,6 +4,28 @@ Hitim is a private, installable Pokémon card gallery. Google login and the
 administrator's access list are centralized; every user's cards, photos and
 notes are stored in that user's browser with IndexedDB.
 
+## Local card catalog
+
+Hitim identifies a photographed card with a short AI/OCR pass, then resolves
+the exact printing from a bundled read-only SQLite catalog. Identification no
+longer calls TCGdex at request time. Only live price lookup and downloading the
+selected card image use the network.
+
+The compressed catalog in `data/card_catalog.sqlite3.gz` contains searchable
+metadata rather than image files, so more than 130,000 multilingual records add
+roughly 5–6 MB to the deployment. It indexes English, French, Spanish, German,
+Italian, Portuguese, Japanese, Traditional Chinese, Indonesian, Thai and Korean.
+
+Rebuild it locally with:
+
+```bash
+python scripts/build_card_catalog.py
+```
+
+The `Update local card catalog` GitHub Actions workflow rebuilds it every Monday
+and can also be started manually. Its source is the MIT-licensed
+[TCGdex cards database](https://github.com/tcgdex/cards-database).
+
 The primary administrator is configured privately with the
 `HITIM_ADMIN_EMAIL` environment variable. Do not commit that address.
 
