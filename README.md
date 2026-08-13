@@ -6,10 +6,12 @@ notes are stored in that user's browser with IndexedDB.
 
 ## Local card catalog
 
-Hitim identifies a photographed card with a short AI/OCR pass, then resolves
-the exact printing from a bundled read-only SQLite catalog. Identification no
-longer calls TCGdex at request time. Only live price lookup and downloading the
-selected card image use the network.
+Hitim first reads the collector number locally in the browser and resolves the
+exact printing from a bundled read-only SQLite catalog. If the local OCR cannot
+produce one unambiguous match, the backend uses a free vision model for hints
+and verifies those hints against the same catalog. Identification no longer
+calls TCGdex at request time. Only the AI fallback, live price lookup, and
+downloading the selected card image use the network.
 
 The compressed catalog in `data/card_catalog.sqlite3.gz` contains searchable
 metadata rather than image files, so more than 130,000 multilingual records add
@@ -33,8 +35,9 @@ The primary administrator is configured privately with the
 
 - New card photos are compressed in the browser and saved only on the device.
 - New gallery records are not written to Google Sheets or Cloudinary.
-- A selected photo is sent transiently to the existing recognition service and
-  is not persisted by Hitim's backend.
+- Quick local OCR runs on the device. A selected photo is sent transiently to
+  the AI fallback only when local catalog identification is inconclusive, and
+  it is not persisted by Hitim's backend.
 - Supabase stores authentication identity and the access status/role only.
 - Price and recognition requests require a valid, approved Google session.
 - A blocked user loses online access, but a website cannot remotely erase data

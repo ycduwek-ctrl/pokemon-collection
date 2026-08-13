@@ -23,7 +23,7 @@ from hitim_auth import (
     update_access_user,
     remove_access_user,
 )
-from card_catalog import catalog_status, ensure_catalog, lookup_card
+from card_catalog import catalog_status, ensure_catalog, lookup_card, lookup_ocr_text
 
 app = FastAPI()
 ensure_catalog()
@@ -1215,7 +1215,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "local-catalog-v7",
+        "build": "local-ocr-v8",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1467,6 +1467,24 @@ async def upload_image(file: UploadFile = File(...), authorization: str = Header
     require_access(authorization, admin=True)
     raise HTTPException(status_code=410, detail="Images are stored locally by the Hitim browser app")
 
+
+@app.post("/catalog/identify-text")
+async def identify_catalog_text(data: dict, authorization: str = Header(None)):
+    """Identify a printing from OCR performed locally in the user's browser."""
+    await asyncio.to_thread(require_access, authorization)
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="לא נקרא טקסט מהקלף")
+    match = await asyncio.to_thread(lookup_ocr_text, text)
+    if not match:
+        raise HTTPException(status_code=404, detail="המספר שנקרא אינו מספיק לזיהוי ודאי")
+    match.update({
+        "value": "",
+        "priceStatus": "pending",
+        "identificationMode": "local-ocr",
+    })
+    return match
+
 @app.post("/identify")
 async def identify(
     front: UploadFile = File(...),
@@ -1556,9 +1574,19 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
 
     def request_identification():
         try:
-            primary_model = os.environ.get(
-                "OPENROUTER_MODEL",
-                "google/gemma-4-26b-a4b-it:free"
+            # Gemma 4 was never a valid OpenRouter model slug. An old Render
+            # override using that value made every AI fallback fail before a
+            # provider could see the image. Keep the configured override only
+            # when it names one of the current free vision routes.
+            configured_model = os.environ.get("OPENROUTER_MODEL", "").strip()
+            supported_free_models = {
+                "google/gemma-3-12b-it:free",
+                "google/gemma-3-27b-it:free",
+                "openrouter/free",
+            }
+            primary_model = (
+                configured_model if configured_model in supported_free_models
+                else "google/gemma-3-12b-it:free"
             )
             request_body = {
                 "model": primary_model,

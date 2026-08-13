@@ -27,6 +27,21 @@ LANGUAGE_CODES = {
     "thai": "th",
     "indonesian": "id",
 }
+LANGUAGE_NAMES = {code: name.title() for name, code in LANGUAGE_CODES.items()}
+
+_OCR_DIGITS = str.maketrans({
+    "O": "0", "Q": "0", "D": "0",
+    "I": "1", "L": "1", "|": "1",
+    "Z": "2", "S": "5", "B": "8",
+})
+_OCR_NUMBER_PAIR = re.compile(
+    r"(?<![A-Z0-9])"
+    r"([A-Z]{0,4}[0-9OQDILZSB]{1,4})"
+    r"\s*[/\\]\s*"
+    r"([A-Z]{0,4}[0-9OQDILZSB]{1,4})"
+    r"(?![A-Z0-9])",
+    re.IGNORECASE,
+)
 
 ROOT = Path(__file__).resolve().parent
 ARCHIVE_PATH = ROOT / "data" / "card_catalog.sqlite3.gz"
@@ -47,6 +62,33 @@ def normalize_number(value: object) -> str:
     if text.isdigit():
         return str(int(text))
     return re.sub(r"[^A-Z0-9!?]", "", text)
+
+
+def _repair_ocr_number(value: object) -> str:
+    """Repair common OCR confusions without changing real letter prefixes."""
+    compact = re.sub(r"[\s-]+", "", str(value or "").upper())
+    match = re.fullmatch(r"([A-Z]{0,4})([0-9OQDILZSB]+)", compact)
+    if not match:
+        return normalize_number(compact)
+    prefix, digits = match.groups()
+    # Prefixes such as TG, GG and SVP are meaningful. A lone OCR-looking
+    # prefix beside digits is much more likely to be a misread digit.
+    if prefix and not re.fullmatch(r"(?:TG|GG|SVP|SWSH|SM|XY|BW|DP|HGSS|RC)", prefix):
+        digits = prefix + digits
+        prefix = ""
+    return normalize_number(prefix + digits.translate(_OCR_DIGITS))
+
+
+def extract_ocr_number_pairs(text: object) -> list[tuple[str, str]]:
+    """Extract collector number pairs such as 043/185 or TG01/TG30."""
+    source = unicodedata.normalize("NFKC", str(text or "")).upper()
+    pairs: list[tuple[str, str]] = []
+    for match in _OCR_NUMBER_PAIR.finditer(source):
+        numerator = _repair_ocr_number(match.group(1))
+        denominator = _repair_ocr_number(match.group(2))
+        if numerator and denominator and (numerator, denominator) not in pairs:
+            pairs.append((numerator, denominator))
+    return pairs[:8]
 
 
 def _database_is_current() -> bool:
@@ -206,4 +248,133 @@ def lookup_card(card_info: dict) -> dict | None:
         "printedName": str(best["printed_name"] or card_info.get("printedName") or ""),
         "catalogEnglishName": str(english["printed_name"] if english else ""),
         "catalogMatch": "local",
+    }
+
+
+def _image_url(value: object) -> str:
+    image_url = str(value or "").rstrip("/")
+    if image_url and not re.search(r"\.(?:webp|png|jpe?g)$", image_url, re.IGNORECASE):
+        image_url += "/high.webp"
+    return image_url
+
+
+def lookup_ocr_text(text: object) -> dict | None:
+    """Resolve OCR text to one unambiguous printing in the local catalogue.
+
+    Collector number + denominator are the primary identity. Set codes and a
+    printed name visible in the OCR text break ties between older sets that
+    share the same numbering.
+    """
+    raw_text = unicodedata.normalize("NFKC", str(text or ""))
+    pairs = extract_ocr_number_pairs(raw_text)
+    if not pairs:
+        return None
+    normalized_text = normalize_text(raw_text)
+    token_text = re.sub(r"[^A-Z0-9.]+", " ", raw_text.upper())
+    tokens = {token for token in token_text.split() if len(token) >= 2}
+
+    try:
+        with _connection() as connection:
+            rows: list[sqlite3.Row] = []
+            for numerator, denominator in pairs:
+                for language in LANGUAGE_NAMES:
+                    rows.extend(connection.execute(
+                        """
+                        SELECT c.language, c.card_id, c.set_id, c.local_id,
+                               c.printed_name, c.image_url,
+                               s.name AS set_name, s.official_count
+                          FROM cards c
+                          JOIN sets s
+                            ON s.language = c.language AND s.set_id = c.set_id
+                         WHERE c.language = ? AND c.local_id_norm = ?
+                         LIMIT 180
+                        """,
+                        (language, numerator),
+                    ))
+
+            scored: list[tuple[float, sqlite3.Row, str, str, bool, bool]] = []
+            for row in rows:
+                numerator = normalize_number(row["local_id"])
+                matching_pairs = [pair for pair in pairs if pair[0] == numerator]
+                if not matching_pairs:
+                    continue
+                official = normalize_number(row["official_count"])
+                exact_official = any(pair[1] == official for pair in matching_pairs)
+                if not exact_official:
+                    continue
+
+                set_id = str(row["set_id"] or "")
+                set_token = re.sub(r"[^A-Z0-9.]", "", set_id.upper())
+                exact_set = bool(len(set_token) >= 3 and set_token in tokens)
+                printed_name = normalize_text(row["printed_name"])
+                name_visible = bool(len(printed_name) >= 4 and printed_name in normalized_text)
+
+                score = 24
+                score += 30 if exact_set else 0
+                score += 18 if name_visible else 0
+                scored.append((
+                    score, row, normalize_text(set_id), numerator,
+                    exact_set, name_visible,
+                ))
+
+            if not scored:
+                return None
+
+            # Collapse translated printings of the same set/card identity.
+            groups: dict[tuple[str, str], list[tuple]] = {}
+            for item in scored:
+                groups.setdefault((item[2], item[3]), []).append(item)
+            ranked_groups = sorted(
+                groups.values(), key=lambda group: max(item[0] for item in group), reverse=True
+            )
+            best_group = ranked_groups[0]
+            best_score = max(item[0] for item in best_group)
+            second_score = (
+                max(item[0] for item in ranked_groups[1]) if len(ranked_groups) > 1 else -1
+            )
+            has_strong_tiebreaker = any(item[4] or item[5] for item in best_group)
+            if len(ranked_groups) > 1 and not (
+                has_strong_tiebreaker and best_score - second_score >= 10
+            ):
+                return None
+
+            # Prefer the language whose printed name was actually read. If OCR
+            # only found the number, use English for a stable display name.
+            best_group.sort(key=lambda item: (
+                item[5], item[4], bool(item[1]["image_url"]),
+                item[1]["language"] == "en", item[0]
+            ), reverse=True)
+            best = best_group[0][1]
+            image_row = next(
+                (item[1] for item in best_group if str(item[1]["image_url"] or "").strip()),
+                best,
+            )
+            english = connection.execute(
+                "SELECT printed_name FROM cards WHERE language = 'en' AND card_id = ? LIMIT 1",
+                (best["card_id"],),
+            ).fetchone()
+    except (FileNotFoundError, OSError, sqlite3.Error):
+        return None
+
+    official_count = str(best["official_count"] or "")
+    local_id = str(best["local_id"] or "")
+    english_name = str(english["printed_name"] if english else "").strip()
+    printed_name = str(best["printed_name"] or "").strip()
+    display_name = english_name or printed_name
+    return {
+        "name": display_name,
+        "pokemon": display_name,
+        "printedName": printed_name,
+        "set": str(best["set_name"] or ""),
+        "setCode": str(best["set_id"] or ""),
+        "number": f"{local_id}/{official_count}" if official_count else local_id,
+        "language": LANGUAGE_NAMES.get(str(best["language"]), "Other"),
+        "finish": "",
+        "year": "",
+        "condition": "",
+        "rarity": "",
+        "catalogCardId": str(best["card_id"] or ""),
+        "catalogImage": _image_url(image_row["image_url"]),
+        "catalogMatch": "local-ocr",
+        "identityConfidence": "catalog",
     }

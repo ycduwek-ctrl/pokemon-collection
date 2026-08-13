@@ -1343,6 +1343,9 @@ let renderFrame=0;
 let hasRenderedCards=false;
 const cardNodeCache=new Map();
 const identificationFileCache=new WeakMap();
+let localOcrWorkerPromise=null;
+let localOcrQueue=Promise.resolve();
+let localOcrWasAnnounced=false;
 
 const RARITIES = ['Common','Uncommon','Rare','Holo Rare','Ultra Rare','Secret Rare'];
 const CONDITIONS = ['Mint','Near Mint','Excellent','Good','Poor'];
@@ -1919,20 +1922,137 @@ async function prepareIdentificationImage(file){
   return task;
 }
 
+function loadLocalOcrWorker(){
+  if(localOcrWorkerPromise)return localOcrWorkerPromise;
+  localOcrWorkerPromise=(async()=>{
+    if(!window.Tesseract){
+      if(!localOcrWasAnnounced){
+        localOcrWasAnnounced=true;
+        toast('📖 מכין זיהוי מקומי בפעם הראשונה…');
+      }
+      await new Promise((resolve,reject)=>{
+        const script=document.createElement('script');
+        script.src='https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.min.js';
+        script.async=true;script.crossOrigin='anonymous';
+        script.onload=resolve;
+        script.onerror=()=>reject(new Error('מנוע הקריאה המקומי לא נטען'));
+        document.head.appendChild(script);
+      });
+    }
+    const worker=await window.Tesseract.createWorker('eng',1,{
+      workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js',
+      corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@7.0.0',
+      langPath:'https://cdn.jsdelivr.net/npm/@tesseract.js-data/eng@1.0.0/4.0.0_best_int'
+    });
+    await worker.setParameters({
+      tessedit_pageseg_mode:window.Tesseract.PSM.SPARSE_TEXT,
+      preserve_interword_spaces:'1'
+    });
+    return worker;
+  })().catch(error=>{
+    localOcrWorkerPromise=null;
+    throw error;
+  });
+  return localOcrWorkerPromise;
+}
+
+async function createLocalOcrCanvas(file){
+  if(typeof createImageBitmap!=='function')throw new Error('OCR is unsupported');
+  const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
+  try{
+    // The useful identity text is concentrated in the title band and the
+    // lower collector-number band. Omitting the central artwork makes OCR
+    // faster and prevents foil art from being mistaken for characters.
+    const targetWidth=Math.round(Math.min(1450,Math.max(1000,bitmap.width*1.45)));
+    const topHeight=Math.max(1,Math.round(bitmap.height*.42));
+    const bottomY=Math.max(0,Math.round(bitmap.height*.55));
+    const bottomHeight=Math.max(1,bitmap.height-bottomY);
+    const scale=targetWidth/bitmap.width;
+    const canvas=document.createElement('canvas');
+    canvas.width=targetWidth;
+    canvas.height=Math.max(1,Math.round((topHeight+bottomHeight)*scale));
+    const context=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+    context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+    const drawnTopHeight=Math.round(topHeight*scale);
+    context.drawImage(bitmap,0,0,bitmap.width,topHeight,0,0,targetWidth,drawnTopHeight);
+    context.drawImage(
+      bitmap,0,bottomY,bitmap.width,bottomHeight,
+      0,drawnTopHeight,targetWidth,canvas.height-drawnTopHeight
+    );
+    // A moderate monochrome contrast boost makes tiny collector numbers more
+    // readable without destroying text printed over foil artwork.
+    const pixels=context.getImageData(0,0,canvas.width,canvas.height);
+    const data=pixels.data;
+    for(let i=0;i<data.length;i+=4){
+      const gray=.299*data[i]+.587*data[i+1]+.114*data[i+2];
+      const value=Math.max(0,Math.min(255,(gray-128)*1.22+128));
+      data[i]=value;data[i+1]=value;data[i+2]=value;
+    }
+    context.putImageData(pixels,0,0);
+    return canvas;
+  }finally{
+    bitmap.close?.();
+  }
+}
+
+async function identifyWithLocalCatalog(file){
+  const run=async()=>{
+    const [worker,canvas]=await Promise.all([loadLocalOcrWorker(),createLocalOcrCanvas(file)]);
+    const result=await worker.recognize(canvas);
+    const text=String(result?.data?.text||'').trim();
+    if(!text)throw new Error('לא נקרא טקסט מהקלף');
+    const response=await HitimAuth.fetch('/catalog/identify-text',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text}),timeoutMs:12000
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok||data.error){
+      const error=new Error(data.detail||data.error||'הקטלוג לא זיהה את המספר');
+      error.status=response.status;
+      throw error;
+    }
+    return data;
+  };
+  const task=localOcrQueue.then(run,run);
+  localOcrQueue=task.catch(()=>{});
+  return task;
+}
+
 async function requestIdentification(frontFile,backFile=null,mode='quick'){
   const [preparedFront,preparedBack]=await Promise.all([
     prepareIdentificationImage(frontFile),
     backFile?prepareIdentificationImage(backFile):Promise.resolve(null)
   ]);
-  const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
   identificationInFlight++;
   try{
-    const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
-      method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
-    });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
-    return data;
+    let localError=null;
+    if(mode==='quick'){
+      try{return await identifyWithLocalCatalog(preparedFront);}
+      catch(error){localError=error;console.debug('Local catalog OCR needs AI fallback',error);}
+    }
+
+    const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
+    try{
+      const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
+        method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||data.error){
+        const error=new Error(data.detail||data.error||'הזיהוי לא הצליח');
+        error.status=response.status;
+        throw error;
+      }
+      return data;
+    }catch(aiError){
+      if(mode==='deep'){
+        try{return await identifyWithLocalCatalog(preparedFront);}
+        catch(error){localError=error;}
+      }
+      const detail=localError?.message&&aiError?.message
+        ?`${aiError.message}. גם המספר המודפס לא נקרא בוודאות.`
+        :(aiError?.message||localError?.message||'הזיהוי לא הצליח');
+      throw new Error(detail);
+    }
   }finally{
     identificationInFlight=Math.max(0,identificationInFlight-1);
   }

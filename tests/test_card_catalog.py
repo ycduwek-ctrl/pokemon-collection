@@ -67,6 +67,24 @@ class CardCatalogTests(unittest.TestCase):
             "name": "Unknown",
         }))
 
+    def test_ocr_uses_name_to_resolve_shared_numbering(self):
+        match = card_catalog.lookup_ocr_text(
+            "Charizard 120 HP Energy Burn Fire Spin 4 / 102"
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match["catalogCardId"], "base1-4")
+        self.assertEqual(match["name"], "Charizard")
+
+    def test_ocr_repairs_common_digit_confusions_and_reads_set_code(self):
+        match = card_catalog.lookup_ocr_text(
+            "SV2a Pikachu Thunder Jolt O25 / 165"
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match["catalogCardId"].casefold(), "sv2a-025")
+
+    def test_ocr_does_not_guess_an_ambiguous_number(self):
+        self.assertIsNone(card_catalog.lookup_ocr_text("025 / 102"))
+
 
 if __name__ == "__main__":
     unittest.main()
