@@ -1,0 +1,20 @@
+{
+  "cards": 130739,
+  "languages": [
+    "en",
+    "fr",
+    "es",
+    "de",
+    "it",
+    "pt",
+    "ja",
+    "zh-tw",
+    "id",
+    "th",
+    "ko"
+  ],
+  "builtAt": "2026-08-13T04:21:14+00:00",
+  "databaseBytes": 20697088,
+  "archiveBytes": 5471656,
+  "sha256": "0ce7ba744971c6d960c0e158d977e31622603d749fa02335a3705921ea8517e5"
+}

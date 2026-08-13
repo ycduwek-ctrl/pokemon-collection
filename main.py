@@ -23,8 +23,10 @@ from hitim_auth import (
     update_access_user,
     remove_access_user,
 )
+from card_catalog import catalog_status, ensure_catalog, lookup_card
 
 app = FastAPI()
+ensure_catalog()
 
 app.add_middleware(
     CORSMiddleware,
@@ -564,120 +566,21 @@ def _experimental_enrich_identification_from_catalog(card_info, source_image=Non
 
 
 def _enrich_identification_from_catalog(card_info):
-    """Resolve a printing quickly from language, set code and collector number."""
-    language = str(card_info.get("language") or "").strip().lower()
-    language_codes = {
-        "english": "en",
-        "japanese": "ja", "chinese": "zh-tw", "korean": "ko",
-        "french": "fr", "german": "de", "spanish": "es",
-        "italian": "it", "portuguese": "pt", "thai": "th",
-        "indonesian": "id"
-    }
-    lang = language_codes.get(language)
-    if not lang:
+    """Enrich AI/OCR hints from the bundled catalogue without a network request."""
+    match = lookup_card(card_info)
+    if not match:
         return card_info
-
-    raw_local_id = re.sub(
-        r"[^A-Za-z0-9]", "", str(card_info.get("number") or "").split("/", 1)[0]
-    )
-    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
-    if not card_number:
-        return card_info
-    set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
-    printed_name = str(card_info.get("printedName") or "").strip()
-
-    try:
-        details = []
-        if set_code and raw_local_id:
-            direct = _fetch_tcgdex_card(lang, f"{set_code.lower()}-{raw_local_id}", timeout=4)
-            if direct and _clean_card_number(direct.get("localId")) == card_number:
-                details = [direct]
-
-        if details:
-            candidates = []
-        else:
-            search = requests.get(
-                f"https://api.tcgdex.net/v2/{lang}/cards",
-                params={"localId": raw_local_id or card_number},
-                timeout=5
-            )
-            search.raise_for_status()
-            candidates = [
-                card for card in search.json()
-                if _clean_card_number(card.get("localId")) == card_number
-            ]
-        if set_code:
-            code_matches = [
-                card for card in candidates
-                if re.sub(
-                    r"[^A-Z0-9]", "",
-                    str(card.get("id") or "").rsplit("-", 1)[0].upper()
-                ) == set_code
-            ]
-            if code_matches:
-                candidates = code_matches
-        elif len(candidates) > 12:
-            return card_info
-
-        candidate_ids = [candidate["id"] for candidate in candidates[:6]]
-        if not details and candidate_ids:
-            with ThreadPoolExecutor(max_workers=min(4, len(candidate_ids))) as executor:
-                details = [
-                    detail for detail in executor.map(
-                        lambda card_id: _fetch_tcgdex_card(lang, card_id),
-                        candidate_ids
-                    ) if detail
-                ]
-
-        if printed_set_count.isdigit():
-            count_matches = [
-                card for card in details
-                if str(((card.get("set") or {}).get("cardCount") or {}).get("official", "")) == printed_set_count
-            ]
-            if count_matches:
-                details = count_matches
-
-        if len(details) > 1 and printed_name:
-            scored = sorted(
-                [
-                    (
-                        SequenceMatcher(
-                            None,
-                            printed_name.casefold(),
-                            str(card.get("name") or "").casefold()
-                        ).ratio(),
-                        card
-                    )
-                    for card in details
-                ],
-                key=lambda item: item[0],
-                reverse=True
-            )
-            if scored[0][0] >= 0.72 and (
-                len(scored) == 1 or scored[0][0] - scored[1][0] >= 0.10
-            ):
-                details = [scored[0][1]]
-
-        if len(details) != 1:
-            return card_info
-        card = details[0]
-        card_set = card.get("set") or {}
-        official_count = str((card_set.get("cardCount") or {}).get("official") or "")
-        resolved_code = str(card.get("id") or "").rsplit("-", 1)[0]
-        card_info["setCode"] = resolved_code
-        card_info["catalogCardId"] = card.get("id", "")
-        catalog_image = _tcgdex_image_url(card)
-        if catalog_image:
-            card_info["catalogImage"] = catalog_image
-        if official_count:
-            card_info["number"] = f"{card.get('localId', card_number)}/{official_count}"
-        if not card_info.get("set"):
-            card_info["set"] = card_set.get("name", "")
-        if not card_info.get("rarity") and card.get("rarity"):
-            card_info["rarity"] = card["rarity"]
-        return card_info
-    except (requests.RequestException, ValueError, TypeError, KeyError):
-        return card_info
+    english_name = str(match.pop("catalogEnglishName", "") or "").strip()
+    if english_name:
+        current_name = str(card_info.get("name") or card_info.get("pokemon") or "")
+        hebrew_suffix = re.search(r"\(([^)]*[\u0590-\u05FF][^)]*)\)\s*$", current_name)
+        display_name = english_name
+        if hebrew_suffix:
+            display_name += f" ({hebrew_suffix.group(1)})"
+        card_info["name"] = display_name
+        card_info["pokemon"] = display_name
+    card_info.update(match)
+    return card_info
 
 
 def _localized_tcgdex_price(card_info):
@@ -1312,8 +1215,9 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "stable-identify-v6",
+        "build": "local-catalog-v7",
         "authConfigured": public_auth_config()["configured"],
+        "catalog": catalog_status(),
     }
 
 
@@ -1728,7 +1632,7 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
             timeout=5
         )
     except asyncio.TimeoutError:
-        # Catalog verification improves certainty but must not block a valid scan.
+        # The local catalog improves certainty but must not block a valid AI scan.
         pass
     identified["identityConfidence"] = (
         "catalog" if identified.get("catalogCardId") else "ai"
