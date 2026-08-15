@@ -1828,7 +1828,7 @@ function quickFilesSelected(input){
     quickScans.push({
       id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
       file,url:URL.createObjectURL(file),status:'queued',name:'',value:null,
-      priceStatus:'',error:'',saving:false,added:false,saveError:false
+      priceStatus:'',error:'',errorMessage:'',candidates:[],saving:false,added:false,saveError:false
     });
   });
   renderQuickScans();
@@ -1863,7 +1863,17 @@ function renderQuickScans(){
     let body='';
     if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
     else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה קלף...</div>';
-    else if(scan.status==='error')body='<div class="quick-scan-status error">לא הצלחנו לזהות — אפשר לצלם שוב</div>';
+    else if(scan.status==='choice'){
+      const choices=(scan.candidates||[]).map((candidate,index)=>
+        `<button type="button" class="match-choice" onclick="confirmQuickCandidate('${scan.id}',${index})">
+          <img src="${escapeHtml(candidate.catalogImage||scan.url)}" alt="">
+          ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}<br>
+          <span>${escapeHtml(candidate.set||'')} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
+        </button>`).join('');
+      body=`<div class="match-choice-note">מצאנו כמה אפשרויות — בחר את הקלף הזהה:</div>
+        <div class="match-choices">${choices}</div>`;
+    }
+    else if(scan.status==='error')body=`<div class="quick-scan-status error">${escapeHtml(scan.errorMessage||'לא הצלחנו לקרוא את הקלף — אפשר לנסות צילום נוסף')}</div>`;
     else {
       const price=scan.priceStatus==='pending'
         ?'<span class="quick-mini-ball"></span>בודק מחיר...'
@@ -1890,6 +1900,19 @@ function renderQuickScans(){
       </div>
     </div>`;
   }).join('');
+}
+
+function confirmQuickCandidate(id,index){
+  const scan=quickScans.find(item=>item.id===id);
+  const candidate=scan?.candidates?.[index];
+  if(!scan||!candidate)return;
+  scan.data={...candidate,needsConfirmation:false,matchCandidates:[],identityConfidence:'catalog'};
+  scan.candidates=[];
+  scan.status='done';
+  scan.name=candidate.name||candidate.pokemon||candidate.printedName||'קלף לא מזוהה';
+  scan.priceStatus='pending';scan.value=null;
+  renderQuickScans();
+  queueQuickScanPrice(scan,quickSessionToken);
 }
 
 async function prepareIdentificationImage(file){
@@ -1956,10 +1979,36 @@ function loadLocalOcrWorker(){
   return localOcrWorkerPromise;
 }
 
-async function createLocalOcrCanvas(file){
+async function createLocalOcrCanvas(file,focus='identity'){
   if(typeof createImageBitmap!=='function')throw new Error('OCR is unsupported');
   const bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
   try{
+    if(focus==='number'){
+      // A second, larger pass over the lower portion recovers tiny collector
+      // numbers when the normal title/number scan was inconclusive.
+      const bottomY=Math.max(0,Math.round(bitmap.height*.58));
+      const bottomHeight=Math.max(1,bitmap.height-bottomY);
+      const targetWidth=Math.round(Math.min(2000,Math.max(1500,bitmap.width*1.8)));
+      const scale=targetWidth/bitmap.width;
+      const canvas=document.createElement('canvas');
+      canvas.width=targetWidth;
+      canvas.height=Math.max(1,Math.round(bottomHeight*scale));
+      const context=canvas.getContext('2d',{alpha:false,willReadFrequently:true});
+      context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
+      context.drawImage(
+        bitmap,0,bottomY,bitmap.width,bottomHeight,
+        0,0,canvas.width,canvas.height
+      );
+      const pixels=context.getImageData(0,0,canvas.width,canvas.height);
+      const data=pixels.data;
+      for(let i=0;i<data.length;i+=4){
+        const gray=.299*data[i]+.587*data[i+1]+.114*data[i+2];
+        const value=Math.max(0,Math.min(255,(gray-128)*1.10+128));
+        data[i]=value;data[i+1]=value;data[i+2]=value;
+      }
+      context.putImageData(pixels,0,0);
+      return canvas;
+    }
     // The useful identity text is concentrated in the title band and the
     // lower collector-number band. Omitting the central artwork makes OCR
     // faster and prevents foil art from being mistaken for characters.
@@ -1998,20 +2047,51 @@ async function createLocalOcrCanvas(file){
 async function identifyWithLocalCatalog(file){
   const run=async()=>{
     const [worker,canvas]=await Promise.all([loadLocalOcrWorker(),createLocalOcrCanvas(file)]);
-    const result=await worker.recognize(canvas);
-    const text=String(result?.data?.text||'').trim();
-    if(!text)throw new Error('לא נקרא טקסט מהקלף');
-    const response=await HitimAuth.fetch('/catalog/identify-text',{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text}),timeoutMs:12000
+    const postText=async text=>{
+      const response=await HitimAuth.fetch('/catalog/identify-text',{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({text}),timeoutMs:12000
+      });
+      const data=await response.json().catch(()=>({}));
+      if(!response.ok||data.error){
+        const error=new Error(data.detail||data.error||'הקטלוג לא זיהה את הקלף');
+        error.status=response.status;
+        throw error;
+      }
+      return data;
+    };
+    await worker.setParameters({
+      tessedit_pageseg_mode:window.Tesseract.PSM.SPARSE_TEXT,
+      tessedit_char_whitelist:'',preserve_interword_spaces:'1'
     });
-    const data=await response.json().catch(()=>({}));
-    if(!response.ok||data.error){
-      const error=new Error(data.detail||data.error||'הקטלוג לא זיהה את המספר');
-      error.status=response.status;
-      throw error;
+    const firstResult=await worker.recognize(canvas);
+    const firstText=String(firstResult?.data?.text||'').trim();
+    if(!firstText)throw new Error('לא נקרא טקסט מהקלף');
+    let firstData=null,firstError=null;
+    try{
+      firstData=await postText(firstText);
+      if(!firstData.needsConfirmation)return firstData;
+    }catch(error){firstError=error;}
+
+    // Only ambiguous scans pay for the heavier number-focused pass.
+    try{
+      const numberCanvas=await createLocalOcrCanvas(file,'number');
+      await worker.setParameters({
+        tessedit_pageseg_mode:window.Tesseract.PSM.SINGLE_BLOCK||'6',
+        tessedit_char_whitelist:'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/',
+        preserve_interword_spaces:'1'
+      });
+      const numberResult=await worker.recognize(numberCanvas);
+      const numberText=String(numberResult?.data?.text||'').trim();
+      if(numberText){
+        const combinedData=await postText(`${firstText}\n${numberText}`);
+        return combinedData;
+      }
+    }catch(error){
+      console.debug('Focused collector-number pass was inconclusive',error);
     }
-    return data;
+    if(firstData)return firstData;
+    throw firstError||new Error('הקטלוג לא זיהה את הקלף');
   };
   const task=localOcrQueue.then(run,run);
   localOcrQueue=task.catch(()=>{});
@@ -2101,15 +2181,21 @@ async function processQuickQueue(){
       try{
         const data=await requestIdentification(scan.file);
         if(token!==quickSessionToken)return;
-        scan.status='done';
-        scan.name=data.name||data.pokemon||'קלף לא מזוהה';
-        scan.priceStatus='pending';
-        scan.value=null;
-        scan.data=data;
-        queueQuickScanPrice(scan,token);
+        if(data.needsConfirmation&&Array.isArray(data.matchCandidates)&&data.matchCandidates.length){
+          scan.status='choice';scan.candidates=data.matchCandidates;scan.data=null;
+          scan.priceStatus='';scan.value=null;
+        }else{
+          scan.status='done';
+          scan.name=data.name||data.pokemon||'קלף לא מזוהה';
+          scan.priceStatus='pending';
+          scan.value=null;
+          scan.data=data;
+          queueQuickScanPrice(scan,token);
+        }
       }catch(error){
         if(token!==quickSessionToken)return;
         scan.status='error';scan.error=String(error);
+        scan.errorMessage=error?.message||'לא הצלחנו לקרוא את הקלף — אפשר לנסות צילום נוסף';
       }
       renderQuickScans();
     }
@@ -2274,7 +2360,8 @@ function editorCandidateChoicesHtml(candidates){
   const choices=(candidates||[]).map((candidate,index)=>
     `<button type="button" class="match-choice" onclick="confirmEditorCandidate(${index})">
       <img src="${escapeHtml(candidate.catalogImage||'')}" alt="">
-      ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}
+      ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}<br>
+      <span>${escapeHtml(candidate.set||'')} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
     </button>`).join('');
   return `<div class="match-choice-note">מצאנו כמה אפשרויות. בחר את התמונה הזהה לקלף שצילמת:</div>
     <div class="editor-match-choices">${choices}</div>`;
@@ -2304,14 +2391,20 @@ async function identifyCoin(){
   let identifiedOk=false;
   try{
     const d=await requestIdentification(aiFront,aiBack);
-    applyIdentificationToEditor(d);
-    document.getElementById('fValue').value='';
-    aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
     const res=document.getElementById('aiResult');res.style.display='block';
-    res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
-    identifiedOk=true;
-    resolveEditorPrice(d,priceToken);
+    if(d.needsConfirmation&&Array.isArray(d.matchCandidates)&&d.matchCandidates.length){
+      editorCandidateOptions=d.matchCandidates;
+      editorCandidateResultNodeId='aiResult';
+      res.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
+    }else{
+      applyIdentificationToEditor(d);
+      document.getElementById('fValue').value='';
+      aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
+      res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
+      identifiedOk=true;
+      resolveEditorPrice(d,priceToken);
+    }
   }catch(e){toast(e.message||'שגיאת זיהוי');}
   finally{
     document.getElementById('aiLoading').classList.remove('show');
@@ -2337,9 +2430,15 @@ async function deepIdentifyCurrent(){
       file=new File([blob],'card-photo.webp',{type:blob.type||'image/webp'});
     }
     const d=await requestIdentification(file,null,'deep');
-    applyIdentificationToEditor(d);
-    resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
-    resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+    if(d.needsConfirmation&&Array.isArray(d.matchCandidates)&&d.matchCandidates.length){
+      editorCandidateOptions=d.matchCandidates;
+      editorCandidateResultNodeId='deepIdentifyResult';
+      resultNode.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
+    }else{
+      applyIdentificationToEditor(d);
+      resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
+      resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+    }
   }catch(error){
     resultNode.textContent=error.message||'הזיהוי המעמיק לא הושלם';
   }finally{

@@ -6,12 +6,15 @@ notes are stored in that user's browser with IndexedDB.
 
 ## Local card catalog
 
-Hitim first reads the collector number locally in the browser and resolves the
-exact printing from a bundled read-only SQLite catalog. If the local OCR cannot
-produce one unambiguous match, the backend uses a free vision model for hints
-and verifies those hints against the same catalog. Identification no longer
-calls TCGdex at request time. Only the AI fallback, live price lookup, and
-downloading the selected card image use the network.
+Hitim first reads the title and collector number locally in the browser and
+resolves the printing from a bundled read-only SQLite catalog. Ambiguous scans
+receive a second number-focused OCR pass. If the title is readable but the
+printing is still uncertain, the app presents ranked catalog images for a
+one-tap choice instead of failing or silently guessing. The free vision model
+is used only when local OCR cannot produce either a safe match or useful
+candidates. Identification no longer calls TCGdex at request time. Only the AI
+fallback, live price lookup, and downloading the selected card image use the
+network.
 
 The compressed catalog in `data/card_catalog.sqlite3.gz` contains searchable
 metadata rather than image files, so more than 130,000 multilingual records add

@@ -85,6 +85,50 @@ class CardCatalogTests(unittest.TestCase):
     def test_ocr_does_not_guess_an_ambiguous_number(self):
         self.assertIsNone(card_catalog.lookup_ocr_text("025 / 102"))
 
+    def test_ocr_repairs_slash_read_as_seven(self):
+        match = card_catalog.lookup_ocr_text(
+            "Teal Mask Ogerpon ex Pokemon eX rule 0257167 2024"
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match["catalogCardId"], "sv06-025")
+
+    def test_ocr_repairs_extra_leading_digit(self):
+        match = card_catalog.lookup_ocr_text(
+            "Victini V V rule 925/202 2020"
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match["catalogCardId"], "swsh1-25")
+
+    def test_ocr_repairs_missing_denominator_digit(self):
+        match = card_catalog.lookup_ocr_text(
+            "Charizard Energy Burn 4/02 1999"
+        )
+        self.assertIsNotNone(match)
+        self.assertEqual(match["catalogCardId"], "base1-4")
+
+    def test_noisy_number_returns_correct_visual_candidate(self):
+        result = card_catalog.lookup_ocr_result(
+            "BASIC Charcade Protect G2005/782 2023"
+        )
+        self.assertIsNone(result["match"])
+        self.assertGreaterEqual(len(result["candidates"]), 1)
+        self.assertEqual(result["candidates"][0]["catalogCardId"], "sv04-025")
+
+    def test_name_only_returns_ranked_candidates_instead_of_failure(self):
+        result = card_catalog.lookup_ocr_result(
+            "BASIC Torkoal 130 HP Live Coal 2025"
+        )
+        self.assertIsNone(result["match"])
+        self.assertGreaterEqual(len(result["candidates"]), 2)
+        self.assertEqual(result["candidates"][0]["catalogCardId"], "sv09-025")
+
+    def test_artwork_fragment_does_not_override_card_name(self):
+        result = card_catalog.lookup_ocr_result(
+            "BASIC Torkoal 130 HP EE0/2 Live Coal 2025"
+        )
+        self.assertIsNone(result["match"])
+        self.assertEqual(result["candidates"][0]["catalogCardId"], "sv09-025")
+
 
 if __name__ == "__main__":
     unittest.main()

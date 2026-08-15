@@ -23,7 +23,7 @@ from hitim_auth import (
     update_access_user,
     remove_access_user,
 )
-from card_catalog import catalog_status, ensure_catalog, lookup_card, lookup_ocr_text
+from card_catalog import catalog_status, ensure_catalog, lookup_card, lookup_ocr_result
 
 app = FastAPI()
 ensure_catalog()
@@ -1215,7 +1215,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "local-ocr-v8",
+        "build": "hybrid-recognition-v9",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1475,15 +1475,27 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
     text = str(data.get("text") or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="לא נקרא טקסט מהקלף")
-    match = await asyncio.to_thread(lookup_ocr_text, text)
-    if not match:
-        raise HTTPException(status_code=404, detail="המספר שנקרא אינו מספיק לזיהוי ודאי")
-    match.update({
-        "value": "",
-        "priceStatus": "pending",
-        "identificationMode": "local-ocr",
-    })
-    return match
+    result = await asyncio.to_thread(lookup_ocr_result, text)
+    match = result["match"]
+    if match:
+        match.update({
+            "value": "",
+            "priceStatus": "pending",
+            "identificationMode": "local-ocr",
+            "needsConfirmation": False,
+            "matchCandidates": [],
+        })
+        return match
+    candidates = result["candidates"]
+    if candidates:
+        return {
+            "needsConfirmation": True,
+            "matchCandidates": candidates,
+            "identificationMode": "local-ocr-candidates",
+            "value": "",
+            "priceStatus": "pending",
+        }
+    raise HTTPException(status_code=404, detail="לא נמצאה התאמה בקטלוג המקומי")
 
 @app.post("/identify")
 async def identify(
