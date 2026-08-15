@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hitim-shell-v7';
+const CACHE_NAME = 'hitim-shell-v8';
 const APP_SHELL = [
   '/',
   '/index.html',
