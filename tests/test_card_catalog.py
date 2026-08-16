@@ -129,6 +129,33 @@ class CardCatalogTests(unittest.TestCase):
         self.assertIsNone(result["match"])
         self.assertEqual(result["candidates"][0]["catalogCardId"], "sv09-025")
 
+    def test_candidate_pages_return_more_exact_printings(self):
+        first = card_catalog.lookup_ocr_result(
+            "BASIC Torkoal 130 HP Live Coal 2025", limit=4, offset=0
+        )
+        second = card_catalog.lookup_ocr_result(
+            "BASIC Torkoal 130 HP Live Coal 2025", limit=4, offset=4
+        )
+        first_ids = {candidate["catalogCardId"] for candidate in first["candidates"]}
+        second_ids = {candidate["catalogCardId"] for candidate in second["candidates"]}
+        self.assertTrue(first["hasMoreCandidates"])
+        self.assertGreater(first["candidateTotal"], len(first["candidates"]))
+        self.assertEqual(first_ids & second_ids, set())
+
+    def test_visual_candidates_never_include_text_only_records(self):
+        result = card_catalog.lookup_ocr_result("025 / 102", limit=12)
+        self.assertIsNone(result["match"])
+        self.assertTrue(result["candidates"])
+        self.assertTrue(all(candidate["catalogImage"] for candidate in result["candidates"]))
+
+    def test_foreign_exact_match_requests_an_english_display_name(self):
+        result = card_catalog.lookup_ocr_result(
+            "SV2a Pikachu Thunder Jolt O25 / 165"
+        )
+        self.assertIsNotNone(result["match"])
+        self.assertEqual(result["match"]["language"], "Japanese")
+        self.assertTrue(result["match"]["needsEnglishName"])
+
 
 if __name__ == "__main__":
     unittest.main()
