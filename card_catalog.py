@@ -452,6 +452,7 @@ def _ocr_candidate_payload(
     english_name = str(english["printed_name"] if english else "").strip()
     printed_name = str(row["printed_name"] or "").strip()
     display_name = english_name or printed_name
+    language = LANGUAGE_NAMES.get(str(row["language"]), "Other")
     return {
         "name": display_name,
         "pokemon": display_name,
@@ -459,7 +460,7 @@ def _ocr_candidate_payload(
         "set": str(row["set_name"] or ""),
         "setCode": str(row["set_id"] or ""),
         "number": f"{local_id}/{official_count}" if official_count else local_id,
-        "language": LANGUAGE_NAMES.get(str(row["language"]), "Other"),
+        "language": language,
         "finish": "",
         "year": "",
         "condition": "",
@@ -468,11 +469,15 @@ def _ocr_candidate_payload(
         "catalogImage": _image_url(image_row["image_url"]),
         "catalogMatch": "local-ocr",
         "identityConfidence": "catalog",
+        # The browser uses this flag to avoid presenting Japanese/Chinese text
+        # as the user-facing name. A requested vision pass can then translate
+        # the exact photographed printing without changing its catalog ID.
+        "needsEnglishName": bool(language != "English" and not english_name),
         "candidateScore": round(score, 2),
     }
 
 
-def _rank_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
+def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
     raw_text = unicodedata.normalize("NFKC", str(text or ""))
     pairs = extract_ocr_number_pairs(raw_text)
     name_matches = _find_ocr_names(raw_text)
@@ -529,6 +534,10 @@ def _rank_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
                     rows[(str(row["language"]), str(row["card_id"]))] = row
 
             scored_rows: list[dict] = []
+            strongest_read_name = max(
+                (score for _language, _name, _printed, _count, score in name_matches),
+                default=0,
+            )
             for row in rows.values():
                 name_score, printing_count = name_scores.get(
                     (str(row["language"]), str(row["name_norm"])), (0.0, 0)
@@ -570,6 +579,13 @@ def _rank_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
                 estimated_year = _estimated_set_year(row["set_id"])
                 if printed_years and estimated_year:
                     score += 14 if estimated_year in printed_years else -4
+                # Once the title is read confidently, an unrelated card that
+                # happens to share an OCR-like number should not appear next to
+                # the real card. This prevents noisy artwork numbers from
+                # creating Toxel/Toxtricity-style false options.
+                if strongest_read_name >= .82 and name_score < strongest_read_name - .12:
+                    if not exact_set:
+                        score -= 34
                 if score < 24:
                     continue
                 scored_rows.append({
@@ -598,17 +614,30 @@ def _rank_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
                     item["row"]["language"] == "en", bool(item["row"]["image_url"]),
                 ), reverse=True)
                 best = group[0]
-                image_item = next(
-                    (item for item in group if str(item["row"]["image_url"] or "").strip()),
-                    best,
-                )
+                image_item = next((item for item in group if (
+                    item["row"]["language"] == best["row"]["language"]
+                    and str(item["row"]["image_url"] or "").strip()
+                )), None)
+                if image_item is None:
+                    image_item = next((item for item in group if (
+                        item["row"]["language"] == "en"
+                        and str(item["row"]["image_url"] or "").strip()
+                    )), None)
+                if image_item is None:
+                    image_item = next((item for item in group if str(
+                        item["row"]["image_url"] or ""
+                    ).strip()), best)
                 best["payload"] = _ocr_candidate_payload(
                     connection, best["row"], image_item["row"], best["score"]
                 )
-                ranked.append(best)
+                # A visual choice without a catalogue image is not useful and
+                # previously produced text-only options on phones.
+                if best["payload"]["catalogImage"]:
+                    ranked.append(best)
 
             ranked.sort(key=lambda item: (
                 item["score"], item["exact_pair"], item["name_score"],
+                item["row"]["language"] == "en",
                 _set_recency_key(item["row"]["set_id"]),
             ), reverse=True)
             if not ranked:
@@ -616,17 +645,22 @@ def _rank_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
             best_score = ranked[0]["score"]
             return [
                 item for item in ranked
-                if item["exact_pair"] or item["score"] >= best_score - 18
-            ][:max(1, min(int(limit), 20))]
+                if item["exact_pair"] or item["score"] >= best_score - 24
+            ][:max(1, min(int(limit), 80))]
     except (FileNotFoundError, OSError, sqlite3.Error):
         return []
 
 
-def lookup_ocr_result(text: object, limit: int = 12) -> dict:
+def lookup_ocr_result(text: object, limit: int = 6, offset: int = 0) -> dict:
     """Return either a safe match or visual candidates for one-tap confirmation."""
-    ranked = _rank_ocr_candidates(text, limit=limit)
+    page_limit = max(1, min(int(limit), 12))
+    page_offset = max(0, min(int(offset), 72))
+    ranked = _rank_ocr_candidates(text, limit=80)
     if not ranked:
-        return {"match": None, "candidates": []}
+        return {
+            "match": None, "candidates": [], "candidateTotal": 0,
+            "candidateOffset": page_offset, "hasMoreCandidates": False,
+        }
 
     best = ranked[0]
     second_score = ranked[1]["score"] if len(ranked) > 1 else -1
@@ -653,10 +687,18 @@ def lookup_ocr_result(text: object, limit: int = 12) -> dict:
     if safe_exact_pair or safe_repaired_pair or safe_unique_name:
         payload = dict(best["payload"])
         payload.pop("candidateScore", None)
-        return {"match": payload, "candidates": []}
+        return {
+            "match": payload, "candidates": [], "candidateTotal": 0,
+            "candidateOffset": 0, "hasMoreCandidates": False,
+        }
+    candidate_total = len(ranked)
+    page = ranked[page_offset:page_offset + page_limit]
     return {
         "match": None,
-        "candidates": [dict(item["payload"]) for item in ranked],
+        "candidates": [dict(item["payload"]) for item in page],
+        "candidateTotal": candidate_total,
+        "candidateOffset": page_offset,
+        "hasMoreCandidates": page_offset + len(page) < candidate_total,
     }
 
 
@@ -665,6 +707,6 @@ def lookup_ocr_text(text: object) -> dict | None:
     return lookup_ocr_result(text)["match"]
 
 
-def lookup_ocr_candidates(text: object, limit: int = 12) -> list[dict]:
+def lookup_ocr_candidates(text: object, limit: int = 6) -> list[dict]:
     """Return ranked catalogue choices when OCR cannot safely choose one."""
     return lookup_ocr_result(text, limit=limit)["candidates"]

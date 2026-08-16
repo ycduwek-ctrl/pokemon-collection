@@ -1215,7 +1215,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hybrid-recognition-v9",
+        "build": "hybrid-recognition-v10",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1475,7 +1475,12 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
     text = str(data.get("text") or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="לא נקרא טקסט מהקלף")
-    result = await asyncio.to_thread(lookup_ocr_result, text)
+    try:
+        limit = max(1, min(int(data.get("limit") or 6), 12))
+        offset = max(0, min(int(data.get("offset") or 0), 72))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="בקשת האפשרויות אינה תקינה")
+    result = await asyncio.to_thread(lookup_ocr_result, text, limit, offset)
     match = result["match"]
     if match:
         match.update({
@@ -1491,6 +1496,9 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
         return {
             "needsConfirmation": True,
             "matchCandidates": candidates,
+            "candidateTotal": result.get("candidateTotal", len(candidates)),
+            "candidateOffset": result.get("candidateOffset", offset),
+            "hasMoreCandidates": bool(result.get("hasMoreCandidates")),
             "identificationMode": "local-ocr-candidates",
             "value": "",
             "priceStatus": "pending",

@@ -7,6 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
+  <meta name="hitim-build" content="hybrid-recognition-v10">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
@@ -407,6 +408,14 @@
       font: 700 .58em 'Heebo',sans-serif; line-height: 1.2; text-align: center;
     }
     .match-choice img { width: 38px; height: 53px; display: block; margin: 0 auto 3px; border-radius: 4px; object-fit: cover; }
+    .match-choice-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .match-tool-btn {
+      min-height: 30px; padding: 5px 9px; border-radius: 16px; cursor: pointer;
+      color: #c4b5fd; background: rgba(124,58,237,.13); border: 1px solid #4c3a83;
+      font: 800 .64em 'Heebo',sans-serif;
+    }
+    .match-tool-btn.precise { color: #5eead4; border-color: rgba(45,212,191,.48); background: rgba(13,148,136,.12); }
+    .match-tool-btn:disabled { opacity: .55; cursor: wait; }
     .editor-match-choices { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 7px; margin-top: 9px; }
     .editor-match-choices .match-choice { width: 100%; min-height: 104px; }
     .editor-match-choices .match-choice img { width: 48px; height: 67px; }
@@ -1339,6 +1348,10 @@ let quickPriceQueue=[];
 let editorPriceToken=0;
 let editorCandidateOptions=[];
 let editorCandidateResultNodeId='aiResult';
+let editorCandidateOcrText='';
+let editorCandidateHasMore=false;
+let editorCandidateSourceFile=null;
+let editorCandidateLoading=false;
 let renderFrame=0;
 let hasRenderedCards=false;
 const cardNodeCache=new Map();
@@ -1828,7 +1841,8 @@ function quickFilesSelected(input){
     quickScans.push({
       id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
       file,url:URL.createObjectURL(file),status:'queued',name:'',value:null,
-      priceStatus:'',error:'',errorMessage:'',candidates:[],saving:false,added:false,saveError:false
+      priceStatus:'',error:'',errorMessage:'',candidates:[],saving:false,added:false,saveError:false,
+      ocrText:'',hasMoreCandidates:false,loadingMore:false,refining:false
     });
   });
   renderQuickScans();
@@ -1837,9 +1851,60 @@ function quickFilesSelected(input){
 function removeQuickScan(id){
   const index=quickScans.findIndex(scan=>scan.id===id);
   if(index<0)return;
-  if(quickScans[index].saving)return;
+  if(quickScans[index].saving||quickScans[index].refining||quickScans[index].loadingMore)return;
   if(quickScans[index].url)URL.revokeObjectURL(quickScans[index].url);
   quickScans.splice(index,1);renderQuickScans();
+}
+
+function containsForeignCardScript(value){
+  return /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/u.test(String(value||''));
+}
+function cardNeedsEnglishName(card){
+  const name=card?.name||card?.pokemon||card?.printedName||'';
+  return Boolean(card?.needsEnglishName||(
+    card?.language&&card.language!=='English'&&containsForeignCardScript(name)
+  ));
+}
+function safeCardDisplayName(card,index=0){
+  const name=card?.name||card?.pokemon||card?.printedName||'';
+  if(cardNeedsEnglishName(card)){
+    const language=LANGUAGE_HE[card?.language]||'שפה זרה';
+    return `קלף פוקימון (${language})`;
+  }
+  return name||`אפשרות ${index+1}`;
+}
+function safeCardSetName(card){
+  const setName=String(card?.set||'').trim();
+  if(setName&&containsForeignCardScript(setName))return card?.setCode||'';
+  return setName;
+}
+function sanitizeForeignIdentification(card){
+  const set=safeCardSetName(card);
+  if(!cardNeedsEnglishName(card))return set===String(card?.set||'').trim()?card:{...card,set};
+  const name=safeCardDisplayName(card);
+  return {...card,name,pokemon:name,set};
+}
+function candidateWithEnglishResult(candidate,visionResult){
+  const vision=sanitizeForeignIdentification(visionResult||{});
+  const visionName=!cardNeedsEnglishName(vision)
+    ?(vision.name||vision.pokemon||''):'';
+  const name=visionName||safeCardDisplayName(candidate);
+  const visionSet=!containsForeignCardScript(vision.set)?String(vision.set||'').trim():'';
+  return {
+    ...vision,...candidate,name,pokemon:name,
+    set:visionSet||safeCardSetName(candidate),
+    printedName:candidate.printedName||vision.printedName||'',
+    needsEnglishName:!visionName,
+  };
+}
+function usableCandidates(candidates){
+  const seen=new Set();
+  return (Array.isArray(candidates)?candidates:[]).filter(candidate=>{
+    const image=String(candidate?.catalogImage||'').trim();
+    const key=String(candidate?.catalogCardId||`${candidate?.setCode||candidate?.set||''}-${candidate?.number||''}-${image}`);
+    if(!image||seen.has(key))return false;
+    seen.add(key);return true;
+  });
 }
 function renderQuickScans(){
   const list=document.getElementById('quickScanList');
@@ -1864,14 +1929,18 @@ function renderQuickScans(){
     if(scan.status==='queued')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>ממתין לזיהוי...</div>';
     else if(scan.status==='processing')body='<div class="quick-scan-status"><span class="quick-mini-ball"></span>מזהה קלף...</div>';
     else if(scan.status==='choice'){
-      const choices=(scan.candidates||[]).map((candidate,index)=>
+      const choices=usableCandidates(scan.candidates).map((candidate,index)=>
         `<button type="button" class="match-choice" onclick="confirmQuickCandidate('${scan.id}',${index})">
-          <img src="${escapeHtml(candidate.catalogImage||scan.url)}" alt="">
-          ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}<br>
-          <span>${escapeHtml(candidate.set||'')} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
+          <img src="${escapeHtml(candidate.catalogImage)}" alt="">
+          ${escapeHtml(safeCardDisplayName(candidate,index))}<br>
+          <span>${escapeHtml(safeCardSetName(candidate))} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
         </button>`).join('');
       body=`<div class="match-choice-note">מצאנו כמה אפשרויות — בחר את הקלף הזהה:</div>
-        <div class="match-choices">${choices}</div>`;
+        <div class="match-choices">${choices}</div>
+        <div class="match-choice-tools">
+          <button type="button" class="match-tool-btn precise" onclick="refineQuickScan('${scan.id}')" ${scan.refining||scan.loadingMore?'disabled':''}>${scan.refining?'⏳ מחפש מדויק...':'🔎 חיפוש מדויק יותר'}</button>
+          ${scan.hasMoreCandidates?`<button type="button" class="match-tool-btn" onclick="loadMoreQuickCandidates('${scan.id}')" ${scan.refining||scan.loadingMore?'disabled':''}>${scan.loadingMore?'⏳ טוען...':'עוד אפשרויות'}</button>`:''}
+        </div>`;
     }
     else if(scan.status==='error')body=`<div class="quick-scan-status error">${escapeHtml(scan.errorMessage||'לא הצלחנו לקרוא את הקלף — אפשר לנסות צילום נוסף')}</div>`;
     else {
@@ -1896,7 +1965,7 @@ function renderQuickScans(){
       <div class="quick-scan-info">${body}</div>
       <div class="quick-scan-actions">
         ${addButton}
-        <button class="quick-remove" onclick="removeQuickScan('${scan.id}')" aria-label="הסר" ${scan.saving?'disabled':''}>✕</button>
+        <button class="quick-remove" onclick="removeQuickScan('${scan.id}')" aria-label="הסר" ${scan.saving||scan.refining||scan.loadingMore?'disabled':''}>✕</button>
       </div>
     </div>`;
   }).join('');
@@ -1904,15 +1973,90 @@ function renderQuickScans(){
 
 function confirmQuickCandidate(id,index){
   const scan=quickScans.find(item=>item.id===id);
-  const candidate=scan?.candidates?.[index];
+  const candidate=usableCandidates(scan?.candidates)[index];
   if(!scan||!candidate)return;
+  if(cardNeedsEnglishName(candidate)){
+    confirmQuickForeignCandidate(scan,candidate);
+    return;
+  }
   scan.data={...candidate,needsConfirmation:false,matchCandidates:[],identityConfidence:'catalog'};
   scan.candidates=[];
   scan.status='done';
-  scan.name=candidate.name||candidate.pokemon||candidate.printedName||'קלף לא מזוהה';
+  scan.name=safeCardDisplayName(candidate);
   scan.priceStatus='pending';scan.value=null;
   renderQuickScans();
   queueQuickScanPrice(scan,quickSessionToken);
+}
+
+async function confirmQuickForeignCandidate(scan,candidate){
+  if(scan.refining)return;
+  scan.refining=true;renderQuickScans();
+  let verified=candidate;
+  try{
+    const vision=await requestIdentification(scan.file,null,'quick',true);
+    verified=candidateWithEnglishResult(candidate,vision);
+  }catch(error){
+    verified=sanitizeForeignIdentification(candidate);
+  }
+  if(!quickScans.includes(scan))return;
+  scan.data={...verified,needsConfirmation:false,matchCandidates:[],identityConfidence:'catalog'};
+  scan.candidates=[];scan.status='done';scan.name=safeCardDisplayName(verified);
+  scan.priceStatus='pending';scan.value=null;scan.refining=false;
+  renderQuickScans();queueQuickScanPrice(scan,quickSessionToken);
+}
+
+function applyQuickIdentificationResult(scan,data,token=quickSessionToken){
+  const candidates=usableCandidates(data?.matchCandidates);
+  if(data?.needsConfirmation&&candidates.length){
+    scan.status='choice';scan.candidates=candidates;scan.data=null;
+    scan.ocrText=data.localOcrText||scan.ocrText||'';
+    scan.hasMoreCandidates=Boolean(data.hasMoreCandidates);
+    scan.priceStatus='';scan.value=null;
+    return;
+  }
+  const safeData=sanitizeForeignIdentification(data||{});
+  scan.status='done';scan.candidates=[];scan.hasMoreCandidates=false;
+  scan.name=safeCardDisplayName(safeData);
+  scan.priceStatus='pending';scan.value=null;scan.data=safeData;
+  queueQuickScanPrice(scan,token);
+}
+
+async function loadMoreQuickCandidates(id){
+  const scan=quickScans.find(item=>item.id===id);
+  if(!scan||scan.status!=='choice'||scan.loadingMore||!scan.ocrText)return;
+  scan.loadingMore=true;renderQuickScans();
+  try{
+    const data=await requestCatalogOcrPage(scan.ocrText,scan.candidates.length,6);
+    const combined=usableCandidates([...scan.candidates,...(data.matchCandidates||[])]);
+    scan.candidates=combined;
+    scan.hasMoreCandidates=Boolean(data.hasMoreCandidates);
+  }catch(error){
+    scan.hasMoreCandidates=false;
+    toast(error?.message||'לא נמצאו אפשרויות נוספות');
+  }finally{
+    scan.loadingMore=false;renderQuickScans();
+  }
+}
+
+async function refineQuickScan(id){
+  const scan=quickScans.find(item=>item.id===id);
+  if(!scan||scan.status!=='choice'||scan.refining)return;
+  scan.refining=true;renderQuickScans();
+  try{
+    const data=await requestIdentification(scan.file,null,'quick',true);
+    if(data.needsConfirmation){
+      data.matchCandidates=usableCandidates([
+        ...(data.matchCandidates||[]),...scan.candidates
+      ]);
+      data.hasMoreCandidates=scan.hasMoreCandidates||Boolean(data.hasMoreCandidates);
+      data.localOcrText=scan.ocrText;
+    }
+    applyQuickIdentificationResult(scan,data,quickSessionToken);
+  }catch(error){
+    toast(error?.message||'החיפוש המדויק לא הושלם — האפשרויות הקיימות נשמרו');
+  }finally{
+    scan.refining=false;renderQuickScans();
+  }
 }
 
 async function prepareIdentificationImage(file){
@@ -2044,22 +2188,28 @@ async function createLocalOcrCanvas(file,focus='identity'){
   }
 }
 
+async function requestCatalogOcrPage(text,offset=0,limit=6){
+  const response=await HitimAuth.fetch('/catalog/identify-text',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({text,offset,limit}),timeoutMs:12000
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.error){
+    const error=new Error(data.detail||data.error||'הקטלוג לא זיהה את הקלף');
+    error.status=response.status;
+    throw error;
+  }
+  if(data.needsConfirmation){
+    data.matchCandidates=usableCandidates(data.matchCandidates);
+    if(!data.matchCandidates.length)throw new Error('לא נמצאו אפשרויות עם תמונה');
+  }
+  data.localOcrText=text;
+  return data;
+}
+
 async function identifyWithLocalCatalog(file){
   const run=async()=>{
     const [worker,canvas]=await Promise.all([loadLocalOcrWorker(),createLocalOcrCanvas(file)]);
-    const postText=async text=>{
-      const response=await HitimAuth.fetch('/catalog/identify-text',{
-        method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({text}),timeoutMs:12000
-      });
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok||data.error){
-        const error=new Error(data.detail||data.error||'הקטלוג לא זיהה את הקלף');
-        error.status=response.status;
-        throw error;
-      }
-      return data;
-    };
     await worker.setParameters({
       tessedit_pageseg_mode:window.Tesseract.PSM.SPARSE_TEXT,
       tessedit_char_whitelist:'',preserve_interword_spaces:'1'
@@ -2069,7 +2219,7 @@ async function identifyWithLocalCatalog(file){
     if(!firstText)throw new Error('לא נקרא טקסט מהקלף');
     let firstData=null,firstError=null;
     try{
-      firstData=await postText(firstText);
+      firstData=await requestCatalogOcrPage(firstText);
       if(!firstData.needsConfirmation)return firstData;
     }catch(error){firstError=error;}
 
@@ -2084,7 +2234,7 @@ async function identifyWithLocalCatalog(file){
       const numberResult=await worker.recognize(numberCanvas);
       const numberText=String(numberResult?.data?.text||'').trim();
       if(numberText){
-        const combinedData=await postText(`${firstText}\n${numberText}`);
+        const combinedData=await requestCatalogOcrPage(`${firstText}\n${numberText}`);
         return combinedData;
       }
     }catch(error){
@@ -2098,7 +2248,7 @@ async function identifyWithLocalCatalog(file){
   return task;
 }
 
-async function requestIdentification(frontFile,backFile=null,mode='quick'){
+async function requestIdentification(frontFile,backFile=null,mode='quick',forceAi=false){
   const [preparedFront,preparedBack]=await Promise.all([
     prepareIdentificationImage(frontFile),
     backFile?prepareIdentificationImage(backFile):Promise.resolve(null)
@@ -2106,9 +2256,14 @@ async function requestIdentification(frontFile,backFile=null,mode='quick'){
   identificationInFlight++;
   try{
     let localError=null;
-    if(mode==='quick'){
-      try{return await identifyWithLocalCatalog(preparedFront);}
-      catch(error){localError=error;console.debug('Local catalog OCR needs AI fallback',error);}
+    let localResult=null;
+    if(mode==='quick'&&!forceAi){
+      try{
+        localResult=await identifyWithLocalCatalog(preparedFront);
+        // Foreign-language catalogue rows often have no English translation.
+        // Ask vision for an English name before showing or saving them.
+        if(!cardNeedsEnglishName(localResult))return localResult;
+      }catch(error){localError=error;console.debug('Local catalog OCR needs AI fallback',error);}
     }
 
     const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
@@ -2122,8 +2277,9 @@ async function requestIdentification(frontFile,backFile=null,mode='quick'){
         error.status=response.status;
         throw error;
       }
-      return data;
+      return localResult?candidateWithEnglishResult(localResult,data):data;
     }catch(aiError){
+      if(localResult)return sanitizeForeignIdentification(localResult);
       if(mode==='deep'){
         try{return await identifyWithLocalCatalog(preparedFront);}
         catch(error){localError=error;}
@@ -2181,17 +2337,7 @@ async function processQuickQueue(){
       try{
         const data=await requestIdentification(scan.file);
         if(token!==quickSessionToken)return;
-        if(data.needsConfirmation&&Array.isArray(data.matchCandidates)&&data.matchCandidates.length){
-          scan.status='choice';scan.candidates=data.matchCandidates;scan.data=null;
-          scan.priceStatus='';scan.value=null;
-        }else{
-          scan.status='done';
-          scan.name=data.name||data.pokemon||'קלף לא מזוהה';
-          scan.priceStatus='pending';
-          scan.value=null;
-          scan.data=data;
-          queueQuickScanPrice(scan,token);
-        }
+        applyQuickIdentificationResult(scan,data,token);
       }catch(error){
         if(token!==quickSessionToken)return;
         scan.status='error';scan.error=String(error);
@@ -2269,7 +2415,7 @@ function saveComments(){
 
 function openAdd(){
   editorPriceToken++;
-  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';
+  editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';editorCandidateOcrText='';editorCandidateHasMore=false;editorCandidateSourceFile=null;editorCandidateLoading=false;
   document.getElementById('modalTitle').textContent='➕ הוספת קלף';
   ['fName','fPokemon','fNumber','fSet','fYear','fValue'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('fCondition').value='Mint';document.getElementById('fRarity').value='Common';document.getElementById('fLanguage').value='English';
@@ -2284,7 +2430,7 @@ function openAdd(){
 
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
-  editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';
+  editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';editorCandidateOcrText='';editorCandidateHasMore=false;editorCandidateSourceFile=null;editorCandidateLoading=false;
   aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',catalogLocalImage:c.catalogLocalImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||'',identityConfidence:c.identityConfidence||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
   document.getElementById('fName').value=c.name||'';document.getElementById('fPokemon').value=c.pokemon||'';
@@ -2335,6 +2481,7 @@ function showCaptureSuccess(){
 }
 
 function applyIdentificationToEditor(d){
+  d=sanitizeForeignIdentification(d||{});
   if(d.name||d.pokemon){
     document.getElementById('fName').value=d.name||d.pokemon;
     document.getElementById('fPokemon').value=d.pokemon||d.name;
@@ -2357,21 +2504,39 @@ function applyIdentificationToEditor(d){
 }
 
 function editorCandidateChoicesHtml(candidates){
-  const choices=(candidates||[]).map((candidate,index)=>
+  const choices=usableCandidates(candidates).map((candidate,index)=>
     `<button type="button" class="match-choice" onclick="confirmEditorCandidate(${index})">
-      <img src="${escapeHtml(candidate.catalogImage||'')}" alt="">
-      ${escapeHtml(candidate.name||candidate.printedName||'אפשרות '+(index+1))}<br>
-      <span>${escapeHtml(candidate.set||'')} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
+      <img src="${escapeHtml(candidate.catalogImage)}" alt="">
+      ${escapeHtml(safeCardDisplayName(candidate,index))}<br>
+      <span>${escapeHtml(safeCardSetName(candidate))} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
     </button>`).join('');
   return `<div class="match-choice-note">מצאנו כמה אפשרויות. בחר את התמונה הזהה לקלף שצילמת:</div>
-    <div class="editor-match-choices">${choices}</div>`;
+    <div class="editor-match-choices">${choices}</div>
+    <div class="match-choice-tools">
+      <button type="button" class="match-tool-btn precise" onclick="refineEditorCandidates()" ${editorCandidateLoading?'disabled':''}>${editorCandidateLoading?'⏳ מחפש מדויק...':'🔎 חיפוש מדויק יותר'}</button>
+      ${editorCandidateHasMore&&editorCandidateOcrText?`<button type="button" class="match-tool-btn" onclick="loadMoreEditorCandidates()" ${editorCandidateLoading?'disabled':''}>עוד אפשרויות</button>`:''}
+    </div>`;
 }
 
-function confirmEditorCandidate(index){
+function renderEditorCandidates(){
+  const result=document.getElementById(editorCandidateResultNodeId)||document.getElementById('aiResult');
+  result.style.display='block';result.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
+}
+
+async function confirmEditorCandidate(index){
   const candidate=editorCandidateOptions[index];
   if(!candidate)return;
+  let verified=candidate;
+  if(cardNeedsEnglishName(candidate)&&editorCandidateSourceFile){
+    editorCandidateLoading=true;renderEditorCandidates();
+    try{
+      const vision=await requestIdentification(editorCandidateSourceFile,null,'quick',true);
+      verified=candidateWithEnglishResult(candidate,vision);
+    }catch(error){verified=sanitizeForeignIdentification(candidate);}
+    editorCandidateLoading=false;
+  }
   const priceToken=++editorPriceToken;
-  const verified={...candidate,identityConfidence:'catalog',needsConfirmation:false,matchCandidates:[]};
+  verified={...verified,identityConfidence:'catalog',needsConfirmation:false,matchCandidates:[]};
   editorCandidateOptions=[];
   applyIdentificationToEditor(verified);
   document.getElementById('fValue').value='';
@@ -2381,6 +2546,49 @@ function confirmEditorCandidate(index){
   result.innerHTML=`✅ <b>${escapeHtml(verified.name||verified.pokemon)}</b> | ${escapeHtml(verified.set||'')}<br>⏳ בודק מחיר מדויק של ההדפסה...`;
   renderPreview();
   resolveEditorPrice(verified,priceToken,result.id);
+}
+
+async function loadMoreEditorCandidates(){
+  if(editorCandidateLoading||!editorCandidateOcrText||!editorCandidateHasMore)return;
+  editorCandidateLoading=true;renderEditorCandidates();
+  try{
+    const data=await requestCatalogOcrPage(editorCandidateOcrText,editorCandidateOptions.length,6);
+    editorCandidateOptions=usableCandidates([
+      ...editorCandidateOptions,...(data.matchCandidates||[])
+    ]);
+    editorCandidateHasMore=Boolean(data.hasMoreCandidates);
+  }catch(error){
+    editorCandidateHasMore=false;toast(error?.message||'לא נמצאו אפשרויות נוספות');
+  }finally{
+    editorCandidateLoading=false;renderEditorCandidates();
+  }
+}
+
+async function refineEditorCandidates(){
+  if(editorCandidateLoading||!editorCandidateSourceFile)return;
+  editorCandidateLoading=true;renderEditorCandidates();
+  const priceToken=++editorPriceToken;
+  try{
+    const data=await requestIdentification(editorCandidateSourceFile,null,'quick',true);
+    if(data.needsConfirmation&&usableCandidates(data.matchCandidates).length){
+      editorCandidateOptions=usableCandidates([
+        ...(data.matchCandidates||[]),...editorCandidateOptions
+      ]);
+      editorCandidateHasMore=editorCandidateHasMore||Boolean(data.hasMoreCandidates);
+    }else{
+      const verified=sanitizeForeignIdentification(data);
+      editorCandidateOptions=[];applyIdentificationToEditor(verified);
+      document.getElementById('fValue').value='';
+      const result=document.getElementById(editorCandidateResultNodeId)||document.getElementById('aiResult');
+      result.innerHTML=`✅ <b>${escapeHtml(safeCardDisplayName(verified))}</b> | ${escapeHtml(verified.set||'')}<br>⏳ בודק מחיר מדויק...`;
+      resolveEditorPrice(verified,priceToken,result.id);
+      return;
+    }
+  }catch(error){toast(error?.message||'החיפוש המדויק לא הושלם');}
+  finally{
+    editorCandidateLoading=false;
+    if(editorCandidateOptions.length)renderEditorCandidates();
+  }
 }
 
 async function identifyCoin(){
@@ -2394,16 +2602,19 @@ async function identifyCoin(){
     const res=document.getElementById('aiResult');res.style.display='block';
     if(aiFront)newFiles.unshift(aiFront);if(aiBack)newFiles.push(aiBack);renderPreview();
     if(d.needsConfirmation&&Array.isArray(d.matchCandidates)&&d.matchCandidates.length){
-      editorCandidateOptions=d.matchCandidates;
+      editorCandidateOptions=usableCandidates(d.matchCandidates);
       editorCandidateResultNodeId='aiResult';
+      editorCandidateOcrText=d.localOcrText||'';
+      editorCandidateHasMore=Boolean(d.hasMoreCandidates);
+      editorCandidateSourceFile=aiFront;
       res.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
     }else{
-      applyIdentificationToEditor(d);
+      const safeData=sanitizeForeignIdentification(d);applyIdentificationToEditor(safeData);
       document.getElementById('fValue').value='';
       aiMeta={...aiMeta,catalogLocalImage:'',priceSource:'',priceUpdatedAt:'',priceCheckedAt:''};
-      res.innerHTML=`✅ <b>${escapeHtml(d.name||d.pokemon)}</b> | ${escapeHtml(d.set||'')} | ${escapeHtml(d.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
+      res.innerHTML=`✅ <b>${escapeHtml(safeCardDisplayName(safeData))}</b> | ${escapeHtml(safeData.set||'')} | ${escapeHtml(safeData.rarity||'')}<br>⏳ בודק מחיר שוק ברקע...`;
       identifiedOk=true;
-      resolveEditorPrice(d,priceToken);
+      resolveEditorPrice(safeData,priceToken);
     }
   }catch(e){toast(e.message||'שגיאת זיהוי');}
   finally{
@@ -2431,13 +2642,16 @@ async function deepIdentifyCurrent(){
     }
     const d=await requestIdentification(file,null,'deep');
     if(d.needsConfirmation&&Array.isArray(d.matchCandidates)&&d.matchCandidates.length){
-      editorCandidateOptions=d.matchCandidates;
+      editorCandidateOptions=usableCandidates(d.matchCandidates);
       editorCandidateResultNodeId='deepIdentifyResult';
+      editorCandidateOcrText=d.localOcrText||'';
+      editorCandidateHasMore=Boolean(d.hasMoreCandidates);
+      editorCandidateSourceFile=file;
       resultNode.innerHTML=editorCandidateChoicesHtml(editorCandidateOptions);
     }else{
-      applyIdentificationToEditor(d);
-      resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(d.name||d.pokemon)}</b><br>⏳ מעדכן גם את מחיר השוק...`;
-      resolveEditorPrice(d,priceToken,'deepIdentifyResult');
+      const safeData=sanitizeForeignIdentification(d);applyIdentificationToEditor(safeData);
+      resultNode.innerHTML=`✅ זיהוי מעמיק הושלם: <b>${escapeHtml(safeCardDisplayName(safeData))}</b><br>⏳ מעדכן גם את מחיר השוק...`;
+      resolveEditorPrice(safeData,priceToken,'deepIdentifyResult');
     }
   }catch(error){
     resultNode.textContent=error.message||'הזיהוי המעמיק לא הושלם';
