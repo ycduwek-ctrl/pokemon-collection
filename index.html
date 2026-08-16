@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="hybrid-recognition-v10">
+  <meta name="hitim-build" content="ui-polish-v11">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
@@ -203,8 +203,6 @@
 
     /* ===== POKEMON CARD ===== */
     .poke-card {
-      --holo-strength: .28;
-      --holo-hover-strength: .48;
       background: linear-gradient(160deg, #0f1730 0%, #080d1f 100%);
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
@@ -267,7 +265,6 @@
       opacity: .46; mix-blend-mode: screen;
     }
     .holo-in-view .card-holo-effect { will-change: transform; }
-    .poke-card:active .card-holo-effect { opacity: .62; }
     .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
     .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
@@ -278,10 +275,9 @@
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { --holo-strength: .37; --holo-hover-strength: .58; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
+    .detail-carousel { --holo-strength: .46; --holo-hover-strength: .68; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
     @media (hover: hover) and (pointer: fine) {
       .card-holo-effect { opacity: 0; }
-      .poke-card:hover .card-holo-effect,
       .detail-carousel:hover .card-holo-effect {
         opacity: var(--holo-hover-strength, .52);
         will-change: transform, opacity;
@@ -795,11 +791,10 @@
     .auth-primary:disabled { opacity: .6; cursor: wait; }
     .auth-secondary { margin-top: 9px; color: #c4b5fd; border: 1px solid #47348a; background: #130b31; }
     .auth-spinner {
-      width: 48px; height: 48px; border: 2px solid #050a18;
-      border-radius: 14px; margin: 8px auto 15px;
-      background: url('/hitim-icon-193.png') center/cover no-repeat;
-      box-shadow: 0 0 20px rgba(251,191,36,.3);
-      animation: pokeWobble .95s ease-in-out infinite;
+      width: 30px; height: 30px; margin: 9px auto 17px; border-radius: 50%;
+      border: 3px solid rgba(167,139,250,.2); border-top-color: #fbbf24;
+      background: none; box-shadow: 0 0 14px rgba(251,191,36,.14);
+      animation: quickAddSpin .72s linear infinite;
     }
     .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
 
@@ -909,8 +904,6 @@
       width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%;
       color: #160929; background: #fbbf24; font-weight: 900;
     }
-    .inline-brand-icon { width: 21px; height: 21px; border-radius: 6px; object-fit: cover; vertical-align: middle; }
-
     @media (min-width: 620px) {
       .system-overlay { align-items: center; }
       .system-panel { border-radius: 22px; }
@@ -1022,7 +1015,7 @@
 </div>
 
 <div class="quick-identify-bar">
-  <button class="quick-identify-btn" onclick="openQuickIdentify()"><img class="inline-brand-icon" src="/hitim-icon-193.png" alt=""> <span>זיהוי מהיר</span> — בדיקה בלי לשמור</button>
+  <button class="quick-identify-btn" onclick="openQuickIdentify()"><span>זיהוי מהיר</span> — בדיקה בלי לשמור</button>
 </div>
 
 <div class="toolbar">
@@ -1086,7 +1079,7 @@
 
 <div class="floating-actions" aria-label="פעולות מהירות">
   <button class="floating-action scan" onclick="openQuickCamera()" aria-label="זיהוי מהיר במצלמה">
-    <img class="inline-brand-icon" src="/hitim-icon-193.png" alt=""><span>זיהוי מהיר</span>
+    <span>זיהוי מהיר</span>
   </button>
   <button class="floating-action add" onclick="openAdd()" aria-label="הוספת קלף">
     <span class="floating-action-icon">＋</span><span>הוסף קלף</span>
@@ -1194,7 +1187,7 @@
             </div>
           </div>
         </div>
-        <button class="btn btn-purple" id="identifyBtn" onclick="identifyCoin()">⚡ זיהוי מהיר</button>
+        <button class="btn btn-purple" id="identifyBtn" onclick="identifyCoin()">זיהוי מהיר</button>
         <div class="ai-result" id="aiResult"></div>
       </div>
 
@@ -1508,9 +1501,9 @@ function cardImageMarkup(card,imgs,index,commentCount){
   };
   if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
   if(imgs.length>1){
-    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)}></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
+    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)}></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
   }
-  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)}><div class="card-holo-effect" aria-hidden="true"></div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)}><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
 }
 
 function getCardNode(card,index){
@@ -1568,13 +1561,10 @@ function render(){
   add.innerHTML='<div class="add-icon">＋</div><div class="add-label">הוסף קלף</div>';
   fragment.appendChild(add);
   grid.replaceChildren(fragment);
-  holoTrackedSurfaces.forEach(surface=>{if(!surface.isConnected)untrackHoloSurface(surface);});
-  cardNodes.forEach(trackHoloSurface);
 
   const storedIds=new Set(cards.map(card=>String(card.id)));
   cardNodeCache.forEach((cached,id)=>{
     if(storedIds.has(id))return;
-    untrackHoloSurface(cached.node);
     cardNodeCache.delete(id);
   });
   hasRenderedCards=true;
@@ -1589,6 +1579,7 @@ function openDetail(id){
   const cc=comments[String(c.id)]||[];
   const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
   const detailBody=document.getElementById('detailBody');
+  untrackHoloSurface(detailBody.querySelector('.detail-carousel'));
   detailBody.innerHTML=`
     ${imgHtml}
     <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
@@ -1617,7 +1608,11 @@ function openDetail(id){
   document.getElementById('detailOverlay').classList.add('open');
   trackHoloSurface(detailBody.querySelector('.detail-carousel'));
 }
-function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
+function closeDetail(){
+  const detailBody=document.getElementById('detailBody');
+  untrackHoloSurface(detailBody.querySelector('.detail-carousel'));
+  document.getElementById('detailOverlay').classList.remove('open');
+}
 function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
@@ -1677,9 +1672,9 @@ function untrackHoloSurface(surface){
 
 function applyHoloStyles(surface,x,y){
   if(!surface?.isConnected)return;
-  const shiftX=(x-50)*.18;
-  const shiftY=(y-46)*.13;
-  const rotate=(x-50)*.035+(y-46)*.012;
+  const shiftX=(x-50)*.22;
+  const shiftY=(y-46)*.16;
+  const rotate=(x-50)*.042+(y-46)*.015;
   const key=`${shiftX.toFixed(2)}|${shiftY.toFixed(2)}|${rotate.toFixed(2)}`;
   if(surface._holoStyleKey===key)return;
   surface._holoStyleKey=key;
@@ -1743,7 +1738,7 @@ async function requestHoloMotion(){
 
 function holoSurfaceFromEvent(event){
   if(!(event.target instanceof Element))return null;
-  return event.target.closest('.poke-card,.detail-carousel');
+  return event.target.closest('.detail-carousel');
 }
 
 function handleHoloPointer(event){
@@ -2620,7 +2615,7 @@ async function identifyCoin(){
   finally{
     document.getElementById('aiLoading').classList.remove('show');
     if(identifiedOk)await showCaptureSuccess();
-    btn.textContent='⚡ זיהוי מהיר';btn.disabled=false;
+    btn.textContent='זיהוי מהיר';btn.disabled=false;
   }
 }
 
