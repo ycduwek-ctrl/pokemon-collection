@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="ui-polish-v11">
+  <meta name="hitim-build" content="ui-performance-v12">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
@@ -53,7 +53,6 @@
       background: linear-gradient(to left, #fbbf24, #fef08a, #f59e0b, #fbbf24);
       background-size: 200% auto;
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      animation: shine 3s linear infinite;
       letter-spacing: 1px;
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
     }
@@ -61,14 +60,6 @@
       width: 38px; height: 38px; flex: 0 0 38px; border-radius: 10px;
       object-fit: cover;
       box-shadow: 0 0 11px rgba(251,191,36,0.5);
-      animation: titleBall 2.2s ease-in-out infinite;
-    }
-    @keyframes shine { to { background-position: 200% center; } }
-    @keyframes titleBall {
-      0%,100% { transform: translateY(0) rotate(0); }
-      25% { transform: translateY(-2px) rotate(-12deg); }
-      55% { transform: translateY(0) rotate(10deg); }
-      75% { transform: translateY(-1px) rotate(-5deg); }
     }
     .header-stats-row {
       position: absolute; left: calc(50% + 30px); top: 50%;
@@ -207,83 +198,29 @@
       border-radius: 14px; overflow: hidden;
       border: 1px solid #1e2d5a;
       box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      transition: transform 0.15s, box-shadow 0.15s;
       min-width: 0; cursor: pointer; position: relative;
-      contain: layout paint style; isolation: isolate;
-      content-visibility: auto; contain-intrinsic-size: auto 360px;
+      contain: layout paint; isolation: isolate;
     }
-    .poke-card:active { transform: scale(0.96); }
-    .poke-card.holo { --holo-strength: .34; --holo-hover-strength: .55; border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
-    .poke-card.ultra { --holo-strength: .38; --holo-hover-strength: .62; border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
-    .poke-card.secret { --holo-strength: .42; --holo-hover-strength: .67; border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
-
-    :root {
-      --holo-shift-x: 0%;
-      --holo-shift-y: 0%;
-      --holo-rotate: 0deg;
-    }
+    .poke-card.holo { border-color: #a78bfa55; box-shadow: 0 4px 20px rgba(167,139,250,0.25), inset 0 0 20px rgba(167,139,250,0.05); }
+    .poke-card.ultra { border-color: #f59e0b66; box-shadow: 0 4px 25px rgba(245,158,11,0.3), inset 0 0 20px rgba(245,158,11,0.05); }
+    .poke-card.secret { border-color: #f43f5e66; box-shadow: 0 4px 25px rgba(244,63,94,0.3), inset 0 0 20px rgba(244,63,94,0.05); }
     .card-img-wrap { width: 100%; aspect-ratio: 5/7; position: relative; overflow: hidden; background: #050a18; contain: paint; isolation: isolate; }
-    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; transition: transform 0.3s; }
-    .poke-card:active .card-img-wrap img { transform: scale(1.03); }
-    .card-holo-effect {
-      position: absolute; inset: -22%; z-index: 2; pointer-events: none;
-      border-radius: 18%; opacity: var(--holo-strength, .28); mix-blend-mode: screen;
-      background:
-        linear-gradient(118deg,
-          transparent 0 14%,
-          rgba(59,226,255,.06) 18%,
-          rgba(86,214,255,.38) 21%,
-          rgba(255,255,255,.64) 24%,
-          rgba(255,100,221,.29) 27%,
-          transparent 31% 40%,
-          rgba(255,225,91,.09) 43%,
-          rgba(255,190,69,.34) 46%,
-          rgba(255,255,255,.52) 49%,
-          rgba(151,103,255,.30) 52%,
-          transparent 56% 66%,
-          rgba(129,140,248,.08) 69%,
-          rgba(70,226,255,.30) 72%,
-          rgba(255,255,255,.43) 75%,
-          rgba(255,99,188,.25) 78%,
-          transparent 82% 100%),
-        linear-gradient(145deg,
-          transparent 16%, rgba(255,72,205,.13) 34%, transparent 48%,
-          rgba(78,224,255,.11) 63%, transparent 80%),
-        radial-gradient(circle at 48% 45%, rgba(255,255,255,.13), transparent 42%);
-      transform: translate3d(var(--holo-shift-x), var(--holo-shift-y), 0)
-        rotate(var(--holo-rotate)) scale(1.24);
-      transform-origin: center;
-      backface-visibility: hidden;
-      transition: opacity .2s ease, transform .12s linear;
+    .card-img-wrap img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; }
+    .card-carousel-track {
+      display: flex; width: 100%; height: 100%; overflow-x: auto; direction: ltr;
+      scroll-snap-type: x mandatory; overscroll-behavior-x: contain;
+      touch-action: pan-x pan-y; -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
-    .card-holo-effect::after {
-      content: ''; position: absolute; inset: 0; border-radius: inherit;
-      background: repeating-linear-gradient(118deg,
-        transparent 0 22px,
-        rgba(255,255,255,.075) 23px 24px,
-        transparent 25px 44px);
-      opacity: .46; mix-blend-mode: screen;
-    }
-    .holo-in-view .card-holo-effect { will-change: transform; }
-    .card-carousel-track { display: flex; width: 100%; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
     .card-carousel-track::-webkit-scrollbar { display: none; }
-    .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; }
-    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; }
-    .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; }
+    .card-carousel-track .carousel-slide { flex: 0 0 100%; width: 100%; height: 100%; scroll-snap-align: start; scroll-snap-stop: always; }
+    .card-carousel-track .carousel-slide img { width: 100%; height: 100%; object-fit: cover; object-position: center; background: #050a18; display: block; user-select: none; -webkit-user-drag: none; }
+    .carousel-dots { position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%); display: flex; gap: 4px; z-index: 5; pointer-events: none; }
     .carousel-dot { width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,0.4); }
     .carousel-dot.active { background: #fbbf24; width: 14px; border-radius: 3px; }
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { --holo-strength: .46; --holo-hover-strength: .68; width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
-    @media (hover: hover) and (pointer: fine) {
-      .card-holo-effect { opacity: 0; }
-      .detail-carousel:hover .card-holo-effect {
-        opacity: var(--holo-hover-strength, .52);
-        will-change: transform, opacity;
-      }
-      .holo-in-view .card-holo-effect { will-change: auto; }
-    }
+    .detail-carousel { width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
     .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
     .detail-set { font-size: 0.85em; color: #7891c8; margin-bottom: 14px; }
@@ -300,7 +237,7 @@
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
-    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; }
+    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; pointer-events: none; }
     .rarity-common { background: rgba(55,65,81,0.85); color: #9ca3af; }
     .rarity-uncommon { background: rgba(6,78,59,0.85); color: #6ee7b7; }
     .rarity-rare { background: rgba(30,58,138,0.85); color: #93c5fd; }
@@ -308,8 +245,8 @@
     .rarity-ultra { background: rgba(120,53,15,0.85); color: #fcd34d; }
     .rarity-secret { background: rgba(136,19,55,0.85); color: #fda4af; }
 
-    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); }
-    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; }
+    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); pointer-events: none; }
+    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; pointer-events: none; }
 
     .card-body { padding: 7px 8px 5px; }
     .card-name { font-weight: 800; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e2e8f0; margin-bottom: 2px; }
@@ -334,7 +271,7 @@
     .add-label { font-size: 0.72em; color: #3d4f7a; font-weight: 700; margin-top: 6px; }
 
     /* ===== MODAL ===== */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; display: none; align-items: flex-end; backdrop-filter: blur(4px); }
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: flex-end; }
     .overlay.open { display: flex; }
     .modal { background: #080d1f; border-radius: 22px 22px 0 0; width: 100%; max-height: 92vh; overflow-y: auto; border-top: 2px solid #f59e0b55; box-shadow: 0 -10px 40px rgba(0,0,0,0.8); }
     .modal-handle { width: 36px; height: 4px; background: #1e2d5a; border-radius: 2px; margin: 12px auto 0; }
@@ -516,8 +453,7 @@
     .ai-loading {
       position: fixed; inset: 0; z-index: 1000;
       display: none; align-items: center; justify-content: center;
-      background: rgba(5,10,24,0.88);
-      backdrop-filter: blur(8px);
+      background: rgba(5,10,24,0.95);
     }
     .ai-loading.show { display: flex; }
     .ai-loading-box { text-align: center; padding: 28px; }
@@ -745,7 +681,6 @@
     @media (prefers-reduced-motion: reduce) {
       .header-title-icon, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
-      .card-holo-effect { transition: none; transform: scale(1.24); }
     }
 
     /* ===== HITIM ACCOUNT & LOCAL APP ===== */
@@ -764,14 +699,12 @@
       text-align: center; background: rgba(8,13,31,.94);
       border: 1px solid rgba(167,139,250,.36);
       box-shadow: 0 25px 80px rgba(0,0,0,.62), inset 0 1px rgba(255,255,255,.07);
-      backdrop-filter: blur(18px);
     }
     .auth-ball {
       width: 78px; height: 78px; margin: 0 auto 11px; border-radius: 22px;
       border: 3px solid #050a18; position: relative;
       background: url('/hitim-icon-193.png') center/cover no-repeat;
       box-shadow: 0 0 32px rgba(251,191,36,.36);
-      animation: titleBall 2.2s ease-in-out infinite;
     }
     .auth-ball::after {
       display: none;
@@ -806,7 +739,7 @@
       width: 54px; height: 54px; padding: 0; border-radius: 50%;
       border: 1px solid rgba(251,191,36,.42); background: rgba(5,10,24,.72);
       color: #f8fafc; cursor: pointer; display: grid; place-content: center; gap: 4px;
-      backdrop-filter: blur(9px); box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.08);
+      box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.08);
     }
     .header-menu-toggle span {
       display: block; width: 23px; height: 3px; border-radius: 3px; background: currentColor;
@@ -1501,9 +1434,37 @@ function cardImageMarkup(card,imgs,index,commentCount){
   };
   if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
   if(imgs.length>1){
-    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)" onclick="event.stopPropagation()">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)}></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
+    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)} draggable="false"></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
   }
-  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)}><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)} draggable="false"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+}
+
+function bindGalleryCarousel(track,cardId){
+  if(!track)return;
+  let pointerActive=false,startX=0,startY=0,startScroll=0,didSwipe=false;
+  track.addEventListener('pointerdown',event=>{
+    pointerActive=true;didSwipe=false;
+    startX=event.clientX;startY=event.clientY;startScroll=track.scrollLeft;
+  },{passive:true});
+  track.addEventListener('pointermove',event=>{
+    if(!pointerActive)return;
+    if(Math.abs(event.clientX-startX)>9||Math.abs(event.clientY-startY)>9||Math.abs(track.scrollLeft-startScroll)>5){
+      didSwipe=true;
+    }
+  },{passive:true});
+  track.addEventListener('scroll',()=>{
+    if(pointerActive&&Math.abs(track.scrollLeft-startScroll)>5)didSwipe=true;
+  },{passive:true});
+  const endPointer=()=>{pointerActive=false;};
+  track.addEventListener('pointerup',endPointer,{passive:true});
+  track.addEventListener('pointercancel',endPointer,{passive:true});
+  track.addEventListener('dragstart',event=>event.preventDefault());
+  track.addEventListener('click',event=>{
+    event.stopPropagation();
+    const shouldOpen=!didSwipe;
+    didSwipe=false;
+    if(shouldOpen)openDetail(cardId);
+  });
 }
 
 function getCardNode(card,index){
@@ -1527,6 +1488,7 @@ function getCardNode(card,index){
         <div class="card-name">${escapeHtml(card.name||card.pokemon||'—')}</div>
         <div class="card-row"><span class="card-value">${card.value?'$'+escapeHtml(card.value):''}</span></div>
       </div>`;
+    bindGalleryCarousel(cached.node.querySelector('.card-carousel-track'),id);
     cached.signature=signature;
   }
   if(isNew&&hasRenderedCards&&!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
@@ -1574,12 +1536,11 @@ function openDetail(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
   const imgs=cardImageUrls(c);
   const imgHtml=imgs.length
-    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" decoding="async" alt="${escapeHtml(c.name||c.pokemon||'קלף פוקימון')}"></div>`).join('')}</div><div class="card-holo-effect" aria-hidden="true"></div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
+    ?`<div class="detail-carousel"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map(u=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" decoding="async" draggable="false" alt="${escapeHtml(c.name||c.pokemon||'קלף פוקימון')}"></div>`).join('')}</div>${imgs.length>1?`<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div>`:''}</div>`
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
   const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
   const detailBody=document.getElementById('detailBody');
-  untrackHoloSurface(detailBody.querySelector('.detail-carousel'));
   detailBody.innerHTML=`
     ${imgHtml}
     <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
@@ -1606,175 +1567,18 @@ function openDetail(id){
   detailBody.querySelector('[data-detail-action="price"]').onclick=event=>refreshSavedPrice(c.id,event.currentTarget);
   detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
   document.getElementById('detailOverlay').classList.add('open');
-  trackHoloSurface(detailBody.querySelector('.detail-carousel'));
 }
-function closeDetail(){
-  const detailBody=document.getElementById('detailBody');
-  untrackHoloSurface(detailBody.querySelector('.detail-carousel'));
-  document.getElementById('detailOverlay').classList.remove('open');
-}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
 function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
   if(track._dotsFrame)return;
   track._dotsFrame=requestAnimationFrame(()=>{
     track._dotsFrame=0;
-    const idx=Math.round(track.scrollLeft/track.offsetWidth);
+    const idx=Math.round(Math.abs(track.scrollLeft)/Math.max(1,track.clientWidth));
     const dots=track.parentElement.querySelectorAll('.carousel-dot');
     dots.forEach((dot,i)=>dot.classList.toggle('active',i===idx));
   });
-}
-
-let holoFrame=0;
-let holoPendingPosition=null;
-let holoOrientationBase=null;
-let holoMotionAttached=false;
-let holoPermissionAsked=false;
-let holoMotionPosition={x:50,y:46};
-let holoLastPosition={x:50,y:46};
-const holoVisibleSurfaces=new Set();
-const holoTrackedSurfaces=new Set();
-const holoObserver=typeof IntersectionObserver==='undefined'?null:new IntersectionObserver(entries=>{
-  entries.forEach(entry=>{
-    const surface=entry.target;
-    if(entry.isIntersecting){
-      holoVisibleSurfaces.add(surface);
-      surface.classList.add('holo-in-view');
-      applyHoloStyles(surface,holoLastPosition.x,holoLastPosition.y);
-    }else{
-      holoVisibleSurfaces.delete(surface);
-      surface.classList.remove('holo-in-view');
-    }
-  });
-},{rootMargin:'80px 0px',threshold:0});
-
-function clampHolo(value,min,max){return Math.max(min,Math.min(max,value));}
-function isDesktopHolo(){return window.matchMedia('(hover: hover) and (pointer: fine)').matches;}
-
-function trackHoloSurface(surface){
-  if(!surface)return;
-  if(!surface.querySelector('.card-holo-effect')){untrackHoloSurface(surface);return;}
-  if(holoTrackedSurfaces.has(surface))return;
-  holoTrackedSurfaces.add(surface);
-  if(holoObserver){holoObserver.observe(surface);return;}
-  holoVisibleSurfaces.add(surface);
-  surface.classList.add('holo-in-view');
-  applyHoloStyles(surface,holoLastPosition.x,holoLastPosition.y);
-}
-
-function untrackHoloSurface(surface){
-  if(!surface||!holoTrackedSurfaces.has(surface))return;
-  holoObserver?.unobserve(surface);
-  holoTrackedSurfaces.delete(surface);
-  holoVisibleSurfaces.delete(surface);
-  surface.classList.remove('holo-in-view');
-}
-
-function applyHoloStyles(surface,x,y){
-  if(!surface?.isConnected)return;
-  const shiftX=(x-50)*.22;
-  const shiftY=(y-46)*.16;
-  const rotate=(x-50)*.042+(y-46)*.015;
-  const key=`${shiftX.toFixed(2)}|${shiftY.toFixed(2)}|${rotate.toFixed(2)}`;
-  if(surface._holoStyleKey===key)return;
-  surface._holoStyleKey=key;
-  surface.style.setProperty('--holo-shift-x',`${shiftX.toFixed(2)}%`);
-  surface.style.setProperty('--holo-shift-y',`${shiftY.toFixed(2)}%`);
-  surface.style.setProperty('--holo-rotate',`${rotate.toFixed(2)}deg`);
-}
-
-function applyHoloPosition(x,y,scope=null){
-  holoPendingPosition={
-    x:clampHolo(Number(x)||50,8,92),
-    y:clampHolo(Number(y)||46,8,92),
-    scope
-  };
-  if(holoFrame)return;
-  holoFrame=requestAnimationFrame(()=>{
-    holoFrame=0;
-    const next=holoPendingPosition;
-    if(!next)return;
-    holoPendingPosition=null;
-    holoLastPosition={x:next.x,y:next.y};
-    const targets=next.scope?[next.scope]:Array.from(holoVisibleSurfaces);
-    targets.forEach(surface=>applyHoloStyles(surface,next.x,next.y));
-  });
-}
-
-function handleHoloOrientation(event){
-  if(isDesktopHolo()||document.visibilityState!=='visible')return;
-  if(event.gamma==null||event.beta==null)return;
-  if(!holoOrientationBase)holoOrientationBase={gamma:event.gamma,beta:event.beta};
-  let dx=event.gamma-holoOrientationBase.gamma;
-  let dy=event.beta-holoOrientationBase.beta;
-  const angle=Number(window.screen?.orientation?.angle??window.orientation??0);
-  if(Math.abs(angle)===90){const swap=dx;dx=dy;dy=-swap;}
-  const targetX=clampHolo(50+dx*1.7,8,92);
-  const targetY=clampHolo(46+dy*1.15,8,92);
-  holoMotionPosition.x+=(targetX-holoMotionPosition.x)*.24;
-  holoMotionPosition.y+=(targetY-holoMotionPosition.y)*.24;
-  applyHoloPosition(holoMotionPosition.x,holoMotionPosition.y);
-}
-
-function attachHoloMotion(){
-  if(holoMotionAttached)return;
-  holoMotionAttached=true;
-  window.addEventListener('deviceorientation',handleHoloOrientation,{passive:true});
-}
-
-async function requestHoloMotion(){
-  if(holoPermissionAsked)return;
-  holoPermissionAsked=true;
-  try{
-    if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){
-      if(await DeviceOrientationEvent.requestPermission()==='granted')attachHoloMotion();
-    }else{
-      attachHoloMotion();
-    }
-  }catch(error){
-    console.debug('Motion permission unavailable',error);
-  }
-}
-
-function holoSurfaceFromEvent(event){
-  if(!(event.target instanceof Element))return null;
-  return event.target.closest('.detail-carousel');
-}
-
-function handleHoloPointer(event){
-  const surface=holoSurfaceFromEvent(event);
-  if(!surface)return;
-  const rect=surface.getBoundingClientRect();
-  if(!rect.width||!rect.height)return;
-  applyHoloPosition(
-    ((event.clientX-rect.left)/rect.width)*100,
-    ((event.clientY-rect.top)/rect.height)*100,
-    isDesktopHolo()?surface:null
-  );
-}
-
-function initHoloEffect(){
-  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
-  document.addEventListener('pointerdown',handleHoloPointer,{passive:true});
-  if(isDesktopHolo()){
-    document.addEventListener('pointermove',handleHoloPointer,{passive:true});
-    return;
-  }
-  if(typeof DeviceOrientationEvent==='undefined')return;
-  if(typeof DeviceOrientationEvent.requestPermission==='function'){
-    const askForMotion=event=>{
-      if(!holoSurfaceFromEvent(event))return;
-      requestHoloMotion();
-      document.removeEventListener('pointerup',askForMotion);
-    };
-    document.addEventListener('pointerup',askForMotion,{passive:true});
-  }else{
-    attachHoloMotion();
-  }
-  window.addEventListener('orientationchange',()=>{
-    holoOrientationBase=null;
-    holoMotionPosition={x:50,y:46};
-  },{passive:true});
 }
 
 function escapeHtml(value){
@@ -3162,7 +2966,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
   field.addEventListener('input',clearExactMatch);
   field.addEventListener('change',clearExactMatch);
 });
-initCols();initPanel();initHoloEffect();initPwa();
+initCols();initPanel();initPwa();
 HitimAuth.init(async access=>{
   currentAccess=access;
   document.getElementById('adminMenuBtn').hidden=access.role!=='admin';

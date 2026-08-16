@@ -10,21 +10,34 @@ class UiShellTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = (ROOT / "index.html").read_text(encoding="utf-8")
 
-    def test_gallery_cards_do_not_render_holo_layers(self):
+    def test_holo_and_motion_code_are_completely_removed(self):
+        self.assertNotIn("card-holo-effect", self.html)
+        self.assertNotIn("deviceorientation", self.html)
+        self.assertNotIn("DeviceOrientationEvent", self.html)
+        self.assertNotIn("initHoloEffect", self.html)
+
+    def test_gallery_image_tap_opens_card_but_swipe_does_not(self):
+        self.assertIn("function bindGalleryCarousel", self.html)
+        self.assertIn("if(shouldOpen)openDetail(cardId)", self.html)
+        self.assertIn("didSwipe=true", self.html)
         gallery_markup = self.html.split(
             "function cardImageMarkup", 1
-        )[1].split("function getCardNode", 1)[0]
-        self.assertNotIn("card-holo-effect", gallery_markup)
+        )[1].split("function bindGalleryCarousel", 1)[0]
+        self.assertNotIn('onclick="event.stopPropagation()"', gallery_markup)
 
-    def test_holo_effect_is_limited_to_detail_view_and_ignores_touches(self):
-        self.assertIn(
-            "event.target.closest('.detail-carousel')", self.html
-        )
-        self.assertIn("pointer-events: none", self.html)
-        detail_markup = self.html.split("function openDetail", 1)[1].split(
-            "function closeDetail", 1
+    def test_carousel_is_optimized_for_stable_horizontal_swiping(self):
+        carousel_css = self.html.split(".card-carousel-track {", 1)[1].split(
+            "}", 1
         )[0]
-        self.assertIn("card-holo-effect", detail_markup)
+        self.assertIn("direction: ltr", carousel_css)
+        self.assertIn("touch-action: pan-x pan-y", carousel_css)
+        self.assertIn("overscroll-behavior-x: contain", carousel_css)
+        self.assertIn("scroll-snap-stop: always", self.html)
+
+    def test_expensive_mobile_painting_features_are_not_used(self):
+        self.assertNotIn("backdrop-filter", self.html)
+        self.assertNotIn("content-visibility", self.html)
+        self.assertNotIn(".poke-card:active", self.html)
 
     def test_auth_spinner_does_not_repeat_the_brand_icon(self):
         spinner_css = self.html.split(".auth-spinner {", 1)[1].split("}", 1)[0]
