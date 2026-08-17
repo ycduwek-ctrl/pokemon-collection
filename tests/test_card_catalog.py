@@ -156,6 +156,26 @@ class CardCatalogTests(unittest.TestCase):
         self.assertEqual(result["match"]["language"], "Japanese")
         self.assertTrue(result["match"]["needsEnglishName"])
 
+    def test_manual_name_search_keeps_the_full_variant_name(self):
+        result = card_catalog.search_catalog("Pikachu V", limit=12)
+        self.assertTrue(result["candidates"])
+        self.assertTrue(all(
+            candidate["name"] == "Pikachu V"
+            for candidate in result["candidates"]
+        ))
+        self.assertTrue(all(candidate["catalogImage"] for candidate in result["candidates"]))
+
+    def test_manual_search_accepts_name_and_number_together(self):
+        result = card_catalog.search_catalog("Pikachu V", "043/185")
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertEqual(result["candidates"][0]["catalogCardId"], "swsh4-43")
+        self.assertEqual(result["candidates"][0]["name"], "Pikachu V")
+
+    def test_manual_search_accepts_number_without_name(self):
+        result = card_catalog.search_catalog(number="043/185")
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertEqual(result["candidates"][0]["catalogCardId"], "swsh4-43")
+
 
 if __name__ == "__main__":
     unittest.main()

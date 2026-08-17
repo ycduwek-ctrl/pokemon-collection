@@ -288,6 +288,108 @@ def _image_url(value: object) -> str:
     return image_url
 
 
+def search_catalog(
+    name: object = "", number: object = "", limit: int = 6, offset: int = 0
+) -> dict:
+    """Search English catalogue printings without applying OCR heuristics."""
+    name_norm = normalize_text(name)
+    number_text = str(number or "").strip()
+    number_parts = number_text.split("/", 1)
+    local_id = normalize_number(number_parts[0])
+    official_count = normalize_number(number_parts[1]) if len(number_parts) == 2 else ""
+    page_limit = max(1, min(int(limit), 12))
+    page_offset = max(0, min(int(offset), 120))
+    if not name_norm and not local_id:
+        return {"candidates": [], "candidateTotal": 0, "candidateOffset": 0, "hasMoreCandidates": False}
+
+    base_conditions = ["c.language = 'en'", "TRIM(c.image_url) <> ''"]
+    base_parameters: list[object] = []
+    if local_id:
+        base_conditions.append("c.local_id_norm = ?")
+        base_parameters.append(local_id)
+    if official_count:
+        if official_count.isdigit():
+            base_conditions.append("CAST(s.official_count AS INTEGER) = ?")
+            base_parameters.append(int(official_count))
+        else:
+            base_conditions.append("s.official_count = ?")
+            base_parameters.append(official_count)
+
+    try:
+        with _connection() as connection:
+            name_values: list[str] = []
+            if name_norm:
+                exact = connection.execute(
+                    f"""
+                    SELECT 1 FROM cards c
+                    LEFT JOIN sets s ON s.language = c.language AND s.set_id = c.set_id
+                    WHERE {' AND '.join(base_conditions)} AND c.name_norm = ? LIMIT 1
+                    """,
+                    [*base_parameters, name_norm],
+                ).fetchone()
+                if exact:
+                    name_values = [name_norm]
+                else:
+                    prefix_rows = connection.execute(
+                        f"""
+                        SELECT DISTINCT c.name_norm FROM cards c
+                        LEFT JOIN sets s ON s.language = c.language AND s.set_id = c.set_id
+                        WHERE {' AND '.join(base_conditions)} AND c.name_norm LIKE ?
+                        ORDER BY LENGTH(c.name_norm), c.name_norm LIMIT 8
+                        """,
+                        [*base_parameters, f"{name_norm}%"],
+                    ).fetchall()
+                    name_values = [str(row["name_norm"]) for row in prefix_rows]
+                    if not name_values and len(name_norm) >= 4:
+                        name_values = [
+                            candidate_name for language, candidate_name, _printed, _count, score
+                            in _find_ocr_names(str(name or ""))
+                            if language == "en" and score >= .82
+                        ][:4]
+                if not name_values:
+                    return {"candidates": [], "candidateTotal": 0, "candidateOffset": page_offset, "hasMoreCandidates": False}
+                placeholders = ",".join("?" for _ in name_values)
+                base_conditions.append(f"c.name_norm IN ({placeholders})")
+                base_parameters.extend(name_values)
+
+            where = " AND ".join(base_conditions)
+            total = int(connection.execute(
+                f"""
+                SELECT COUNT(*) FROM cards c
+                LEFT JOIN sets s ON s.language = c.language AND s.set_id = c.set_id
+                WHERE {where}
+                """,
+                base_parameters,
+            ).fetchone()[0])
+            rows = list(connection.execute(
+                f"""
+                SELECT c.language, c.card_id, c.set_id, c.local_id,
+                       c.printed_name, c.image_url, s.name AS set_name,
+                       s.official_count
+                  FROM cards c
+                  LEFT JOIN sets s ON s.language = c.language AND s.set_id = c.set_id
+                 WHERE {where}
+                 ORDER BY CASE WHEN c.name_norm = ? THEN 0 ELSE 1 END,
+                          c.set_id DESC, c.local_id_norm
+                 LIMIT ? OFFSET ?
+                """,
+                [*base_parameters, name_norm, page_limit, page_offset],
+            ))
+            candidates = [
+                _ocr_candidate_payload(connection, row, row, 100.0)
+                for row in rows
+            ]
+    except (FileNotFoundError, OSError, sqlite3.Error, ValueError):
+        return {"candidates": [], "candidateTotal": 0, "candidateOffset": page_offset, "hasMoreCandidates": False}
+
+    return {
+        "candidates": candidates,
+        "candidateTotal": total,
+        "candidateOffset": page_offset,
+        "hasMoreCandidates": page_offset + len(candidates) < total,
+    }
+
+
 def _trigrams(value: str) -> set[str]:
     if len(value) < 3:
         return {value} if value else set()

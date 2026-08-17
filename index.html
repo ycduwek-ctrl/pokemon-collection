@@ -7,10 +7,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="bottom-navigation-v13">
+  <meta name="hitim-build" content="catalog-search-v14">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
+  <link rel="icon" href="/hitim-icon-193.png" type="image/png">
   <link rel="apple-touch-icon" href="/hitim-icon-193.png">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
@@ -49,16 +49,14 @@
       text-align: center;
     }
     .header-title-text {
-      background: linear-gradient(to left, #fbbf24, #fef08a, #f59e0b, #fbbf24);
-      background-size: 200% auto;
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      letter-spacing: 1px;
-      filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
+      color: #fff; letter-spacing: 1px;
+      background: none; -webkit-text-fill-color: #fff;
+      filter: none; text-shadow: none;
     }
     .header-title-icon {
       width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
       object-fit: cover;
-      box-shadow: 0 0 11px rgba(251,191,36,0.5);
+      box-shadow: 0 0 0 2px rgba(91,55,232,.62), 0 0 19px rgba(124,58,237,.72);
     }
     .header-stats-row {
       position: static; transform: none;
@@ -70,15 +68,14 @@
       width: 52px; height: 52px; flex: 0 0 52px;
       position: relative;
       display: flex; align-items: center; justify-content: center;
-      border: 2px solid rgba(251,191,36,0.78); border-radius: 50%;
+      border: 3px solid #0b1230; border-radius: 50%;
       background:
         radial-gradient(circle at 35% 28%, rgba(255,255,255,0.16), transparent 28%),
-        linear-gradient(145deg, rgba(111,48,208,0.95), rgba(35,18,91,0.98));
+        linear-gradient(150deg,#7c3aed 8%,#5b37e8 52%,#fbbf24 100%);
       box-shadow:
-        0 0 0 3px #2a0f66,
-        0 0 16px rgba(124,58,237,0.42),
-        inset 0 0 0 3px rgba(5,10,24,0.24),
-        inset 0 -8px 16px rgba(5,10,24,0.25);
+        0 7px 20px rgba(91,55,232,.42),
+        0 0 0 1px rgba(251,191,36,.34),
+        inset 0 1px rgba(255,255,255,.14);
       text-align: center;
     }
     .stats-num {
@@ -116,8 +113,6 @@
       .header-title {
         font-size: 1.78em;
         white-space: nowrap;
-        filter: drop-shadow(0 0 10px rgba(251,191,36,0.5));
-        text-shadow: 0 2px 14px #12063a;
       }
       .header-title-icon { width: 40px; height: 40px; flex-basis: 40px; }
       .header-stats-row { gap: 6px; }
@@ -155,23 +150,47 @@
     .panel-close { background: #0f1730; border: none; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 1em; color: #7891c8; }
     .panel-section { padding: 14px 16px; border-bottom: 1px solid #1a2040; }
     .panel-section h4 { font-size: 0.75em; font-weight: 700; color: #3d4f7a; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
-    .p-chips { display: flex; flex-wrap: wrap; gap: 6px; }
-    .p-chip { padding: 5px 12px; border-radius: 16px; border: 1px solid #1e2d5a; background: #0f1730; font-size: 0.78em; font-weight: 700; cursor: pointer; font-family: inherit; color: #7891c8; transition: all 0.15s; }
-    .p-chip.active { background: rgba(245,158,11,0.15); color: #f59e0b; border-color: rgba(245,158,11,0.4); }
-    .range-row { display: flex; gap: 8px; align-items: center; }
-    .range-row input { flex: 1; padding: 8px 10px; border: 1px solid #1e2d5a; border-radius: 8px; font-size: 0.85em; font-family: inherit; text-align: center; background: #0f1730; color: #e2e8f0; }
-    .range-row input:focus { outline: none; border-color: #f59e0b; }
-    .range-sep { color: #3d4f7a; }
     .sort-select {
       width: 100%; min-height: 44px; padding: 9px 12px; border-radius: 10px;
       border: 1px solid #31256d; background: #0f1730; color: #e2e8f0;
       font: 800 .84em 'Heebo', sans-serif; cursor: pointer; outline: none;
     }
     .sort-select:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
-    .reset-btn { margin: 14px 16px; width: calc(100% - 32px); padding: 11px; border: 1px solid #1e2d5a; border-radius: 10px; background: #0f1730; font-family: inherit; font-size: 0.88em; font-weight: 700; cursor: pointer; color: #7891c8; }
-    .panel-search .search-box { min-height: 48px; border-radius: 14px; }
-    .panel-search .search-box input { font-size: .93em; }
-    .panel-cols { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .catalog-search-note { color: #7891c8; font-size: .73em; line-height: 1.55; margin: -2px 0 10px; }
+    .catalog-search-fields { display: grid; grid-template-columns: minmax(0,1.35fr) minmax(98px,.65fr); gap: 8px; }
+    .catalog-search-input {
+      width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; border-radius: 11px;
+      border: 1px solid #293765; background: #0f1730; color: #f8fafc;
+      font: 700 .82em 'Heebo',sans-serif; outline: none;
+    }
+    .catalog-search-input:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
+    .catalog-search-input::placeholder { color: #52658f; }
+    .catalog-search-submit {
+      width: 100%; min-height: 45px; margin-top: 9px; border: 0; border-radius: 13px;
+      color: #fff; background: linear-gradient(135deg,#7c3aed,#5b37e8 62%,#f59e0b 130%);
+      box-shadow: 0 7px 20px rgba(91,55,232,.25); font: 900 .86em 'Heebo',sans-serif; cursor: pointer;
+    }
+    .catalog-search-submit:disabled { opacity: .58; cursor: wait; }
+    .catalog-search-status { min-height: 22px; padding-top: 9px; color: #94a3b8; font-size: .72em; font-weight: 700; }
+    .catalog-search-results { display: grid; gap: 8px; margin-top: 3px; }
+    .catalog-search-result {
+      width: 100%; display: grid; grid-template-columns: 58px minmax(0,1fr) 28px; gap: 10px;
+      align-items: center; padding: 7px; border: 1px solid #33436f; border-radius: 12px;
+      color: #f8fafc; background: #0f1730; text-align: right; font-family: inherit; cursor: pointer;
+    }
+    .catalog-search-result:active { border-color: #fbbf24; background: #141c3c; }
+    .catalog-search-result img { width: 58px; height: 79px; border-radius: 7px; object-fit: cover; background: #050a18; }
+    .catalog-result-copy { min-width: 0; }
+    .catalog-result-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: .84em; font-weight: 900; }
+    .catalog-result-meta { margin-top: 2px; color: #94a3b8; font-size: .66em; line-height: 1.35; }
+    .catalog-result-price { margin-top: 5px; color: #fbbf24; font-size: .82em; font-weight: 900; direction: ltr; text-align: right; }
+    .catalog-result-select { width: 23px; height: 23px; display: grid; place-items: center; border: 2px solid #7891c8; border-radius: 50%; color: transparent; }
+    .catalog-search-result:active .catalog-result-select { border-color: #fbbf24; color: #fbbf24; }
+    .catalog-search-more {
+      width: 100%; min-height: 40px; margin-top: 2px; border: 1px solid #33436f; border-radius: 11px;
+      color: #c4b5fd; background: rgba(124,58,237,.1); font: 800 .78em 'Heebo',sans-serif; cursor: pointer;
+    }
+    @media (max-width: 360px) { .catalog-search-fields { grid-template-columns: 1fr; } }
 
     /* ===== GRID ===== */
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; gap: 10px; padding: 12px; }
@@ -848,34 +867,21 @@
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="filter-panel" id="filterPanel">
   <div class="panel-head">
-    <h3>🔎 חיפוש וסינון</h3>
+    <h3>🔎 חיפוש קלף</h3>
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
-  <div class="panel-section panel-search">
-    <div class="search-box">
-      <span style="color:#7891c8;font-size:1em" aria-hidden="true">🔍</span>
-      <input type="search" id="searchInput" placeholder="חיפוש קלף..." oninput="scheduleRender()" autocomplete="off">
-    </div>
-  </div>
   <div class="panel-section">
-    <h4>⭐ נדירות</h4>
-    <div class="p-chips" id="rarityChips"></div>
-  </div>
-  <div class="panel-section">
-    <h4>🏷️ מצב</h4>
-    <div class="p-chips" id="condChips"></div>
-  </div>
-  <div class="panel-section">
-    <h4>🌐 שפה</h4>
-    <div class="p-chips" id="langChips"></div>
-  </div>
-  <div class="panel-section">
-    <h4>💰 טווח ערך ($)</h4>
-    <div class="range-row">
-      <input type="number" id="valueMin" placeholder="מינ'" oninput="updateFilters()">
-      <span class="range-sep">—</span>
-      <input type="number" id="valueMax" placeholder="מקס'" oninput="updateFilters()">
-    </div>
+    <h4>מציאה בקטלוג המלא</h4>
+    <div class="catalog-search-note">אפשר לחפש לפי שם באנגלית, מספר קלף, או שניהם יחד לקבלת תוצאה מדויקת יותר. החיפוש כולל גם קלפים שעדיין אינם בגלריה.</div>
+    <form onsubmit="event.preventDefault();searchCatalogCards(false)">
+      <div class="catalog-search-fields">
+        <input class="catalog-search-input" type="search" id="catalogSearchName" placeholder="שם, לדוגמה Pikachu V" autocomplete="off" autocapitalize="words">
+        <input class="catalog-search-input" type="search" id="catalogSearchNumber" placeholder="מספר 043/185" autocomplete="off" dir="ltr" inputmode="text">
+      </div>
+      <button class="catalog-search-submit" id="catalogSearchBtn" type="submit">חפש בקטלוג</button>
+    </form>
+    <div class="catalog-search-status" id="catalogSearchStatus" role="status"></div>
+    <div class="catalog-search-results" id="catalogSearchResults"></div>
   </div>
   <div class="panel-section">
     <h4>↕️ סידור לפי מחיר</h4>
@@ -884,23 +890,6 @@
       <option value="price-asc">מהזול ליקר — הזול ביותר למעלה</option>
     </select>
   </div>
-  <div class="panel-section">
-    <h4>📅 טווח שנים</h4>
-    <div class="range-row">
-      <input type="number" id="yearMin" placeholder="מ-" oninput="updateFilters()">
-      <span class="range-sep">—</span>
-      <input type="number" id="yearMax" placeholder="עד" oninput="updateFilters()">
-    </div>
-  </div>
-  <div class="panel-section panel-cols">
-    <h4 style="margin:0">▦ מספר קלפים בשורה</h4>
-    <div class="cols-control">
-      <button class="cols-btn" onclick="changeCols(-1)" aria-label="פחות עמודות">−</button>
-      <span class="cols-num" id="colsNum">3</span>
-      <button class="cols-btn" onclick="changeCols(1)" aria-label="יותר עמודות">+</button>
-    </div>
-  </div>
-  <button class="reset-btn" onclick="resetFilters()">🔄 נקה סינון</button>
 </div>
 
 <div class="system-overlay" id="installOverlay" onclick="systemOverlayClick(event,'installOverlay')">
@@ -1112,25 +1101,16 @@
       <button class="system-close" onclick="closeSystemPanel('settingsOverlay')">✕</button>
     </div>
     <div class="system-body">
-      <div class="system-note">
-        מחובר כ־<span id="settingsEmail" dir="ltr"></span><br>
-        <span class="privacy-local">הקלפים, התמונות וההערות נשמרים רק במכשיר הזה.</span>
-      </div>
+      <button class="system-action primary" id="installBtn" onclick="installHitim()">📲 התקן את Hitim בטלפון</button>
+      <button class="system-action danger" onclick="HitimAuth.signOut()">↪ יציאה מהאפליקציה</button>
+
+      <div class="system-note" style="margin-top:14px"><span class="privacy-local">הקלפים, התמונות וההערות נשמרים רק במכשיר הזה.</span></div>
       <div class="storage-meter" aria-hidden="true"><span id="storageMeterFill"></span></div>
       <div class="storage-label" id="storageLabel">בודק נפח אחסון...</div>
 
-      <button class="system-action primary" id="installBtn" hidden onclick="installHitim()">📲 התקן את Hitim בטלפון</button>
       <button class="system-action" onclick="HitimDB.downloadBackup()">⬇️ הורד גיבוי של האוסף</button>
       <button class="system-action" onclick="document.getElementById('backupImportInput').click()">⬆️ ייבא גיבוי למכשיר</button>
-      <button class="system-action" onclick="shareHitimInvite()">🔗 שתף קישור כניסה ל-Hitim</button>
       <input id="backupImportInput" type="file" accept="application/json,.json" hidden onchange="importHitimBackup(this)">
-
-      <div id="legacyImportSection" hidden>
-        <div class="system-note" style="margin-top:14px">ייבוא חד־פעמי של האוסף הישן מ-Google Sheets ו-Cloudinary. המקור הישן לא יימחק.</div>
-        <button class="system-action" id="legacyImportBtn" onclick="importLegacyGallery(this)">🧳 ייבא את האוסף הישן למכשיר</button>
-        <div class="storage-label" id="legacyImportStatus"></div>
-      </div>
-      <button class="system-action danger" onclick="HitimAuth.signOut()">↪ יציאה מהחשבון</button>
     </div>
   </div>
 </div>
@@ -1196,6 +1176,11 @@ let editorCandidateOcrText='';
 let editorCandidateHasMore=false;
 let editorCandidateSourceFile=null;
 let editorCandidateLoading=false;
+let catalogSearchResults=[];
+let catalogSearchQuery='';
+let catalogSearchHasMore=false;
+let catalogSearchLoading=false;
+let catalogSearchToken=0;
 let renderFrame=0;
 let hasRenderedCards=false;
 const cardNodeCache=new Map();
@@ -1210,19 +1195,9 @@ const LANGUAGES = ['English','Japanese','Chinese','Korean','French','German','Sp
 const RARITY_HE = {'Common':'רגיל','Uncommon':'לא נפוץ','Rare':'נדיר','Holo Rare':'נדיר מבריק','Ultra Rare':'נדיר במיוחד','Secret Rare':'נדיר סודי'};
 const CONDITION_HE = {'Mint':'מושלם','Near Mint':'כמעט מושלם','Excellent':'מצוין','Good':'טוב','Poor':'גרוע'};
 const LANGUAGE_HE = {'English':'אנגלית','Japanese':'יפנית','Chinese':'סינית','Korean':'קוריאנית','French':'צרפתית','German':'גרמנית','Spanish':'ספרדית','Italian':'איטלקית','Portuguese':'פורטוגזית','Thai':'תאילנדית','Indonesian':'אינדונזית','Hebrew':'עברית','Other':'אחר'};
-let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
 let priceSort='price-desc';
 
 function rarityClass(r){const map={'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};return map[r]||'';}
-
-function initPanel(){
-  const rc=document.getElementById('rarityChips');
-  RARITIES.forEach(r=>{const b=document.createElement('button');b.className='p-chip';b.textContent=r+' ('+RARITY_HE[r]+')';b.dataset.val=r;b.onclick=()=>{if(selRarities.has(r))selRarities.delete(r);else selRarities.add(r);b.classList.toggle('active',selRarities.has(r));updateFilters();};rc.appendChild(b);});
-  const cc=document.getElementById('condChips');
-  CONDITIONS.forEach(c=>{const b=document.createElement('button');b.className='p-chip';b.textContent=c+' ('+CONDITION_HE[c]+')';b.dataset.val=c;b.onclick=()=>{if(selConditions.has(c))selConditions.delete(c);else selConditions.add(c);b.classList.toggle('active',selConditions.has(c));updateFilters();};cc.appendChild(b);});
-  const lc=document.getElementById('langChips');
-  LANGUAGES.forEach(l=>{const b=document.createElement('button');b.className='p-chip';b.textContent=l+' ('+LANGUAGE_HE[l]+')';b.dataset.val=l;b.onclick=()=>{if(selLanguages.has(l))selLanguages.delete(l);else selLanguages.add(l);b.classList.toggle('active',selLanguages.has(l));updateFilters();};lc.appendChild(b);});
-}
 
 function updateFilters(){updateFilterBtn();render();}
 function setPriceSort(value){
@@ -1233,7 +1208,7 @@ function setPriceSort(value){
   updateFilterBtn();render();
 }
 function updateFilterBtn(){
-  const count=selRarities.size+selConditions.size+selLanguages.size+(document.getElementById('valueMin').value?1:0)+(document.getElementById('valueMax').value?1:0)+(document.getElementById('yearMin').value?1:0)+(document.getElementById('yearMax').value?1:0)+(priceSort==='price-asc'?1:0);
+  const count=priceSort==='price-asc'?1:0;
   const btn=document.getElementById('filterBtn');
   if(btn){
     btn.classList.toggle('has-filters',count>0);
@@ -1248,13 +1223,6 @@ function updateFilterBtn(){
 }
 function renderActiveTags(){
   const af=document.getElementById('activeFilters');const tags=[];
-  selRarities.forEach(r=>tags.push({label:'⭐ '+r,remove:()=>{selRarities.delete(r);document.querySelector(`.p-chip[data-val="${r}"]`)?.classList.remove('active');updateFilters();}}));
-  selConditions.forEach(c=>tags.push({label:'🏷️ '+c,remove:()=>{selConditions.delete(c);document.querySelector(`.p-chip[data-val="${c}"]`)?.classList.remove('active');updateFilters();}}));
-  selLanguages.forEach(l=>tags.push({label:'🌐 '+l,remove:()=>{selLanguages.delete(l);document.querySelector(`.p-chip[data-val="${l}"]`)?.classList.remove('active');updateFilters();}}));
-  const vMin=document.getElementById('valueMin').value,vMax=document.getElementById('valueMax').value;
-  if(vMin||vMax)tags.push({label:`💰 $${vMin||0}–$${vMax||'∞'}`,remove:()=>{document.getElementById('valueMin').value='';document.getElementById('valueMax').value='';updateFilters();}});
-  const yMin=document.getElementById('yearMin').value,yMax=document.getElementById('yearMax').value;
-  if(yMin||yMax)tags.push({label:`📅 ${yMin||''}–${yMax||''}`,remove:()=>{document.getElementById('yearMin').value='';document.getElementById('yearMax').value='';updateFilters();}});
   if(priceSort==='price-asc')tags.push({label:'↗️ מהזול ליקר',remove:()=>setPriceSort('price-desc')});
   if(!tags.length){af.classList.remove('show');return;}
   af.classList.add('show');
@@ -1262,7 +1230,6 @@ function renderActiveTags(){
   window._ftags=tags;
 }
 window.rmtag=(i)=>window._ftags[i].remove();
-function resetFilters(){selRarities.clear();selConditions.clear();selLanguages.clear();document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchInput').value='';setPriceSort('price-desc');}
 function setBottomNavActive(name='gallery'){
   document.querySelectorAll('.bottom-nav-button').forEach(button=>{
     const active=button.id===`nav${name[0].toUpperCase()+name.slice(1)}Btn`;
@@ -1287,7 +1254,7 @@ function openPanel(){
   closeNavigationViews();setBottomNavActive('search');
   document.getElementById('filterPanel').classList.add('open');
   document.getElementById('panelOverlay').classList.add('open');
-  setTimeout(()=>document.getElementById('searchInput')?.focus(),180);
+  setTimeout(()=>document.getElementById('catalogSearchName')?.focus(),180);
 }
 function openAddFromNav(){closeNavigationViews();setBottomNavActive('add');openAdd();}
 function openQuickCameraFromNav(){closeNavigationViews();setBottomNavActive('camera');openQuickCamera();}
@@ -1331,21 +1298,7 @@ function compareCardsByPrice(first,second){
 }
 
 function getFiltered(){
-  const search=document.getElementById('searchInput').value.trim().toLowerCase();
-  const vMin=parseFloat(document.getElementById('valueMin').value)||0;
-  const vMax=parseFloat(document.getElementById('valueMax').value)||Infinity;
-  const yMin=parseInt(document.getElementById('yearMin').value)||0;
-  const yMax=parseInt(document.getElementById('yearMax').value)||9999;
-  const filtered=cards.filter(c=>{
-    if(search&&!(c.name||'').toLowerCase().includes(search)&&!(c.pokemon||'').toLowerCase().includes(search))return false;
-    if(selRarities.size&&!selRarities.has(c.rarity))return false;
-    if(selConditions.size&&!selConditions.has(c.condition))return false;
-    if(selLanguages.size&&!selLanguages.has(c.language))return false;
-    const val=parseFloat(c.value)||0;if(val<vMin||val>vMax)return false;
-    const yr=parseInt(c.year)||0;if(yr&&(yr<yMin||yr>yMax))return false;
-    return true;
-  });
-  return filtered.sort(compareCardsByPrice);
+  return [...cards].sort(compareCardsByPrice);
 }
 
 function setHeaderStat(id,value){
@@ -1659,6 +1612,130 @@ function usableCandidates(candidates){
     seen.add(key);return true;
   });
 }
+
+function catalogSearchCandidateKey(candidate){
+  return String(candidate?.catalogCardId||`${candidate?.setCode||candidate?.set||''}-${candidate?.number||''}-${candidate?.catalogImage||''}`);
+}
+
+function renderCatalogSearchResults(){
+  const list=document.getElementById('catalogSearchResults');
+  const status=document.getElementById('catalogSearchStatus');
+  const button=document.getElementById('catalogSearchBtn');
+  if(!list||!status||!button)return;
+  button.disabled=catalogSearchLoading;
+  button.textContent=catalogSearchLoading?'מחפש בקטלוג...':'חפש בקטלוג';
+  if(catalogSearchLoading&&!catalogSearchResults.length){
+    status.textContent='מחפש בין יותר מ־130,000 הדפסות...';
+    list.innerHTML='';return;
+  }
+  if(!catalogSearchResults.length){
+    status.textContent=catalogSearchQuery?'לא נמצאה התאמה. נסה שם באנגלית או הוסף את המספר המודפס.':'';
+    list.innerHTML='';return;
+  }
+  status.textContent=`נמצאו ${catalogSearchResults.length} אפשרויות — בחר את התמונה וההדפסה המתאימות:`;
+  list.innerHTML=catalogSearchResults.map((candidate,index)=>{
+    const price=candidate.searchPriceStatus==='loading'
+      ?'בודק מחיר...'
+      :candidate.searchPriceStatus==='matched'&&candidate.searchValue
+        ?`$${escapeHtml(candidate.searchValue)}`
+        :candidate.searchPriceStatus
+          ?'מחיר לא נמצא'
+          :'מחיר בבדיקה';
+    return `<button type="button" class="catalog-search-result" onclick="chooseCatalogSearchResult(${index})">
+      <img src="${escapeHtml(candidate.catalogImage)}" loading="lazy" decoding="async" alt="">
+      <span class="catalog-result-copy">
+        <span class="catalog-result-name">${escapeHtml(safeCardDisplayName(candidate,index))}</span>
+        <span class="catalog-result-meta">${escapeHtml(safeCardSetName(candidate)||candidate.setCode||'')} ${candidate.number?' • '+escapeHtml(candidate.number):''}</span>
+        <span class="catalog-result-price">${price}</span>
+      </span>
+      <span class="catalog-result-select" aria-hidden="true">✓</span>
+    </button>`;
+  }).join('')+(catalogSearchHasMore
+    ?`<button type="button" class="catalog-search-more" onclick="searchCatalogCards(true)" ${catalogSearchLoading?'disabled':''}>${catalogSearchLoading?'טוען...':'עוד אפשרויות'}</button>`:'');
+}
+
+async function hydrateCatalogSearchPrices(token){
+  const pending=catalogSearchResults.filter(candidate=>!candidate.searchPriceStatus);
+  pending.forEach(candidate=>{candidate.searchPriceStatus='loading';});
+  renderCatalogSearchResults();
+  let cursor=0;
+  const worker=async()=>{
+    while(cursor<pending.length&&token===catalogSearchToken){
+      const candidate=pending[cursor++];
+      try{
+        const result=await requestMarketPrice(candidate);
+        if(token!==catalogSearchToken)return;
+        candidate.searchPriceResult=result;
+        candidate.searchPriceStatus=result.priceStatus==='matched'?'matched':'unavailable';
+        candidate.searchValue=result.priceStatus==='matched'?String(result.value||''):'';
+      }catch(error){
+        if(token!==catalogSearchToken)return;
+        candidate.searchPriceStatus='unavailable';candidate.searchValue='';
+      }
+      renderCatalogSearchResults();
+    }
+  };
+  await Promise.all([worker(),worker()]);
+}
+
+async function searchCatalogCards(loadMore=false){
+  if(catalogSearchLoading)return;
+  const name=document.getElementById('catalogSearchName').value.trim();
+  const number=document.getElementById('catalogSearchNumber').value.trim();
+  const query=[name,number].filter(Boolean).join('\n');
+  if(!query){toast('כתוב שם קלף או מספר קלף');return;}
+  if(loadMore&&query!==catalogSearchQuery)loadMore=false;
+  if(!loadMore){
+    catalogSearchToken++;
+    catalogSearchQuery=query;catalogSearchResults=[];catalogSearchHasMore=false;
+  }
+  const token=catalogSearchToken;
+  catalogSearchLoading=true;renderCatalogSearchResults();
+  try{
+    const data=await requestCatalogSearch(name,number,loadMore?catalogSearchResults.length:0,6);
+    if(token!==catalogSearchToken)return;
+    const incoming=usableCandidates(data.candidates);
+    const byKey=new Map(catalogSearchResults.map(candidate=>[catalogSearchCandidateKey(candidate),candidate]));
+    incoming.forEach(candidate=>{
+      const key=catalogSearchCandidateKey(candidate);
+      if(!byKey.has(key)){byKey.set(key,candidate);catalogSearchResults.push(candidate);}
+    });
+    catalogSearchHasMore=Boolean(data.hasMoreCandidates);
+  }catch(error){
+    if(token!==catalogSearchToken)return;
+    if(!loadMore)catalogSearchResults=[];
+    catalogSearchHasMore=false;
+    toast(error?.message||'לא נמצאה התאמה בקטלוג');
+  }finally{
+    if(token===catalogSearchToken){
+      catalogSearchLoading=false;renderCatalogSearchResults();
+      if(catalogSearchResults.length)hydrateCatalogSearchPrices(token);
+    }
+  }
+}
+
+function chooseCatalogSearchResult(index){
+  const candidate=catalogSearchResults[index];
+  if(!candidate)return;
+  catalogSearchToken++;
+  const selected={...candidate,...(candidate.searchPriceResult||{}),needsConfirmation:false,matchCandidates:[],identityConfidence:'catalog'};
+  openAddFromNav();
+  applyIdentificationToEditor(selected);
+  aiMeta={
+    ...aiMeta,
+    priceSource:selected.priceSource||'',priceUpdatedAt:selected.priceUpdatedAt||'',
+    priceCheckedAt:selected.priceStatus==='matched'?new Date().toISOString():''
+  };
+  document.getElementById('fValue').value=selected.priceStatus==='matched'?(selected.value||''):'';
+  const result=document.getElementById('aiResult');
+  result.style.display='block';
+  result.innerHTML=selected.priceStatus==='matched'
+    ?`✅ נבחר <b>${escapeHtml(safeCardDisplayName(selected))}</b> | ${escapeHtml(safeCardSetName(selected))}<br>💰 $${escapeHtml(selected.value)} לפי מחיר השוק`
+    :`✅ נבחר <b>${escapeHtml(safeCardDisplayName(selected))}</b> | ${escapeHtml(safeCardSetName(selected))}<br>⏳ בודק מחיר מדויק...`;
+  renderPreview();
+  if(selected.priceStatus!=='matched')resolveEditorPrice(selected,++editorPriceToken,result.id);
+}
+
 function renderQuickScans(){
   const list=document.getElementById('quickScanList');
   if(!list)return;
@@ -1957,6 +2034,21 @@ async function requestCatalogOcrPage(text,offset=0,limit=6){
     if(!data.matchCandidates.length)throw new Error('לא נמצאו אפשרויות עם תמונה');
   }
   data.localOcrText=text;
+  return data;
+}
+
+async function requestCatalogSearch(name,number,offset=0,limit=6){
+  const response=await HitimAuth.fetch('/catalog/search',{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,number,offset,limit}),timeoutMs:12000
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok){
+    const error=new Error(data.detail||'לא נמצאה התאמה בקטלוג');
+    error.status=response.status;throw error;
+  }
+  data.candidates=usableCandidates(data.candidates);
+  if(!data.candidates.length)throw new Error('לא נמצאו אפשרויות עם תמונה');
   return data;
 }
 
@@ -2714,10 +2806,8 @@ async function updateStorageInfo(){
 
 function openSettingsPanel(){
   closeNavigationViews();setBottomNavActive('settings');
-  const session=HitimAuth.getSession();
-  document.getElementById('settingsEmail').textContent=currentAccess?.email||session?.user?.email||'';
-  document.getElementById('legacyImportSection').hidden=!HitimAuth.isAdmin();
   document.getElementById('settingsOverlay').classList.add('open');
+  updateInstallButtons();
   updateStorageInfo().catch(()=>{});
 }
 
@@ -2729,53 +2819,6 @@ async function importHitimBackup(input){
     toast(`✅ יובאו ${count} קלפים מהגיבוי`);
   }catch(error){
     console.error(error);toast('קובץ הגיבוי אינו תקין');
-  }
-}
-
-async function importLegacyGallery(button){
-  if(!HitimAuth.isAdmin())return;
-  if(!confirm('לייבא עותק מקומי של האוסף הישן? המידע הישן בענן לא יימחק.'))return;
-  const status=document.getElementById('legacyImportStatus');
-  button.disabled=true;button.textContent='⏳ מכין את הייבוא...';
-  try{
-    const response=await HitimAuth.fetch('/legacy/cards');
-    const legacy=await response.json();
-    if(!response.ok||!Array.isArray(legacy))throw new Error(legacy.detail||'legacy');
-    let imported=0,remoteImages=0;
-    for(const sourceCard of legacy){
-      status.textContent=`מייבא ${imported+1} מתוך ${legacy.length}...`;
-      const card={...sourceCard,id:String(sourceCard.id||`legacy-${Date.now()}-${imported}`)};
-      const catalogImage=String(card.catalogImage||'').trim();
-      card.catalogLocalImage=await HitimDB.remoteImageToDataUrl(catalogImage);
-      const photos=[];
-      for(const imageUrl of cardPhotoUrls(card)){
-        if(imageUrl===catalogImage)continue;
-        const localImage=await HitimDB.remoteImageToDataUrl(imageUrl);
-        photos.push(localImage||imageUrl);
-        if(!localImage&&/^https?:\/\//i.test(imageUrl))remoteImages++;
-      }
-      card.images=uniqueImageUrls(photos).join('|');
-      card.legacyImportedAt=new Date().toISOString();
-      await HitimDB.putCard(card);imported++;
-    }
-    try{
-      const legacyComments=JSON.parse(localStorage.getItem('pokeComments')||'{}');
-      if(legacyComments&&typeof legacyComments==='object'){
-        comments={...comments,...legacyComments};
-        await HitimDB.setSetting('comments',comments);
-      }
-    }catch(error){console.debug('Legacy comments were not readable',error);}
-    await HitimDB.setSetting('legacyImportedAt',new Date().toISOString());
-    await load();await updateStorageInfo();
-    status.textContent=remoteImages
-      ?`הייבוא הסתיים. ${remoteImages} תמונות נשארו זמנית בקישור המקורי כי הדפדפן לא אפשר להעתיק אותן.`
-      :`הייבוא הסתיים: ${imported} קלפים נשמרו במכשיר.`;
-    toast(`✅ ${imported} קלפים יובאו ל-Hitim`);
-  }catch(error){
-    console.error(error);status.textContent='הייבוא לא הושלם. לא מחקנו דבר מהאוסף הישן.';
-    toast('לא הצלחנו לייבא את האוסף הישן');
-  }finally{
-    button.disabled=false;button.textContent='🧳 ייבא את האוסף הישן למכשיר';
   }
 }
 
@@ -2853,7 +2896,10 @@ function hitimIsInstalled(){
 function updateInstallButtons(){
   const installed=hitimIsInstalled();
   const settingsButton=document.getElementById('installBtn');
-  if(settingsButton)settingsButton.hidden=installed;
+  if(settingsButton){
+    settingsButton.hidden=false;
+    settingsButton.textContent=installed?'✅ Hitim מותקן בטלפון':'📲 התקן את Hitim בטלפון';
+  }
 }
 
 function showInstallGuide(){
@@ -2900,11 +2946,10 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
   field.addEventListener('input',clearExactMatch);
   field.addEventListener('change',clearExactMatch);
 });
-initCols();initPanel();initPwa();
+initCols();initPwa();
 HitimAuth.init(async access=>{
   currentAccess=access;
   document.getElementById('navAdminBtn').hidden=access.role!=='admin';
-  document.getElementById('legacyImportSection').hidden=access.role!=='admin';
   await load();
   HitimDB.requestPersistence().catch(()=>{});
   scheduleDailyPriceRefresh(90000);
