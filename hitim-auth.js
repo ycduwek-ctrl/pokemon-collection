@@ -239,11 +239,29 @@
   }
 
   async function signOut() {
-    if (client) await client.auth.signOut();
-    session = null;
-    access = null;
-    clearCachedAccess();
-    location.reload();
+    try {
+      if (!client && window.supabase?.createClient) {
+        const config = readCache(CONFIG_CACHE_KEY);
+        if (config?.supabaseUrl && config?.supabaseAnonKey) {
+          client = window.supabase.createClient(config.supabaseUrl, config.supabaseAnonKey, {
+            auth: { persistSession: true, autoRefreshToken: false, detectSessionInUrl: false }
+          });
+        }
+      }
+      if (client) await client.auth.signOut({ scope: 'local' });
+    } catch (error) {
+      console.debug('Hitim sign out fallback', error);
+    } finally {
+      session = null;
+      access = null;
+      clearCachedAccess();
+      try {
+        Object.keys(localStorage)
+          .filter(key => key.startsWith('sb-') && key.endsWith('-auth-token'))
+          .forEach(key => localStorage.removeItem(key));
+      } catch (_) {}
+      location.reload();
+    }
   }
 
   async function refreshAccess() {
