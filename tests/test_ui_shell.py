@@ -63,7 +63,7 @@ class UiShellTests(unittest.TestCase):
         self.assertNotIn("<span>זיהוי מהיר", camera_button)
         self.assertIn('class="visually-hidden"', camera_button)
 
-    def test_official_app_icon_is_preserved_in_header(self):
+    def test_app_icon_is_used_in_header(self):
         header = self.html.split('<div class="header">', 1)[1].split(
             '<div class="active-filters"', 1
         )[0]
@@ -86,16 +86,35 @@ class UiShellTests(unittest.TestCase):
         )[0]
         self.assertNotIn("add-card", render)
 
-    def test_search_and_settings_keep_all_existing_actions(self):
-        self.assertIn("🔎 חיפוש וסינון", self.html)
+    def test_catalog_search_and_simple_price_sort(self):
+        self.assertIn("מציאה בקטלוג המלא", self.html)
+        self.assertIn('id="catalogSearchName"', self.html)
+        self.assertIn('id="catalogSearchNumber"', self.html)
+        self.assertIn("function searchCatalogCards", self.html)
+        self.assertIn("function chooseCatalogSearchResult", self.html)
+        self.assertIn("מהיקר לזול", self.html)
+        self.assertIn("מהזול ליקר", self.html)
+        for removed_filter in ("rarityChips", "condChips", "langChips", "valueMin", "yearMin"):
+            self.assertNotIn(removed_filter, self.html)
+
+    def test_settings_show_install_and_exit_without_legacy_or_invite(self):
         self.assertNotIn('<div class="toolbar">', self.html)
         settings = self.html.split('id="settingsOverlay"', 1)[1].split(
             'id="adminOverlay"', 1
         )[0]
         self.assertIn("התקן את Hitim", settings)
         self.assertIn("הורד גיבוי", settings)
-        self.assertIn("שתף קישור כניסה", settings)
-        self.assertIn("יציאה מהחשבון", settings)
+        self.assertIn("יציאה מהאפליקציה", settings)
+        self.assertNotIn("שתף קישור כניסה", settings)
+        self.assertNotIn("האוסף הישן", settings)
+        self.assertNotIn("מחובר כ־", settings)
+
+    def test_header_brand_uses_white_text_and_camera_palette(self):
+        title_css = self.html.split(".header-title-text {", 1)[1].split("}", 1)[0]
+        stats_css = self.html.split(".header-stats-box {", 1)[1].split("}", 1)[0]
+        self.assertIn("color: #fff", title_css)
+        self.assertIn("filter: none", title_css)
+        self.assertIn("linear-gradient(150deg,#7c3aed 8%,#5b37e8 52%,#fbbf24 100%)", stats_css)
 
     def test_auth_spinner_does_not_repeat_the_brand_icon(self):
         spinner_css = self.html.split(".auth-spinner {", 1)[1].split("}", 1)[0]

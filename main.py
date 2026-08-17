@@ -23,7 +23,13 @@ from hitim_auth import (
     update_access_user,
     remove_access_user,
 )
-from card_catalog import catalog_status, ensure_catalog, lookup_card, lookup_ocr_result
+from card_catalog import (
+    catalog_status,
+    ensure_catalog,
+    lookup_card,
+    lookup_ocr_result,
+    search_catalog,
+)
 
 app = FastAPI()
 ensure_catalog()
@@ -1504,6 +1510,25 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
             "priceStatus": "pending",
         }
     raise HTTPException(status_code=404, detail="לא נמצאה התאמה בקטלוג המקומי")
+
+
+@app.post("/catalog/search")
+async def search_catalog_cards(data: dict, authorization: str = Header(None)):
+    """Search catalogue printings by an optional English name and/or number."""
+    await asyncio.to_thread(require_access, authorization)
+    name = str(data.get("name") or "").strip()
+    number = str(data.get("number") or "").strip()
+    if not name and not number:
+        raise HTTPException(status_code=400, detail="נא להזין שם או מספר קלף")
+    try:
+        limit = max(1, min(int(data.get("limit") or 6), 12))
+        offset = max(0, min(int(data.get("offset") or 0), 120))
+    except (TypeError, ValueError):
+        raise HTTPException(status_code=400, detail="בקשת החיפוש אינה תקינה")
+    result = await asyncio.to_thread(search_catalog, name, number, limit, offset)
+    if not result["candidates"]:
+        raise HTTPException(status_code=404, detail="לא נמצאה התאמה בקטלוג")
+    return result
 
 @app.post("/identify")
 async def identify(
