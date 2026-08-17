@@ -9,6 +9,7 @@ class UiShellTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.html = (ROOT / "index.html").read_text(encoding="utf-8")
+        cls.auth = (ROOT / "hitim-auth.js").read_text(encoding="utf-8")
 
     def test_holo_and_motion_code_are_completely_removed(self):
         self.assertNotIn("card-holo-effect", self.html)
@@ -103,6 +104,14 @@ class UiShellTests(unittest.TestCase):
         )[0]
         self.assertIn("if(counter)counter.textContent=cols", init_cols)
         self.assertNotIn("document.getElementById('colsNum').textContent", init_cols)
+
+    def test_sign_out_clears_local_session_even_if_startup_failed(self):
+        sign_out = self.auth.split("async function signOut()", 1)[1].split(
+            "async function refreshAccess", 1
+        )[0]
+        self.assertIn("finally", sign_out)
+        self.assertIn("endsWith('-auth-token')", sign_out)
+        self.assertIn("location.reload()", sign_out)
 
     def test_settings_show_install_and_exit_without_legacy_or_invite(self):
         self.assertNotIn('<div class="toolbar">', self.html)
