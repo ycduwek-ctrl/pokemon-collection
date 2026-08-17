@@ -10,6 +10,19 @@
     { "src": "hitim-icon-513.png", "use": "@vercel/static" }
   ],
   "routes": [
+    {
+      "src": "^/(?:index\\.html)?$",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate",
+        "X-Hitim-Build": "catalog-search-v14.2"
+      },
+      "continue": true
+    },
+    {
+      "src": "^/(?:sw\\.js|hitim-auth\\.js)$",
+      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "continue": true
+    },
     { "src": "/hitim-db.js", "dest": "/hitim-db.js" },
     { "src": "/hitim-auth.js", "dest": "/hitim-auth.js" },
     { "src": "/sw.js", "dest": "/sw.js" },
