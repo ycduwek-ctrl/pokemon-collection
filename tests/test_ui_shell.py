@@ -113,6 +113,16 @@ class UiShellTests(unittest.TestCase):
         self.assertIn("endsWith('-auth-token')", sign_out)
         self.assertIn("location.reload()", sign_out)
 
+    def test_install_guide_opens_above_settings(self):
+        guide = self.html.split("function showInstallGuide()", 1)[1].split(
+            "async function installHitim", 1
+        )[0]
+        close_settings = "document.getElementById('settingsOverlay')?.classList.remove('open')"
+        open_guide = "document.getElementById('installOverlay').classList.add('open')"
+        self.assertIn(close_settings, guide)
+        self.assertIn(open_guide, guide)
+        self.assertLess(guide.index(close_settings), guide.index(open_guide))
+
     def test_settings_show_install_and_exit_without_legacy_or_invite(self):
         self.assertNotIn('<div class="toolbar">', self.html)
         settings = self.html.split('id="settingsOverlay"', 1)[1].split(

@@ -14,7 +14,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "catalog-search-v14.2"
+        "X-Hitim-Build": "catalog-search-v14.3"
       },
       "continue": true
     },

@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="catalog-search-v14.2">
+  <meta name="hitim-build" content="catalog-search-v14.3">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -2932,6 +2932,7 @@ function showInstallGuide(){
     note.textContent='הדפדפן עדיין לא הציג חלון התקנה אוטומטי.';
     steps.innerHTML='<div class="install-step">פתח את תפריט הדפדפן.</div><div class="install-step">בחר „התקנת אפליקציה” או „הוספה למסך הבית”.</div>';
   }
+  document.getElementById('settingsOverlay')?.classList.remove('open');
   document.getElementById('installOverlay').classList.add('open');
 }
 
