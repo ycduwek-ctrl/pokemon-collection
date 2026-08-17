@@ -97,6 +97,13 @@ class UiShellTests(unittest.TestCase):
         for removed_filter in ("rarityChips", "condChips", "langChips", "valueMin", "yearMin"):
             self.assertNotIn(removed_filter, self.html)
 
+    def test_removed_column_control_cannot_stop_app_startup(self):
+        init_cols = self.html.split("function initCols()", 1)[1].split(
+            "function applyGrid", 1
+        )[0]
+        self.assertIn("if(counter)counter.textContent=cols", init_cols)
+        self.assertNotIn("document.getElementById('colsNum').textContent", init_cols)
+
     def test_settings_show_install_and_exit_without_legacy_or_invite(self):
         self.assertNotIn('<div class="toolbar">', self.html)
         settings = self.html.split('id="settingsOverlay"', 1)[1].split(
