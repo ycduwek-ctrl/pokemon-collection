@@ -70,6 +70,17 @@ class UiShellTests(unittest.TestCase):
         )[0]
         self.assertIn('src="/hitim-icon-193.png"', header)
 
+    def test_header_sparkle_is_lightweight_and_motion_safe(self):
+        sparkle_css = self.html.split(".header-icon-wrap::after {", 1)[1].split(
+            "}", 1
+        )[0]
+        self.assertIn("headerIconSparkle", sparkle_css)
+        self.assertNotIn("filter:", sparkle_css)
+        reduced_motion = self.html.rsplit(
+            "@media (prefers-reduced-motion: reduce)", 1
+        )[1].split("}", 2)[0]
+        self.assertIn(".header-icon-wrap::after", reduced_motion)
+
     def test_gallery_cards_show_only_image_and_price(self):
         image_markup = self.html.split("function cardImageMarkup", 1)[1].split(
             "function bindGalleryCarousel", 1
@@ -150,6 +161,32 @@ class UiShellTests(unittest.TestCase):
     def test_quick_identification_buttons_do_not_repeat_the_brand_icon(self):
         self.assertNotIn("inline-brand-icon", self.html)
         self.assertNotIn("⚡ זיהוי מהיר", self.html)
+
+    def test_quick_scan_uses_persistent_camera_without_duplicate_empty_ui(self):
+        quick_modal = self.html.split('id="quickIdentifyOverlay"', 1)[1].split(
+            'id="detailOverlay"', 1
+        )[0]
+        self.assertNotIn("צלם עוד קלף", quick_modal)
+        self.assertNotIn("צלם קלף כדי להתחיל", self.html)
+        self.assertNotIn("quick-scan-empty", self.html)
+        self.assertIn("בחירה מהגלריה", quick_modal)
+        nav_camera = self.html.split("function openQuickCameraFromNav()", 1)[1].split(
+            "async function shareHitimFromNav", 1
+        )[0]
+        self.assertIn("classList.contains('open')", nav_camera)
+        self.assertIn("triggerQuickCamera()", nav_camera)
+        self.assertNotIn("resetQuickIdentify()", nav_camera)
+
+    def test_card_detail_shows_one_name_and_only_essential_metadata(self):
+        detail = self.html.split("function openDetail", 1)[1].split(
+            "function closeDetail", 1
+        )[0]
+        self.assertEqual(detail.count('class="detail-name"'), 1)
+        for expected in ("detailPriceValue", "detail-set", ">שנה<", ">נדירות<"):
+            self.assertIn(expected, detail)
+        self.assertNotIn("CONDITION_HE", detail)
+        self.assertNotIn("LANGUAGE_HE", detail)
+        self.assertNotIn('detail-meta-label">פוקימון', detail)
 
 
 if __name__ == "__main__":

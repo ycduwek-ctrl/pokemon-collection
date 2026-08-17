@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="catalog-search-v14.3">
+  <meta name="hitim-build" content="clean-scan-v15.0">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -57,6 +57,20 @@
       width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
       object-fit: cover;
       box-shadow: 0 0 0 2px rgba(91,55,232,.62), 0 0 19px rgba(124,58,237,.72);
+    }
+    .header-icon-wrap {
+      position: relative; display: block; width: 44px; height: 44px; flex: 0 0 44px;
+    }
+    .header-icon-wrap::after {
+      content: '✦'; position: absolute; top: -7px; right: -8px;
+      color: #fde68a; font-size: 14px; line-height: 1; opacity: 0;
+      pointer-events: none; transform: translate3d(-3px,3px,0) scale(.35);
+      animation: headerIconSparkle 7s ease-out infinite;
+    }
+    @keyframes headerIconSparkle {
+      0%,82%,100% { opacity: 0; transform: translate3d(-3px,3px,0) scale(.35); }
+      87% { opacity: 1; transform: translate3d(0,0,0) scale(1); }
+      92% { opacity: 0; transform: translate3d(3px,-3px,0) scale(.55); }
     }
     .header-stats-row {
       position: static; transform: none;
@@ -115,6 +129,7 @@
         white-space: nowrap;
       }
       .header-title-icon { width: 40px; height: 40px; flex-basis: 40px; }
+      .header-icon-wrap { width: 40px; height: 40px; flex-basis: 40px; }
       .header-stats-row { gap: 6px; }
       .header-stats-box { width: 50px; height: 50px; flex-basis: 50px; }
       .stats-num { max-width: 46px; font-size: 1em; }
@@ -223,18 +238,37 @@
 
     /* ===== DETAIL MODAL ===== */
     .detail-modal { max-width: 480px; margin: 0 auto; }
-    .detail-carousel { width: 100%; aspect-ratio: 2/3; max-height: 60vh; position: relative; border-radius: 14px; overflow: hidden; background: #0a0f2e; margin-bottom: 14px; contain: paint; isolation: isolate; }
+    .detail-carousel {
+      width: 100%; aspect-ratio: 2/3; max-height: 57vh; position: relative;
+      border-radius: 20px; overflow: hidden; background: #0a0f2e; margin-bottom: 16px;
+      border: 1px solid rgba(167,139,250,.25); contain: paint; isolation: isolate;
+    }
     .detail-carousel .card-carousel-track .carousel-slide img { object-fit: contain; background: #0a0f2e; }
-    .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; margin-bottom: 2px; }
-    .detail-set { font-size: 0.85em; color: #7891c8; margin-bottom: 14px; }
-    .detail-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
-    .detail-badge { font-size: 0.78em; font-weight: 700; padding: 5px 12px; border-radius: 16px; background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; }
-    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
-    .detail-stat { background: #0f1730; border: 1px solid #1e2d5a; border-radius: 10px; padding: 10px 12px; }
-    .detail-stat-label { font-size: 0.65em; color: #3d4f7a; font-weight: 600; margin-bottom: 3px; }
-    .detail-stat-val { font-size: 1em; font-weight: 800; color: #e2e8f0; }
-    .detail-actions { display: flex; gap: 8px; }
-    .detail-actions .card-btn { flex: 1; padding: 12px; font-size: 0.9em; border-radius: 10px; background: #0f1730; border: 1px solid #1e2d5a; color: #e2e8f0; font-weight: 700; cursor: pointer; font-family: inherit; }
+    .detail-identity { text-align: center; padding: 0 4px; }
+    .detail-name { font-size: 1.3em; font-weight: 900; color: #fff; line-height: 1.25; margin-bottom: 5px; }
+    .detail-set { font-size: 0.84em; color: #8da2d3; margin-bottom: 13px; }
+    .detail-price-card {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      min-height: 68px; padding: 12px 15px; margin-bottom: 10px; border-radius: 17px;
+      background: linear-gradient(135deg,rgba(13,148,136,.16),rgba(124,58,237,.18));
+      border: 1px solid rgba(45,212,191,.27);
+    }
+    .detail-price-label { color: #94a3b8; font-size: .74em; font-weight: 800; }
+    .detail-price-value { color: #5eead4; font-size: 1.38em; font-weight: 900; direction: ltr; white-space: nowrap; }
+    .detail-meta-row { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; margin-bottom: 15px; }
+    .detail-meta-item {
+      min-height: 57px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 2px; padding: 8px 10px; border-radius: 15px; color: #f8fafc;
+      background: #0f1730; border: 1px solid #263762; text-align: center;
+    }
+    .detail-meta-label { color: #6477a4; font-size: .65em; font-weight: 700; }
+    .detail-meta-value { font-size: .84em; font-weight: 900; }
+    .detail-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; }
+    .detail-actions .card-btn {
+      min-height: 47px; padding: 8px 6px; font-size: .76em; border-radius: 15px;
+      background: #0f1730; border: 1px solid #293765; color: #e2e8f0;
+      font-weight: 800; cursor: pointer; font-family: inherit;
+    }
     .detail-comments { margin-top: 16px; }
     .detail-comments-title { font-size: 0.85em; font-weight: 800; color: #f59e0b; margin-bottom: 8px; }
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
@@ -274,8 +308,14 @@
     .ai-img-preview { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: none; }
     .ai-result { font-size: 0.8em; background: #050a18; border-radius: 8px; padding: 8px; margin-top: 8px; border: 1px solid #7c3aed44; color: #a78bfa; display: none; }
     /* ===== QUICK MULTI-SCAN SESSION ===== */
-    .quick-scan-modal { max-height: 94vh; }
-    .quick-scan-modal .modal-body { padding-bottom: calc(24px + env(safe-area-inset-bottom)); }
+    .quick-scan-modal {
+      height: calc(100dvh - 72px); max-height: calc(100dvh - 72px);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .quick-scan-modal .modal-body {
+      flex: 1; min-height: 0; overflow-y: auto;
+      padding-bottom: calc(106px + env(safe-area-inset-bottom));
+    }
     .quick-session-summary {
       display: flex; align-items: center; justify-content: space-between;
       gap: 12px; padding: 11px 13px; border-radius: 13px;
@@ -284,15 +324,7 @@
     }
     .quick-summary-count { color: #94a3b8; font-size: .76em; font-weight: 700; }
     .quick-summary-total { color: #5eead4; font-size: 1.18em; font-weight: 900; white-space: nowrap; }
-    .quick-scan-list { display: flex; flex-direction: column; gap: 9px; min-height: 90px; }
-    .quick-scan-empty {
-      min-height: 118px; display: flex; flex-direction: column; align-items: center; justify-content: center;
-      color: #52658f; border: 1px dashed #293765; border-radius: 14px;
-      background: rgba(15,23,48,.42); text-align: center; padding: 18px;
-    }
-    .quick-scan-empty-icon { font-size: 2em; margin-bottom: 5px; }
-    .quick-scan-empty-title { color: #94a3b8; font-size: .84em; font-weight: 800; }
-    .quick-scan-empty-sub { font-size: .68em; margin-top: 3px; }
+    .quick-scan-list { display: flex; flex-direction: column; gap: 9px; min-height: 0; }
     .quick-scan-row {
       display: grid; grid-template-columns: 58px minmax(0,1fr) 34px;
       gap: 10px; align-items: center; padding: 8px;
@@ -359,28 +391,21 @@
     }
     @keyframes quickAddSpin { to { transform: rotate(360deg); } }
     .quick-capture-actions {
-      display: grid; grid-template-columns: .8fr 1.2fr; gap: 9px; margin-top: 13px;
-      position: sticky; bottom: 0; padding: 9px 0 2px;
-      background: linear-gradient(to top,#080d1f 72%,transparent);
+      display: flex; justify-content: center; margin-top: 11px; padding: 4px 0 0;
     }
-    .quick-capture-btn, .quick-gallery-btn {
-      min-height: 52px; border-radius: 26px; border: 1px solid rgba(255,255,255,.13);
+    .quick-gallery-btn {
+      width: min(100%,260px); min-height: 44px; border-radius: 22px; border: 1px solid #33436f;
       display: flex; align-items: center; justify-content: center; gap: 7px;
-      font-family: inherit; font-weight: 900; font-size: .88em; cursor: pointer;
+      color: #c4b5fd; background: #111a37;
+      font-family: inherit; font-weight: 900; font-size: .82em; cursor: pointer;
     }
-    .quick-capture-btn {
-      color: #fff; background: linear-gradient(135deg,#7c3aed,#4f46e5);
-      box-shadow: 0 7px 24px rgba(124,58,237,.36);
-    }
-    .quick-gallery-btn { color: #a5b4fc; background: #0f1730; border-color: #293765; }
+    .quick-gallery-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.8; }
     .quick-gallery-btn input { display: none; }
     .quick-session-tools { display: flex; justify-content: center; margin-top: 8px; }
+    .quick-session-tools[hidden] { display: none; }
     .quick-clear-btn {
       border: 0; background: none; color: #64748b; font-family: inherit;
       font-size: .72em; font-weight: 700; padding: 6px 10px; cursor: pointer;
-    }
-    .quick-privacy {
-      color: #52658f; font-size: .65em; line-height: 1.4; text-align: center; margin-top: 7px;
     }
 
     .upload-btns { display: flex; gap: 8px; }
@@ -624,7 +649,7 @@
       overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
     .grid { padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
-    .modal-body, .system-body, .quick-scan-modal .modal-body { padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
+    .modal-body, .system-body { padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
 
     .toast.show { animation: toastPop 0.3s cubic-bezier(.2,1.3,.3,1); }
     @keyframes cardEnter {
@@ -667,7 +692,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-icon, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-icon-wrap::after, .header-title-icon, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
 
@@ -835,7 +860,7 @@
     <div class="header-left">
       <div class="header-logo">
         <div class="header-title">
-          <img class="header-title-icon" src="/hitim-icon-193.png" alt="" aria-hidden="true">
+          <span class="header-icon-wrap" aria-hidden="true"><img class="header-title-icon" src="/hitim-icon-193.png" alt=""></span>
           <span class="header-title-text">Hitim</span>
         </div>
       </div>
@@ -946,7 +971,7 @@
   <div class="modal quick-scan-modal">
     <div class="modal-handle"></div>
     <div class="modal-head">
-      <span class="modal-title">📸 זיהוי מהיר מרובה</span>
+      <span class="modal-title">זיהוי קלפים</span>
       <button class="modal-close" onclick="closeQuickIdentify()">✕</button>
     </div>
     <div class="modal-body">
@@ -960,16 +985,15 @@
       <div class="quick-capture-actions">
         <label class="quick-gallery-btn">
           <input id="quickGalleryInput" type="file" accept="image/*" multiple onchange="quickFilesSelected(this)">
-          🖼️ גלריה
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="3"></rect><circle cx="9" cy="10" r="2"></circle><path d="m5 18 5-5 3 3 2-2 4 4"></path></svg>
+          בחירה מהגלריה
         </label>
-        <button class="quick-capture-btn" onclick="triggerQuickCamera()">📸 צלם עוד קלף</button>
       </div>
       <input id="quickFrontCamera" type="file" accept="image/*" capture="environment" style="display:none" onchange="quickFilesSelected(this)">
 
-      <div class="quick-session-tools">
-        <button class="quick-clear-btn" onclick="resetQuickIdentify()">🗑️ נקה את הסריקה</button>
+      <div class="quick-session-tools" id="quickSessionTools" hidden>
+        <button class="quick-clear-btn" onclick="resetQuickIdentify()">נקה את הסריקה</button>
       </div>
-      <div class="quick-privacy">הסריקה זמנית. רק קלף שתבחר להוסיף בעזרת ＋ יישמר מקומית במכשיר.</div>
     </div>
   </div>
 </div>
@@ -1257,7 +1281,15 @@ function openPanel(){
   setTimeout(()=>document.getElementById('catalogSearchName')?.focus(),180);
 }
 function openAddFromNav(){closeNavigationViews();setBottomNavActive('add');openAdd();}
-function openQuickCameraFromNav(){closeNavigationViews();setBottomNavActive('camera');openQuickCamera();}
+function openQuickCameraFromNav(){
+  const quickOverlay=document.getElementById('quickIdentifyOverlay');
+  if(quickOverlay?.classList.contains('open')){
+    setBottomNavActive('camera');
+    triggerQuickCamera();
+    return;
+  }
+  closeNavigationViews();setBottomNavActive('camera');openQuickCamera();
+}
 async function shareHitimFromNav(){
   setBottomNavActive('share');
   try{await shareHitimInvite();}finally{setBottomNavActive('gallery');}
@@ -1454,21 +1486,23 @@ function openDetail(id){
     :`<div class="detail-carousel" style="display:flex;align-items:center;justify-content:center;font-size:3em">🃏</div>`;
   const cc=comments[String(c.id)]||[];
   const commentsHtml=cc.length?cc.map(t=>`<div class="comment-item" style="margin-bottom:6px">${escapeHtml(t)}</div>`).join(''):'';
+  const numericValue=parseFloat(c.value);
+  const detailPrice=Number.isFinite(numericValue)&&numericValue>0?'$'+numericValue.toFixed(2):'מחיר לא נמצא';
+  const rarity=RARITY_HE[c.rarity]||c.rarity||'לא ידועה';
   const detailBody=document.getElementById('detailBody');
   detailBody.innerHTML=`
     ${imgHtml}
-    <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
-    <div class="detail-set">${escapeHtml(c.set||'')}${c.number?' #'+escapeHtml(c.number):''}</div>
-    <div class="detail-badges">
-      ${c.rarity?`<span class="detail-badge">⭐ ${escapeHtml(RARITY_HE[c.rarity]||c.rarity)}</span>`:''}
-      ${c.condition?`<span class="detail-badge">🏷️ ${escapeHtml(CONDITION_HE[c.condition]||c.condition)}</span>`:''}
-      ${c.language?`<span class="detail-badge">🌐 ${escapeHtml(LANGUAGE_HE[c.language]||c.language)}</span>`:''}
+    <div class="detail-identity">
+      <div class="detail-name">${escapeHtml(c.name||c.pokemon||'—')}</div>
+      <div class="detail-set">${escapeHtml(c.set||'סדרה לא ידועה')}${c.number?' · #'+escapeHtml(c.number):''}</div>
     </div>
-    <div class="detail-grid">
-      <div class="detail-stat"><div class="detail-stat-label">שווי משוער</div><div class="detail-stat-val" id="detailPriceValue">${c.value?'$'+escapeHtml(c.value):'—'}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">שנה</div><div class="detail-stat-val">${escapeHtml(c.year||'—')}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">פוקימון</div><div class="detail-stat-val">${escapeHtml(c.pokemon||'—')}</div></div>
-      <div class="detail-stat"><div class="detail-stat-label">סדרה</div><div class="detail-stat-val">${escapeHtml(c.set||'—')}</div></div>
+    <div class="detail-price-card">
+      <div class="detail-price-label">מחיר משוער</div>
+      <div class="detail-price-value" id="detailPriceValue">${escapeHtml(detailPrice)}</div>
+    </div>
+    <div class="detail-meta-row">
+      <div class="detail-meta-item"><span class="detail-meta-label">שנה</span><span class="detail-meta-value">${escapeHtml(c.year||'לא ידועה')}</span></div>
+      <div class="detail-meta-item"><span class="detail-meta-label">נדירות</span><span class="detail-meta-value">⭐ ${escapeHtml(rarity)}</span></div>
     </div>
     <div class="detail-actions">
       <button class="card-btn" data-detail-action="edit">✏️ עריכה</button>
@@ -1756,12 +1790,10 @@ function renderQuickScans(){
     (quickScans.length===1?'קלף אחד נסרק':quickScans.length+' קלפים נסרקו')+
     (added?' • '+added+' נוספו':'');
   document.getElementById('quickScanTotal').textContent='סה״כ: $'+total.toFixed(2);
+  const sessionTools=document.getElementById('quickSessionTools');
+  if(sessionTools)sessionTools.hidden=!quickScans.length;
   if(!quickScans.length){
-    list.innerHTML=`<div class="quick-scan-empty">
-      <div class="quick-scan-empty-icon">📷</div>
-      <div class="quick-scan-empty-title">צלם קלף כדי להתחיל</div>
-      <div class="quick-scan-empty-sub">אפשר להמשיך לצלם בזמן שהקלפים מזוהים</div>
-    </div>`;
+    list.replaceChildren();
     return;
   }
   list.innerHTML=quickScans.map(scan=>{
