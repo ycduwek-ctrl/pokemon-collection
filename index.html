@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="catalog-search-v14">
+  <meta name="hitim-build" content="catalog-search-v14.1">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -1262,9 +1262,19 @@ async function shareHitimFromNav(){
   setBottomNavActive('share');
   try{await shareHitimInvite();}finally{setBottomNavActive('gallery');}
 }
-function initCols(){cols=window.innerWidth>=600?3:2;document.getElementById('colsNum').textContent=cols;applyGrid();}
+function initCols(){
+  cols=window.innerWidth>=600?3:2;
+  const counter=document.getElementById('colsNum');
+  if(counter)counter.textContent=cols;
+  applyGrid();
+}
 function applyGrid(){document.getElementById('grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;}
-function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementById('colsNum').textContent=cols;applyGrid();}
+function changeCols(d){
+  cols=Math.max(1,Math.min(6,cols+d));
+  const counter=document.getElementById('colsNum');
+  if(counter)counter.textContent=cols;
+  applyGrid();
+}
 
 async function load(){
   try{
