@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="camera-zoom-v15.1">
+  <meta name="hitim-build" content="native-camera-v15.2">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -407,74 +407,6 @@
       border: 0; background: none; color: #64748b; font-family: inherit;
       font-size: .72em; font-weight: 700; padding: 6px 10px; cursor: pointer;
     }
-
-    /* ===== LIGHTWEIGHT IN-APP CAMERA ===== */
-    .quick-camera-overlay {
-      position: fixed; inset: 0; z-index: 850; display: none;
-      flex-direction: column; align-items: center; justify-content: space-between;
-      padding: max(14px,env(safe-area-inset-top)) 14px max(20px,env(safe-area-inset-bottom));
-      background: #030712; color: #fff;
-    }
-    .quick-camera-overlay.open { display: flex; }
-    .quick-camera-top {
-      width: 100%; min-height: 44px; display: grid; grid-template-columns: 44px 1fr 44px;
-      align-items: center; direction: ltr;
-    }
-    .quick-camera-close {
-      width: 40px; height: 40px; border: 1px solid #293765; border-radius: 50%;
-      background: #0f1730; color: #cbd5e1; font-family: inherit; font-size: 1.05em;
-      font-weight: 700; cursor: pointer;
-    }
-    .quick-camera-mode {
-      justify-self: center; padding: 6px 13px; border-radius: 16px;
-      color: #fbbf24; background: #111a37; border: 1px solid #4c3a83;
-      font-size: .76em; font-weight: 900; direction: ltr;
-    }
-    .quick-camera-stage {
-      width: 100%; flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center;
-    }
-    .quick-camera-frame {
-      position: relative; width: min(calc(100vw - 28px),calc((100dvh - 190px)*.75));
-      max-height: calc(100dvh - 190px); aspect-ratio: 3/4; overflow: hidden;
-      border-radius: 22px; background: #080d1f; border: 1px solid #33436f;
-      contain: layout paint; isolation: isolate;
-    }
-    .quick-camera-video { width: 100%; height: 100%; display: block; object-fit: cover; background: #050a18; }
-    .quick-camera-guide {
-      position: absolute; width: 76%; aspect-ratio: 5/7; top: 50%; left: 50%;
-      transform: translate(-50%,-50%); border: 2px solid rgba(255,255,255,.72);
-      border-radius: 15px; pointer-events: none;
-    }
-    .quick-camera-guide-text {
-      position: absolute; left: 50%; bottom: 13px; transform: translateX(-50%);
-      width: max-content; max-width: 90%; padding: 5px 10px; border-radius: 13px;
-      background: rgba(5,10,24,.82); color: #e2e8f0; font-size: .66em; font-weight: 800;
-      pointer-events: none;
-    }
-    .quick-camera-loading {
-      position: absolute; inset: 0; display: grid; place-items: center;
-      color: #94a3b8; background: #080d1f; font-size: .8em; font-weight: 800;
-    }
-    .quick-camera-loading[hidden] { display: none; }
-    .quick-camera-controls {
-      width: min(100%,360px); min-height: 86px; display: grid;
-      grid-template-columns: 1fr 78px 1fr; align-items: center; gap: 16px; direction: ltr;
-    }
-    .quick-camera-shutter {
-      width: 72px; height: 72px; justify-self: center; border-radius: 50%; padding: 6px;
-      border: 3px solid #fff; background: transparent; cursor: pointer;
-    }
-    .quick-camera-shutter::after {
-      content: ''; display: block; width: 100%; height: 100%; border-radius: 50%;
-      background: linear-gradient(150deg,#8b5cf6 5%,#6d46ef 52%,#fbbf24 100%);
-    }
-    .quick-camera-shutter:disabled { opacity: .45; cursor: wait; }
-    .quick-camera-fallback {
-      min-height: 40px; padding: 6px 10px; border-radius: 18px; border: 1px solid #33436f;
-      color: #c4b5fd; background: #111a37; font-family: inherit; font-size: .68em;
-      font-weight: 800; cursor: pointer; direction: rtl;
-    }
-    .quick-camera-fallback[hidden] { visibility: hidden; pointer-events: none; }
 
     .upload-btns { display: flex; gap: 8px; }
     .upload-btn { flex: 1; background: #0f1730; border: 1px dashed #1e2d5a; border-radius: 10px; padding: 12px; text-align: center; cursor: pointer; }
@@ -1035,27 +967,6 @@
   </button>
 </nav>
 
-<div class="quick-camera-overlay" id="quickCameraOverlay" aria-hidden="true">
-  <div class="quick-camera-top">
-    <button class="quick-camera-close" type="button" onclick="closeQuickCameraView()" aria-label="סגירת המצלמה">✕</button>
-    <div class="quick-camera-mode" id="quickCameraMode">2× · 3:4</div>
-    <span></span>
-  </div>
-  <div class="quick-camera-stage">
-    <div class="quick-camera-frame">
-      <video class="quick-camera-video" id="quickCameraVideo" autoplay muted playsinline></video>
-      <div class="quick-camera-guide"></div>
-      <div class="quick-camera-guide-text">יישר את הקלף בתוך המסגרת</div>
-      <div class="quick-camera-loading" id="quickCameraLoading">פותח מצלמה אחורית…</div>
-    </div>
-  </div>
-  <div class="quick-camera-controls">
-    <button class="quick-camera-fallback" id="quickCameraFallback" type="button" onclick="triggerNativeQuickCamera()" hidden>מצלמת המכשיר</button>
-    <button class="quick-camera-shutter" id="quickCameraShutter" type="button" onclick="captureQuickCameraFrame()" aria-label="צילום קלף" disabled></button>
-    <span></span>
-  </div>
-</div>
-
 <div class="overlay" id="quickIdentifyOverlay" onclick="quickOverlayClick(event)">
   <div class="modal quick-scan-modal">
     <div class="modal-handle"></div>
@@ -1282,9 +1193,6 @@ let dailyPriceRefreshTimer=0;
 let identificationInFlight=0;
 let quickPriceInFlight=0;
 let quickPriceQueue=[];
-let quickCameraStream=null;
-let quickCameraOpening=false;
-let quickCameraZoomApplied=false;
 let editorPriceToken=0;
 let editorCandidateOptions=[];
 let editorCandidateResultNodeId='aiResult';
@@ -1359,7 +1267,6 @@ function closePanel(resetNav=true){
   if(resetNav)setBottomNavActive('gallery');
 }
 function closeNavigationViews(){
-  closeQuickCameraView();
   closePanel(false);
   ['quickIdentifyOverlay','detailOverlay','overlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
 }
@@ -1656,114 +1563,11 @@ function openQuickCamera(){
   triggerQuickCamera();
 }
 function triggerQuickCamera(){
-  openQuickCameraView();
-}
-function triggerNativeQuickCamera(){
-  closeQuickCameraView();
   const camera=document.getElementById('quickFrontCamera');
   camera.value='';
   camera.click();
 }
-function stopQuickCameraStream(){
-  if(quickCameraStream){
-    quickCameraStream.getTracks().forEach(track=>track.stop());
-    quickCameraStream=null;
-  }
-  const video=document.getElementById('quickCameraVideo');
-  if(video)video.srcObject=null;
-}
-function closeQuickCameraView(){
-  stopQuickCameraStream();
-  quickCameraOpening=false;
-  quickCameraZoomApplied=false;
-  const overlay=document.getElementById('quickCameraOverlay');
-  if(overlay){overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');}
-}
-function showQuickCameraFallback(message){
-  stopQuickCameraStream();
-  const loading=document.getElementById('quickCameraLoading');
-  const fallback=document.getElementById('quickCameraFallback');
-  const shutter=document.getElementById('quickCameraShutter');
-  if(loading){loading.hidden=false;loading.textContent=message||'המצלמה המתקדמת לא זמינה במכשיר הזה';}
-  if(fallback)fallback.hidden=false;
-  if(shutter)shutter.disabled=true;
-}
-async function openQuickCameraView(){
-  if(quickCameraOpening||quickCameraStream)return;
-  if(!navigator.mediaDevices?.getUserMedia){triggerNativeQuickCamera();return;}
-  const overlay=document.getElementById('quickCameraOverlay');
-  const video=document.getElementById('quickCameraVideo');
-  const loading=document.getElementById('quickCameraLoading');
-  const fallback=document.getElementById('quickCameraFallback');
-  const shutter=document.getElementById('quickCameraShutter');
-  const mode=document.getElementById('quickCameraMode');
-  overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');
-  loading.hidden=false;loading.textContent='פותח מצלמה אחורית…';fallback.hidden=true;shutter.disabled=true;
-  mode.textContent='2× · 3:4';quickCameraOpening=true;quickCameraZoomApplied=false;
-  try{
-    const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1440},height:{ideal:1920},aspectRatio:{ideal:.75}},
-      audio:false
-    });
-    if(!overlay.classList.contains('open')){stream.getTracks().forEach(track=>track.stop());return;}
-    quickCameraStream=stream;
-    const track=stream.getVideoTracks()[0];
-    if(track?.getCapabilities&&track?.applyConstraints){
-      try{
-        const capabilities=track.getCapabilities();
-        const zoom=capabilities.zoom;
-        if(zoom&&Number.isFinite(zoom.min)&&Number.isFinite(zoom.max)&&zoom.max>zoom.min){
-          const targetZoom=Math.min(zoom.max,Math.max(zoom.min,2));
-          await track.applyConstraints({advanced:[{zoom:targetZoom}]});
-          quickCameraZoomApplied=Math.abs(targetZoom-2)<.05;
-        }
-      }catch(error){quickCameraZoomApplied=false;}
-    }
-    video.srcObject=stream;
-    await video.play();
-    loading.hidden=true;shutter.disabled=false;
-    mode.textContent=quickCameraZoomApplied?'2× · 3:4':'3:4';
-  }catch(error){
-    showQuickCameraFallback(error?.name==='NotAllowedError'?'יש לאשר גישה למצלמה כדי לצלם':'השליטה ב־2× לא זמינה במכשיר הזה');
-  }finally{quickCameraOpening=false;}
-}
-function quickCameraCanvasBlob(video){
-  const sourceWidth=video.videoWidth,sourceHeight=video.videoHeight;
-  if(!sourceWidth||!sourceHeight)return Promise.resolve(null);
-  const targetRatio=3/4;
-  let sx=0,sy=0,cropWidth=sourceWidth,cropHeight=sourceHeight;
-  if(sourceWidth/sourceHeight>targetRatio){
-    cropWidth=sourceHeight*targetRatio;sx=(sourceWidth-cropWidth)/2;
-  }else{
-    cropHeight=sourceWidth/targetRatio;sy=(sourceHeight-cropHeight)/2;
-  }
-  const outputHeight=Math.min(2000,Math.round(cropHeight));
-  const canvas=document.createElement('canvas');
-  canvas.width=Math.round(outputHeight*targetRatio);canvas.height=outputHeight;
-  const context=canvas.getContext('2d',{alpha:false});
-  context.drawImage(video,sx,sy,cropWidth,cropHeight,0,0,canvas.width,canvas.height);
-  return new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));
-}
-async function captureQuickCameraFrame(){
-  const video=document.getElementById('quickCameraVideo');
-  const shutter=document.getElementById('quickCameraShutter');
-  if(!quickCameraStream||!video?.videoWidth||shutter.disabled)return;
-  shutter.disabled=true;
-  try{
-    const blob=await quickCameraCanvasBlob(video);
-    if(!blob)throw new Error('empty camera frame');
-    const file=new File([blob],`hitim-${Date.now()}.jpg`,{type:'image/jpeg',lastModified:Date.now()});
-    const usedZoom=quickCameraZoomApplied;
-    closeQuickCameraView();
-    enqueueQuickFiles([file]);
-    toast(usedZoom?'צולם ב־2× וביחס 3:4':'צולם ביחס 3:4');
-  }catch(error){
-    shutter.disabled=false;
-    toast('לא הצלחנו לשמור את הצילום — נסה שוב');
-  }
-}
 function closeQuickIdentify(){
-  closeQuickCameraView();
   document.getElementById('quickIdentifyOverlay').classList.remove('open');
   setBottomNavActive('gallery');
 }
@@ -1783,9 +1587,6 @@ function resetQuickIdentify(){
 function quickFilesSelected(input){
   const files=Array.from(input.files||[]).filter(file=>file.type.startsWith('image/'));
   input.value='';
-  enqueueQuickFiles(files);
-}
-function enqueueQuickFiles(files){
   files.forEach(file=>{
     quickScans.push({
       id:String(Date.now())+'-'+Math.random().toString(36).slice(2),
@@ -3206,7 +3007,7 @@ document.addEventListener('visibilitychange',()=>{
   if(document.visibilityState==='visible'){
     HitimAuth.refreshAccess();
     scheduleDailyPriceRefresh(30000);
-  }else closeQuickCameraView();
+  }
 });
 setInterval(()=>{
   if(document.visibilityState==='visible'&&navigator.onLine)HitimAuth.refreshAccess();
