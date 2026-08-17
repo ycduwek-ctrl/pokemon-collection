@@ -14,7 +14,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "clean-scan-v15.0"
+        "X-Hitim-Build": "camera-zoom-v15.1"
       },
       "continue": true
     },

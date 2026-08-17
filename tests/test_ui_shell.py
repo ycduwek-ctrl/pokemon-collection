@@ -177,6 +177,41 @@ class UiShellTests(unittest.TestCase):
         self.assertIn("triggerQuickCamera()", nav_camera)
         self.assertNotIn("resetQuickIdentify()", nav_camera)
 
+    def test_in_app_camera_requests_2x_and_outputs_three_by_four(self):
+        self.assertIn('id="quickCameraOverlay"', self.html)
+        self.assertIn('id="quickCameraVideo"', self.html)
+        camera = self.html.split("async function openQuickCameraView()", 1)[1].split(
+            "function quickCameraCanvasBlob", 1
+        )[0]
+        self.assertIn("navigator.mediaDevices.getUserMedia", camera)
+        self.assertIn("facingMode:{ideal:'environment'}", camera)
+        self.assertIn("aspectRatio:{ideal:.75}", camera)
+        self.assertIn("Math.max(zoom.min,2)", camera)
+        self.assertIn("applyConstraints({advanced:[{zoom:targetZoom}]})", camera)
+        crop = self.html.split("function quickCameraCanvasBlob", 1)[1].split(
+            "async function captureQuickCameraFrame", 1
+        )[0]
+        self.assertIn("const targetRatio=3/4", crop)
+        self.assertIn("canvas.width=Math.round(outputHeight*targetRatio)", crop)
+        self.assertIn("canvas.toBlob(resolve,'image/jpeg',.94)", crop)
+
+    def test_in_app_camera_has_native_fallback_and_releases_hardware(self):
+        self.assertIn('id="quickFrontCamera"', self.html)
+        self.assertIn("function triggerNativeQuickCamera()", self.html)
+        stop_camera = self.html.split("function stopQuickCameraStream()", 1)[1].split(
+            "function closeQuickCameraView", 1
+        )[0]
+        self.assertIn("getTracks().forEach(track=>track.stop())", stop_camera)
+        visibility = self.html.split(
+            "document.addEventListener('visibilitychange'", 1
+        )[1].split("});", 1)[0]
+        self.assertIn("else closeQuickCameraView()", visibility)
+        camera_css = self.html.split("/* ===== LIGHTWEIGHT IN-APP CAMERA ===== */", 1)[1].split(
+            ".upload-btns", 1
+        )[0]
+        self.assertNotIn("animation:", camera_css)
+        self.assertNotIn("filter:", camera_css)
+
     def test_card_detail_shows_one_name_and_only_essential_metadata(self):
         detail = self.html.split("function openDetail", 1)[1].split(
             "function closeDetail", 1
