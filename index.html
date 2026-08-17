@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="ui-performance-v12">
+  <meta name="hitim-build" content="bottom-navigation-v13">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-02.svg" type="image/svg+xml">
@@ -20,11 +20,11 @@
     /* ===== HEADER HERO ===== */
     .header {
       background: linear-gradient(160deg, #0a0f2e 0%, #12063a 50%, #1a0a4a 100%);
-      position: sticky; top: 0; z-index: 100;
+      position: relative; z-index: 100;
       border-bottom: 2px solid #f59e0b55;
       box-shadow: 0 4px 30px rgba(0,0,0,0.7);
       overflow: visible;
-      min-height: 112px;
+      min-height: 154px;
     }
     .header::before {
       content: '';
@@ -35,14 +35,13 @@
     }
     .header-inner {
       display: flex; align-items: center; justify-content: center;
-      position: relative; z-index: 2; min-height: 112px;
+      position: relative; z-index: 2; min-height: 154px; padding: 14px 12px 18px;
     }
     .header-left {
-      display: contents;
+      width: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 13px;
     }
     .header-logo {
-      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-      display: flex; align-items: center; z-index: 5;
+      position: static; transform: none; display: flex; align-items: center; justify-content: center; z-index: 5;
     }
     .header-title {
       display: flex; align-items: center; justify-content: center; gap: 5px;
@@ -57,15 +56,14 @@
       filter: drop-shadow(0 0 12px rgba(251,191,36,0.4));
     }
     .header-title-icon {
-      width: 38px; height: 38px; flex: 0 0 38px; border-radius: 10px;
+      width: 44px; height: 44px; flex: 0 0 44px; border-radius: 12px;
       object-fit: cover;
       box-shadow: 0 0 11px rgba(251,191,36,0.5);
     }
     .header-stats-row {
-      position: absolute; left: calc(50% + 30px); top: 50%;
-      transform: translate(-50%, -50%);
+      position: static; transform: none;
       display: flex; gap: 7px; justify-content: center;
-      width: auto; margin: 0; padding: 0 0 13px;
+      width: auto; margin: 0; padding: 0 0 12px;
       z-index: 4;
     }
     .header-stats-box {
@@ -121,29 +119,14 @@
         filter: drop-shadow(0 0 10px rgba(251,191,36,0.5));
         text-shadow: 0 2px 14px #12063a;
       }
-      .header-logo { left: 11px; }
-      .header-title-icon { width: 34px; height: 34px; flex-basis: 34px; }
-      .header-stats-row { left: calc(50% + 28px); gap: 6px; transform: translate(-50%, -50%); }
+      .header-title-icon { width: 40px; height: 40px; flex-basis: 40px; }
+      .header-stats-row { gap: 6px; }
       .header-stats-box { width: 50px; height: 50px; flex-basis: 50px; }
       .stats-num { max-width: 46px; font-size: 1em; }
       .stats-label { top: calc(100% + 3px); font-size: .52em; }
     }
 
-    /* ===== TOOLBAR ===== */
-    .toolbar {
-      background: #080d1f; padding: 10px 14px;
-      display: flex; align-items: center; gap: 8px;
-      border-bottom: 1px solid #1a2040;
-    }
-    .quick-identify-bar { display: none; }
-    .quick-identify-btn {
-      width: 100%; border: 1px solid rgba(167,139,250,0.5); border-radius: 13px;
-      padding: 9px 12px; color: #f8fafc; cursor: pointer; font-family: inherit;
-      font-size: 0.82em; font-weight: 800;
-      background: linear-gradient(100deg, rgba(91,33,182,0.92), rgba(49,46,129,0.92));
-      box-shadow: 0 4px 15px rgba(91,33,182,0.22), inset 0 1px rgba(255,255,255,0.1);
-    }
-    .quick-identify-btn span { color: #fbbf24; }
+    /* ===== SEARCH & FILTERS ===== */
     .search-box {
       flex: 1; display: flex; align-items: center; gap: 6px;
       background: #0f1730; border-radius: 22px; padding: 8px 14px;
@@ -151,8 +134,6 @@
     }
     .search-box input { border: none; background: none; font-family: inherit; font-size: 0.85em; width: 100%; outline: none; color: #e2e8f0; }
     .search-box input::placeholder { color: #3d4f7a; }
-    .filter-btn { background: #0f1730; border: 1px solid #1e2d5a; border-radius: 22px; padding: 8px 14px; font-size: 0.82em; font-weight: 700; cursor: pointer; font-family: inherit; color: #7891c8; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: all 0.15s; }
-    .filter-btn.has-filters { background: rgba(245,158,11,0.15); color: #f59e0b; border-color: #f59e0b55; }
     .cols-control { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
     .cols-btn { width: 26px; height: 26px; border-radius: 6px; border: 1px solid #1e2d5a; background: #0f1730; cursor: pointer; font-size: 0.9em; font-weight: 700; color: #7891c8; }
     .cols-num { font-size: 0.85em; font-weight: 700; min-width: 14px; text-align: center; color: #e2e8f0; }
@@ -167,7 +148,7 @@
     /* ===== FILTER PANEL ===== */
     .panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 300; display: none; }
     .panel-overlay.open { display: block; }
-    .filter-panel { position: fixed; top: 0; left: 0; bottom: 0; width: 285px; background: #080d1f; z-index: 301; transform: translateX(-100%); transition: transform 0.25s ease; overflow-y: auto; border-right: 1px solid #1a2040; }
+    .filter-panel { position: fixed; top: 0; left: 0; bottom: 0; width: min(92vw, 390px); padding-bottom: calc(112px + env(safe-area-inset-bottom)); background: #080d1f; z-index: 301; transform: translateX(-100%); transition: transform 0.25s ease; overflow-y: auto; border-right: 1px solid #1a2040; }
     .filter-panel.open { transform: translateX(0); }
     .panel-head { padding: 16px; border-bottom: 1px solid #1a2040; display: flex; justify-content: space-between; align-items: center; }
     .panel-head h3 { font-size: 1em; font-weight: 800; color: #f59e0b; }
@@ -188,6 +169,9 @@
     }
     .sort-select:focus { border-color: #8b5cf6; box-shadow: 0 0 0 3px rgba(124,58,237,.14); }
     .reset-btn { margin: 14px 16px; width: calc(100% - 32px); padding: 11px; border: 1px solid #1e2d5a; border-radius: 10px; background: #0f1730; font-family: inherit; font-size: 0.88em; font-weight: 700; cursor: pointer; color: #7891c8; }
+    .panel-search .search-box { min-height: 48px; border-radius: 14px; }
+    .panel-search .search-box input { font-size: .93em; }
+    .panel-cols { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 
     /* ===== GRID ===== */
     .grid { display: grid; grid-template-columns: repeat(3, 1fr); align-items: start; gap: 10px; padding: 12px; }
@@ -237,38 +221,14 @@
     .card-no-img { width: 100%; aspect-ratio: 2/3; background: linear-gradient(135deg, #0f1730, #080d1f); display: flex; align-items: center; justify-content: center; font-size: 2.5em; flex-direction: column; gap: 6px; }
     .card-no-img-text { font-size: 0.3em; color: #3d4f7a; font-weight: 700; }
 
-    .rarity-badge { position: absolute; z-index: 5; top: 5px; right: 5px; padding: 2px 7px; border-radius: 8px; font-size: 0.6em; font-weight: 800; pointer-events: none; }
-    .rarity-common { background: rgba(55,65,81,0.85); color: #9ca3af; }
-    .rarity-uncommon { background: rgba(6,78,59,0.85); color: #6ee7b7; }
-    .rarity-rare { background: rgba(30,58,138,0.85); color: #93c5fd; }
-    .rarity-holo { background: rgba(76,29,149,0.85); color: #c4b5fd; }
-    .rarity-ultra { background: rgba(120,53,15,0.85); color: #fcd34d; }
-    .rarity-secret { background: rgba(136,19,55,0.85); color: #fda4af; }
-
-    .card-img-overlay { position: absolute; z-index: 3; bottom: 0; left: 0; right: 0; height: 40%; background: linear-gradient(to top, rgba(5,10,24,0.9) 0%, transparent 100%); pointer-events: none; }
-    .comments-badge { position: absolute; z-index: 5; bottom: 5px; left: 5px; background: rgba(0,0,0,0.84); color: #fbbf24; border-radius: 10px; padding: 2px 7px; font-size: 0.62em; font-weight: 700; pointer-events: none; }
-
-    .card-body { padding: 7px 8px 5px; }
-    .card-name { font-weight: 800; font-size: 0.82em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #e2e8f0; margin-bottom: 2px; }
-    .card-set { font-size: 0.66em; color: #3d4f7a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-bottom: 5px; }
-    .card-row { display: flex; justify-content: space-between; align-items: center; }
-    .card-value { color: #fbbf24; font-weight: 800; font-size: 0.82em; }
-    .card-cond { font-size: 0.62em; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
-    .cond-mint { background: rgba(6,78,59,0.7); color: #6ee7b7; }
-    .cond-nm { background: rgba(30,58,138,0.7); color: #93c5fd; }
-    .cond-ex { background: rgba(54,83,20,0.7); color: #bef264; }
-    .cond-good { background: rgba(120,53,15,0.7); color: #fcd34d; }
-    .cond-poor { background: rgba(127,29,29,0.7); color: #fca5a5; }
-
-    .card-actions { padding: 5px 8px; border-top: 1px solid #0f1730; display: flex; justify-content: space-between; }
+    .card-price-badge {
+      position: absolute; z-index: 6; right: 7px; bottom: 7px;
+      min-width: 44px; padding: 4px 8px; border-radius: 9px;
+      color: #fbbf24; background: rgba(5,10,24,.93); border: 1px solid rgba(251,191,36,.62);
+      box-shadow: 0 3px 12px rgba(0,0,0,.5); font-size: .72em; line-height: 1; font-weight: 900;
+      text-align: center; direction: ltr; pointer-events: none;
+    }
     .card-btn { font-size: 0.7em; color: #3d4f7a; cursor: pointer; background: none; border: none; font-family: inherit; font-weight: 600; }
-
-    /* ===== ADD CARD ===== */
-    .add-card { background: linear-gradient(160deg, #0f1730, #080d1f); border: 2px dashed #1e2d5a; border-radius: 14px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; min-height: 80px; padding: 20px 0; transition: all 0.15s; position: relative; overflow: hidden; }
-    .add-card::before { content:''; position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, rgba(245,158,11,0.04),transparent 70%); }
-    .add-card:active { border-color: #f59e0b; }
-    .add-icon { font-size: 1.8em; color: #f59e0b; filter: drop-shadow(0 0 8px rgba(245,158,11,0.5)); }
-    .add-label { font-size: 0.72em; color: #3d4f7a; font-weight: 700; margin-top: 6px; }
 
     /* ===== MODAL ===== */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 200; display: none; align-items: flex-end; }
@@ -437,7 +397,7 @@
     .btn:disabled { opacity: 0.5; }
     .divider { height: 1px; background: #1a2040; margin: 12px 0; }
 
-    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: #0f1730; color: #e2e8f0; border: 1px solid #1e2d5a; padding: 10px 22px; border-radius: 22px; font-size: 0.85em; font-weight: 700; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
+    .toast { position: fixed; bottom: calc(100px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); background: #0f1730; color: #e2e8f0; border: 1px solid #1e2d5a; padding: 10px 22px; border-radius: 22px; font-size: 0.85em; font-weight: 700; z-index: 999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; }
     .toast.show { opacity: 1; }
     .loading { text-align: center; padding: 60px 0; color: #3d4f7a; grid-column: 1/-1; }
     .spin {
@@ -608,35 +568,44 @@
     .price-up { animation: priceUp 0.85s ease both; }
     .price-down { animation: priceDown 0.7s ease both; }
     .price-same { animation: priceSame 0.55s ease both; }
-    /* ===== FLOATING ACTIONS ===== */
-    .floating-actions {
-      position: fixed; left: 14px;
-      bottom: calc(16px + env(safe-area-inset-bottom));
-      z-index: 160; display: flex; flex-direction: column; gap: 9px;
-      align-items: flex-start; direction: rtl;
+    /* ===== PERSISTENT BOTTOM NAVIGATION ===== */
+    .bottom-nav {
+      position: fixed; left: 10px; right: 10px; bottom: calc(10px + env(safe-area-inset-bottom));
+      z-index: 520; width: auto; max-width: 680px; height: 72px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(3,minmax(34px,1fr)) 68px repeat(3,minmax(34px,1fr));
+      align-items: center; gap: 1px; padding: 7px 8px; direction: ltr;
+      border: 1px solid rgba(167,139,250,.34); border-radius: 27px;
+      background: #0b1230; box-shadow: 0 12px 34px rgba(0,0,0,.65), inset 0 1px rgba(255,255,255,.06);
     }
-    .floating-action {
-      min-height: 48px; border: 1px solid rgba(255,255,255,.16);
-      border-radius: 25px; padding: 0 15px;
-      display: flex; align-items: center; justify-content: center; gap: 7px;
-      color: #fff; font-family: inherit; font-size: .82em; font-weight: 900;
-      cursor: pointer; box-shadow: 0 8px 28px rgba(0,0,0,.48);
-      transition: transform .16s, filter .16s;
+    .bottom-nav-button {
+      position: relative; width: 42px; height: 42px; min-width: 0; margin: 0 auto; padding: 0;
+      display: grid; place-items: center; border: 0; border-radius: 14px;
+      color: #cbd5e1; background: transparent; cursor: pointer; touch-action: manipulation;
     }
-    .floating-action:active { transform: scale(.92); filter: brightness(1.18); }
-    .floating-action.scan {
-      background: linear-gradient(135deg, rgba(124,58,237,.96), rgba(79,70,229,.96));
-      box-shadow: 0 8px 30px rgba(124,58,237,.42);
+    .bottom-nav-button svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .bottom-nav-button.active { color: #fbbf24; background: rgba(124,58,237,.2); }
+    .bottom-nav-button:active { color: #fff; background: rgba(124,58,237,.34); }
+    .bottom-nav-button[hidden] { display: grid !important; visibility: hidden; pointer-events: none; }
+    .bottom-nav-camera {
+      width: 70px; height: 70px; margin-top: -32px; border-radius: 50%; color: #fff;
+      border: 3px solid #0b1230;
+      background: linear-gradient(150deg,#7c3aed 8%,#5b37e8 52%,#fbbf24 100%);
+      box-shadow: 0 8px 24px rgba(91,55,232,.48), 0 0 0 1px rgba(251,191,36,.38);
     }
-    .floating-action.add {
-      background: linear-gradient(135deg, rgba(245,158,11,.96), rgba(217,119,6,.96));
-      color: #12063a; box-shadow: 0 8px 30px rgba(245,158,11,.30);
+    .bottom-nav-camera svg { width: 31px; height: 31px; stroke-width: 2.2; }
+    .bottom-nav-camera.active { color: #fff; background: linear-gradient(150deg,#8b5cf6 8%,#6d46ef 52%,#fbbf24 100%); }
+    .bottom-nav-badge {
+      position: absolute; top: 2px; right: 1px; min-width: 16px; height: 16px; padding: 0 4px;
+      display: none; place-items: center; border-radius: 9px; color: #160929; background: #fbbf24;
+      font-size: .56em; font-weight: 900; line-height: 1;
     }
-    .floating-action-icon { font-size: 1.25em; line-height: 1; }
-    .grid { padding-bottom: 126px; }
-    @media (min-width: 720px) {
-      .floating-actions { left: 24px; bottom: 24px; }
+    .bottom-nav-badge.show { display: grid; }
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
+    .grid { padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
+    .modal-body, .system-body, .quick-scan-modal .modal-body { padding-bottom: calc(116px + env(safe-area-inset-bottom)); }
 
     .toast.show { animation: toastPop 0.3s cubic-bezier(.2,1.3,.3,1); }
     @keyframes cardEnter {
@@ -679,7 +648,7 @@
       to { transform: translateX(-50%) translateY(0) scale(1); }
     }
     @media (prefers-reduced-motion: reduce) {
-      .header-title-icon, .floating-action, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
+      .header-title-icon, .quick-mini-ball, .quick-add-spinner, .quick-scan-row, .poke-card.is-entering, .modal, .toast.show, .poke-card.deleting, .delete-particle, .money-coin,
       .price-up, .price-down, .price-same { animation: none; }
     }
 
@@ -730,50 +699,6 @@
       animation: quickAddSpin .72s linear infinite;
     }
     .auth-privacy { margin-top: 15px; color: #64748b; font-size: .72em; line-height: 1.5; }
-
-    .header-menu {
-      position: absolute; top: 28px; right: 12px; z-index: 220;
-      direction: rtl;
-    }
-    .header-menu-toggle {
-      width: 54px; height: 54px; padding: 0; border-radius: 50%;
-      border: 1px solid rgba(251,191,36,.42); background: rgba(5,10,24,.72);
-      color: #f8fafc; cursor: pointer; display: grid; place-content: center; gap: 4px;
-      box-shadow: 0 5px 18px rgba(0,0,0,.34), inset 0 1px rgba(255,255,255,.08);
-    }
-    .header-menu-toggle span {
-      display: block; width: 23px; height: 3px; border-radius: 3px; background: currentColor;
-      transition: transform .2s ease, opacity .16s ease;
-    }
-    .header-menu.open .header-menu-toggle span:nth-child(1) { transform: translateY(6px) rotate(45deg); }
-    .header-menu.open .header-menu-toggle span:nth-child(2) { opacity: 0; }
-    .header-menu.open .header-menu-toggle span:nth-child(3) { transform: translateY(-6px) rotate(-45deg); }
-    .header-menu-panel {
-      position: absolute; top: 62px; right: 0; width: min(76vw, 260px); padding: 9px;
-      display: grid; gap: 5px; border-radius: 15px;
-      border: 1px solid rgba(251,191,36,.3);
-      background: linear-gradient(145deg, rgba(15,23,48,.98), rgba(18,6,58,.98));
-      box-shadow: 0 18px 38px rgba(0,0,0,.58), inset 0 1px rgba(255,255,255,.06);
-      opacity: 0; visibility: hidden; pointer-events: none;
-      transform: translateY(-7px) scale(.96); transform-origin: top right;
-      z-index: 240; max-height: min(70vh, 410px); overflow-y: auto;
-      transition: opacity .18s ease, transform .18s ease, visibility .18s;
-    }
-    .header-menu.open .header-menu-panel {
-      opacity: 1; visibility: visible; pointer-events: auto; transform: translateY(0) scale(1);
-    }
-    .header-menu-item {
-      min-height: 52px; padding: 10px 13px; border-radius: 13px;
-      border: 1px solid transparent; background: rgba(255,255,255,.035);
-      color: #e2e8f0; cursor: pointer; font: 800 .9em 'Heebo',sans-serif;
-      display: flex; align-items: center; gap: 9px; text-align: right;
-    }
-    .header-menu-item:hover, .header-menu-item:focus-visible {
-      outline: none; color: #fff; border-color: rgba(167,139,250,.42); background: rgba(124,58,237,.17);
-    }
-    .header-menu-item.danger { color: #fca5a5; }
-    .header-menu-item[hidden] { display: none; }
-    .header-menu-icon { width: 23px; text-align: center; font-size: 1.12em; }
 
     .system-overlay {
       position: fixed; inset: 0; z-index: 460; display: none; padding: 18px;
@@ -888,35 +813,6 @@
 
 <div class="header">
   <div class="header-inner">
-    <div class="header-menu" id="headerMenu">
-      <button class="header-menu-toggle" id="headerMenuToggle" type="button"
-              onclick="toggleHeaderMenu(event)" aria-expanded="false"
-              aria-controls="headerMenuPanel" aria-label="פתיחת תפריט">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="header-menu-panel" id="headerMenuPanel" role="menu" aria-label="חשבון והגדרות">
-        <button class="header-menu-item" id="adminMenuBtn" type="button" role="menuitem" hidden
-                onclick="closeHeaderMenu();openAdminPanel()">
-          <span class="header-menu-icon">👥</span><span>ניהול משתמשים</span>
-        </button>
-        <button class="header-menu-item" type="button" role="menuitem"
-                onclick="closeHeaderMenu();openSettingsPanel()">
-          <span class="header-menu-icon">⚙️</span><span>הגדרות וגיבוי</span>
-        </button>
-        <button class="header-menu-item" id="installMenuBtn" type="button" role="menuitem"
-                onclick="closeHeaderMenu();installHitim()">
-          <span class="header-menu-icon">📲</span><span>התקנת האפליקציה</span>
-        </button>
-        <button class="header-menu-item" type="button" role="menuitem"
-                onclick="closeHeaderMenu();shareHitimInvite()">
-          <span class="header-menu-icon">🔗</span><span>שיתוף Hitim</span>
-        </button>
-        <button class="header-menu-item danger" type="button" role="menuitem"
-                onclick="closeHeaderMenu();HitimAuth.signOut()">
-          <span class="header-menu-icon">↪</span><span>יציאה</span>
-        </button>
-      </div>
-    </div>
     <div class="header-left">
       <div class="header-logo">
         <div class="header-title">
@@ -947,30 +843,19 @@
   <div class="header-stars"></div>
 </div>
 
-<div class="quick-identify-bar">
-  <button class="quick-identify-btn" onclick="openQuickIdentify()"><span>זיהוי מהיר</span> — בדיקה בלי לשמור</button>
-</div>
-
-<div class="toolbar">
-  <div class="search-box">
-    <span style="color:#3d4f7a;font-size:0.9em">🔍</span>
-    <input type="text" id="searchInput" placeholder="חיפוש קלף..." oninput="scheduleRender()">
-  </div>
-  <button class="filter-btn" id="filterBtn" onclick="openPanel()">⚙️ סינון</button>
-  <div class="cols-control">
-    <button class="cols-btn" onclick="changeCols(-1)">−</button>
-    <span class="cols-num" id="colsNum">3</span>
-    <button class="cols-btn" onclick="changeCols(1)">+</button>
-  </div>
-</div>
-
 <div class="active-filters" id="activeFilters"></div>
 
 <div class="panel-overlay" id="panelOverlay" onclick="closePanel()"></div>
 <div class="filter-panel" id="filterPanel">
   <div class="panel-head">
-    <h3>⚙️ סינון</h3>
+    <h3>🔎 חיפוש וסינון</h3>
     <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-section panel-search">
+    <div class="search-box">
+      <span style="color:#7891c8;font-size:1em" aria-hidden="true">🔍</span>
+      <input type="search" id="searchInput" placeholder="חיפוש קלף..." oninput="scheduleRender()" autocomplete="off">
+    </div>
   </div>
   <div class="panel-section">
     <h4>⭐ נדירות</h4>
@@ -1007,16 +892,15 @@
       <input type="number" id="yearMax" placeholder="עד" oninput="updateFilters()">
     </div>
   </div>
+  <div class="panel-section panel-cols">
+    <h4 style="margin:0">▦ מספר קלפים בשורה</h4>
+    <div class="cols-control">
+      <button class="cols-btn" onclick="changeCols(-1)" aria-label="פחות עמודות">−</button>
+      <span class="cols-num" id="colsNum">3</span>
+      <button class="cols-btn" onclick="changeCols(1)" aria-label="יותר עמודות">+</button>
+    </div>
+  </div>
   <button class="reset-btn" onclick="resetFilters()">🔄 נקה סינון</button>
-</div>
-
-<div class="floating-actions" aria-label="פעולות מהירות">
-  <button class="floating-action scan" onclick="openQuickCamera()" aria-label="זיהוי מהיר במצלמה">
-    <span>זיהוי מהיר</span>
-  </button>
-  <button class="floating-action add" onclick="openAdd()" aria-label="הוספת קלף">
-    <span class="floating-action-icon">＋</span><span>הוסף קלף</span>
-  </button>
 </div>
 
 <div class="system-overlay" id="installOverlay" onclick="systemOverlayClick(event,'installOverlay')">
@@ -1036,6 +920,38 @@
 <div class="grid" id="grid">
   <div class="loading"><div class="spin"></div><div class="loading-text">טוען את Hitim...</div></div>
 </div>
+
+<nav class="bottom-nav" id="bottomNav" aria-label="ניווט ראשי">
+  <button class="bottom-nav-button active" id="navGalleryBtn" type="button" onclick="showGalleryHome()" aria-label="גלריה" aria-current="page">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><rect x="14" y="14" width="7" height="7" rx="1"></rect></svg>
+    <span class="visually-hidden">גלריה</span>
+  </button>
+  <button class="bottom-nav-button" id="navSearchBtn" type="button" onclick="openPanel()" aria-label="חיפוש וסינון">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"></circle><path d="m15.5 15.5 5 5"></path><path d="M4 20h7"></path></svg>
+    <span class="bottom-nav-badge" id="bottomSearchBadge" aria-hidden="true"></span>
+    <span class="visually-hidden">חיפוש וסינון</span>
+  </button>
+  <button class="bottom-nav-button" id="navAddBtn" type="button" onclick="openAddFromNav()" aria-label="הוספת קלף">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 8v8M8 12h8"></path></svg>
+    <span class="visually-hidden">הוספת קלף</span>
+  </button>
+  <button class="bottom-nav-button bottom-nav-camera" id="navCameraBtn" type="button" onclick="openQuickCameraFromNav()" aria-label="זיהוי מהיר במצלמה">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5h3l1.5-2h7l1.5 2h3v10H4z"></path><circle cx="12" cy="13.5" r="3.5"></circle></svg>
+    <span class="visually-hidden">זיהוי מהיר במצלמה</span>
+  </button>
+  <button class="bottom-nav-button" id="navAdminBtn" type="button" onclick="openAdminPanel()" aria-label="ניהול משתמשים" hidden>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.4-3.5 2.2-5.5 5.5-5.5s5.1 2 5.5 5.5M18 8v6M15 11h6"></path></svg>
+    <span class="visually-hidden">ניהול משתמשים</span>
+  </button>
+  <button class="bottom-nav-button" id="navShareBtn" type="button" onclick="shareHitimFromNav()" aria-label="שיתוף Hitim">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"></path></svg>
+    <span class="visually-hidden">שיתוף Hitim</span>
+  </button>
+  <button class="bottom-nav-button" id="navSettingsBtn" type="button" onclick="openSettingsPanel()" aria-label="הגדרות וגיבוי">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"></path></svg>
+    <span class="visually-hidden">הגדרות וגיבוי</span>
+  </button>
+</nav>
 
 <div class="overlay" id="quickIdentifyOverlay" onclick="quickOverlayClick(event)">
   <div class="modal quick-scan-modal">
@@ -1206,6 +1122,7 @@
       <button class="system-action primary" id="installBtn" hidden onclick="installHitim()">📲 התקן את Hitim בטלפון</button>
       <button class="system-action" onclick="HitimDB.downloadBackup()">⬇️ הורד גיבוי של האוסף</button>
       <button class="system-action" onclick="document.getElementById('backupImportInput').click()">⬆️ ייבא גיבוי למכשיר</button>
+      <button class="system-action" onclick="shareHitimInvite()">🔗 שתף קישור כניסה ל-Hitim</button>
       <input id="backupImportInput" type="file" accept="application/json,.json" hidden onchange="importHitimBackup(this)">
 
       <div id="legacyImportSection" hidden>
@@ -1213,6 +1130,7 @@
         <button class="system-action" id="legacyImportBtn" onclick="importLegacyGallery(this)">🧳 ייבא את האוסף הישן למכשיר</button>
         <div class="storage-label" id="legacyImportStatus"></div>
       </div>
+      <button class="system-action danger" onclick="HitimAuth.signOut()">↪ יציאה מהחשבון</button>
     </div>
   </div>
 </div>
@@ -1296,8 +1214,6 @@ let selRarities=new Set(), selConditions=new Set(), selLanguages=new Set();
 let priceSort='price-desc';
 
 function rarityClass(r){const map={'Common':'common','Uncommon':'uncommon','Rare':'rare','Holo Rare':'holo','Ultra Rare':'ultra','Secret Rare':'secret'};return map[r]||'';}
-function rarityBadgeClass(r){const map={'Common':'rarity-common','Uncommon':'rarity-uncommon','Rare':'rarity-rare','Holo Rare':'rarity-holo','Ultra Rare':'rarity-ultra','Secret Rare':'rarity-secret'};return map[r]||'rarity-common';}
-function condClass(c){const map={'Mint':'cond-mint','Near Mint':'cond-nm','Excellent':'cond-ex','Good':'cond-good','Poor':'cond-poor'};return map[c]||'';}
 
 function initPanel(){
   const rc=document.getElementById('rarityChips');
@@ -1319,8 +1235,15 @@ function setPriceSort(value){
 function updateFilterBtn(){
   const count=selRarities.size+selConditions.size+selLanguages.size+(document.getElementById('valueMin').value?1:0)+(document.getElementById('valueMax').value?1:0)+(document.getElementById('yearMin').value?1:0)+(document.getElementById('yearMax').value?1:0)+(priceSort==='price-asc'?1:0);
   const btn=document.getElementById('filterBtn');
-  btn.classList.toggle('has-filters',count>0);
-  btn.textContent=count>0?`⚙️ סינון (${count})`:'⚙️ סינון';
+  if(btn){
+    btn.classList.toggle('has-filters',count>0);
+    btn.textContent=count>0?`⚙️ סינון (${count})`:'⚙️ סינון';
+  }
+  const badge=document.getElementById('bottomSearchBadge');
+  if(badge){
+    badge.textContent=String(count);
+    badge.classList.toggle('show',count>0);
+  }
   renderActiveTags();
 }
 function renderActiveTags(){
@@ -1340,8 +1263,38 @@ function renderActiveTags(){
 }
 window.rmtag=(i)=>window._ftags[i].remove();
 function resetFilters(){selRarities.clear();selConditions.clear();selLanguages.clear();document.querySelectorAll('.p-chip').forEach(c=>c.classList.remove('active'));['valueMin','valueMax','yearMin','yearMax'].forEach(id=>document.getElementById(id).value='');document.getElementById('searchInput').value='';setPriceSort('price-desc');}
-function openPanel(){document.getElementById('filterPanel').classList.add('open');document.getElementById('panelOverlay').classList.add('open');}
-function closePanel(){document.getElementById('filterPanel').classList.remove('open');document.getElementById('panelOverlay').classList.remove('open');}
+function setBottomNavActive(name='gallery'){
+  document.querySelectorAll('.bottom-nav-button').forEach(button=>{
+    const active=button.id===`nav${name[0].toUpperCase()+name.slice(1)}Btn`;
+    button.classList.toggle('active',active);
+    if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+  });
+}
+function closePanel(resetNav=true){
+  document.getElementById('filterPanel').classList.remove('open');
+  document.getElementById('panelOverlay').classList.remove('open');
+  if(resetNav)setBottomNavActive('gallery');
+}
+function closeNavigationViews(){
+  closePanel(false);
+  ['quickIdentifyOverlay','detailOverlay','overlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
+}
+function showGalleryHome(){
+  closeNavigationViews();setBottomNavActive('gallery');
+  window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+}
+function openPanel(){
+  closeNavigationViews();setBottomNavActive('search');
+  document.getElementById('filterPanel').classList.add('open');
+  document.getElementById('panelOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('searchInput')?.focus(),180);
+}
+function openAddFromNav(){closeNavigationViews();setBottomNavActive('add');openAdd();}
+function openQuickCameraFromNav(){closeNavigationViews();setBottomNavActive('camera');openQuickCamera();}
+async function shareHitimFromNav(){
+  setBottomNavActive('share');
+  try{await shareHitimInvite();}finally{setBottomNavActive('gallery');}
+}
 function initCols(){cols=window.innerWidth>=600?3:2;document.getElementById('colsNum').textContent=cols;applyGrid();}
 function applyGrid(){document.getElementById('grid').style.gridTemplateColumns=`repeat(${cols},1fr)`;}
 function changeCols(d){cols=Math.max(1,Math.min(6,cols+d));document.getElementById('colsNum').textContent=cols;applyGrid();}
@@ -1415,28 +1368,28 @@ function compactImageKey(value){
   return `${text.length}:${text.slice(middle,middle+28)}:${text.slice(-28)}`;
 }
 
-function cardRenderSignature(card,commentCount){
+function cardRenderSignature(card){
   return JSON.stringify([
-    card.name,card.pokemon,card.rarity,card.value,commentCount,
+    card.name,card.pokemon,card.rarity,card.value,
     compactImageKey(card.catalogLocalImage),compactImageKey(card.catalogImage),
     compactImageKey(card.images)
   ]);
 }
 
-function cardImageMarkup(card,imgs,index,commentCount){
-  const badge=commentCount?`<div class="comments-badge">💬 ${commentCount}</div>`:'';
-  const rarityLabel=escapeHtml(card.rarity?(RARITY_HE[card.rarity]||card.rarity):'');
+function cardImageMarkup(card,imgs,index){
+  const rawPrice=String(card.value??'').trim().replace(/^\$/,'');
+  const priceBadge=rawPrice?`<div class="card-price-badge">$${escapeHtml(rawPrice)}</div>`:'';
   const imageAttrs=slideIndex=>{
     const priority=slideIndex===0&&index<Math.max(4,cols*2)
       ?'loading="eager" fetchpriority="high"'
       :'loading="lazy" fetchpriority="low"';
     return `${priority} decoding="async" alt="${escapeHtml(card.name||card.pokemon||'קלף פוקימון')}"`;
   };
-  if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${badge}</div>`;
+  if(!imgs.length)return `<div class="card-no-img">🃏<div class="card-no-img-text">אין תמונה</div>${priceBadge}</div>`;
   if(imgs.length>1){
-    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)} draggable="false"></div>`).join('')}</div><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
+    return `<div class="card-img-wrap"><div class="card-carousel-track" onscroll="updateDots(this)">${imgs.map((u,slideIndex)=>`<div class="carousel-slide"><img src="${escapeHtml(u)}" ${imageAttrs(slideIndex)} draggable="false"></div>`).join('')}</div>${priceBadge}<div class="carousel-dots">${imgs.map((u,i)=>`<div class="carousel-dot${i===0?' active':''}"></div>`).join('')}</div></div>`;
   }
-  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)} draggable="false"><div class="card-img-overlay"></div><div class="${rarityBadgeClass(card.rarity)} rarity-badge">${rarityLabel}</div>${badge}</div>`;
+  return `<div class="card-img-wrap"><img src="${escapeHtml(imgs[0])}" ${imageAttrs(0)} draggable="false">${priceBadge}</div>`;
 }
 
 function bindGalleryCarousel(track,cardId){
@@ -1470,24 +1423,23 @@ function bindGalleryCarousel(track,cardId){
 function getCardNode(card,index){
   const id=String(card.id);
   const imgs=cardImageUrls(card);
-  const commentCount=(comments[id]||[]).length;
-  const signature=cardRenderSignature(card,commentCount);
+  const signature=cardRenderSignature(card);
   let cached=cardNodeCache.get(id);
   const isNew=!cached;
   if(!cached){
     cached={node:document.createElement('div'),signature:''};
     cardNodeCache.set(id,cached);
     cached.node.dataset.cardId=id;
+    cached.node.tabIndex=0;
+    cached.node.setAttribute('role','button');
     cached.node.onclick=()=>openDetail(id);
+    cached.node.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();openDetail(id);}};
   }
   if(cached.signature!==signature){
     const entering=cached.node.classList.contains('is-entering');
     cached.node.className=`poke-card ${rarityClass(card.rarity)}${entering?' is-entering':''}`;
-    cached.node.innerHTML=`${cardImageMarkup(card,imgs,index,commentCount)}
-      <div class="card-body">
-        <div class="card-name">${escapeHtml(card.name||card.pokemon||'—')}</div>
-        <div class="card-row"><span class="card-value">${card.value?'$'+escapeHtml(card.value):''}</span></div>
-      </div>`;
+    cached.node.setAttribute('aria-label',`${card.name||card.pokemon||'קלף פוקימון'}${card.value?` — $${card.value}`:''}`);
+    cached.node.innerHTML=cardImageMarkup(card,imgs,index);
     bindGalleryCarousel(cached.node.querySelector('.card-carousel-track'),id);
     cached.signature=signature;
   }
@@ -1508,8 +1460,10 @@ function render(){
   setHeaderStat('statsRareHeader',rareCount);
   const grid=document.getElementById('grid');
   const fragment=document.createDocumentFragment();
-  if(!list.length&&cards.length){
-    const empty=document.createElement('div');empty.className='no-results';empty.textContent='😕 לא נמצאו קלפים';fragment.appendChild(empty);
+  if(!list.length){
+    const empty=document.createElement('div');empty.className='no-results';
+    empty.textContent=cards.length?'😕 לא נמצאו קלפים':'האוסף עדיין ריק — לחץ על ＋ בסרגל כדי להוסיף קלף';
+    fragment.appendChild(empty);
   }
   const cardNodes=list.map((card,index)=>getCardNode(card,index));
   cardNodes.forEach(node=>fragment.appendChild(node));
@@ -1519,9 +1473,6 @@ function render(){
     saving.innerHTML='<div class="saving-mini-ball"></div><div>שומר את הקלף...</div>';
     fragment.appendChild(saving);
   }
-  const add=document.createElement('div');add.className='add-card';add.onclick=openAdd;
-  add.innerHTML='<div class="add-icon">＋</div><div class="add-label">הוסף קלף</div>';
-  fragment.appendChild(add);
   grid.replaceChildren(fragment);
 
   const storedIds=new Set(cards.map(card=>String(card.id)));
@@ -1568,7 +1519,7 @@ function openDetail(id){
   detailBody.querySelector('[data-detail-action="share"]').onclick=()=>shareCard(c.id);
   document.getElementById('detailOverlay').classList.add('open');
 }
-function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');}
+function closeDetail(){document.getElementById('detailOverlay').classList.remove('open');setBottomNavActive('gallery');}
 function detailOverlayClick(e){if(e.target===document.getElementById('detailOverlay'))closeDetail();}
 
 function updateDots(track){
@@ -1604,10 +1555,12 @@ function cardImageUrls(card){
 }
 
 function openQuickIdentify(){
+  setBottomNavActive('camera');
   resetQuickIdentify();
   document.getElementById('quickIdentifyOverlay').classList.add('open');
 }
 function openQuickCamera(){
+  setBottomNavActive('camera');
   resetQuickIdentify();
   document.getElementById('quickIdentifyOverlay').classList.add('open');
   triggerQuickCamera();
@@ -1619,6 +1572,7 @@ function triggerQuickCamera(){
 }
 function closeQuickIdentify(){
   document.getElementById('quickIdentifyOverlay').classList.remove('open');
+  setBottomNavActive('gallery');
 }
 function quickOverlayClick(e){
   if(e.target===document.getElementById('quickIdentifyOverlay'))closeQuickIdentify();
@@ -2213,6 +2167,7 @@ function saveComments(){
 }
 
 function openAdd(){
+  setBottomNavActive('add');
   editorPriceToken++;
   editId=null;existImgs=[];newFiles=[];aiFront=null;aiBack=null;aiMeta={};editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';editorCandidateOcrText='';editorCandidateHasMore=false;editorCandidateSourceFile=null;editorCandidateLoading=false;
   document.getElementById('modalTitle').textContent='➕ הוספת קלף';
@@ -2229,6 +2184,7 @@ function openAdd(){
 
 function openEdit(id){
   const c=cards.find(x=>String(x.id)===String(id));if(!c)return;
+  setBottomNavActive('add');
   editId=id;existImgs=cardPhotoUrls(c);newFiles=[];aiFront=null;aiBack=null;editorCandidateOptions=[];editorCandidateResultNodeId='aiResult';editorCandidateOcrText='';editorCandidateHasMore=false;editorCandidateSourceFile=null;editorCandidateLoading=false;
   aiMeta={setCode:c.setCode||'',catalogCardId:c.catalogCardId||'',catalogImage:c.catalogImage||'',catalogLocalImage:c.catalogLocalImage||'',tcgplayerProductId:c.tcgplayerProductId||'',finish:c.finish||'',priceSource:c.priceSource||'',priceUpdatedAt:c.priceUpdatedAt||'',priceCheckedAt:c.priceCheckedAt||'',identityConfidence:c.identityConfidence||''};
   document.getElementById('modalTitle').textContent='✏️ עריכת קלף';
@@ -2730,34 +2686,12 @@ function scheduleDailyPriceRefresh(delay=60000){
   },delay);
 }
 
-function setHeaderMenuOpen(open,returnFocus=false){
-  const menu=document.getElementById('headerMenu');
-  const toggle=document.getElementById('headerMenuToggle');
-  if(!menu||!toggle)return;
-  menu.classList.toggle('open',open);
-  toggle.setAttribute('aria-expanded',String(open));
-  toggle.setAttribute('aria-label',open?'סגירת תפריט':'פתיחת תפריט');
-  if(open){
-    requestAnimationFrame(()=>document.querySelector('#headerMenuPanel .header-menu-item:not([hidden])')?.focus());
-  }else if(returnFocus){
-    toggle.focus();
-  }
+function closeSystemPanel(id){
+  document.getElementById(id)?.classList.remove('open');
+  if(document.getElementById('settingsOverlay')?.classList.contains('open'))setBottomNavActive('settings');
+  else if(document.getElementById('adminOverlay')?.classList.contains('open'))setBottomNavActive('admin');
+  else setBottomNavActive('gallery');
 }
-function toggleHeaderMenu(event){
-  event?.stopPropagation();
-  const menu=document.getElementById('headerMenu');
-  setHeaderMenuOpen(!menu?.classList.contains('open'));
-}
-function closeHeaderMenu(returnFocus=false){setHeaderMenuOpen(false,returnFocus);}
-document.addEventListener('click',event=>{
-  const menu=document.getElementById('headerMenu');
-  if(menu?.classList.contains('open')&&!menu.contains(event.target))closeHeaderMenu();
-});
-document.addEventListener('keydown',event=>{
-  if(event.key==='Escape'&&document.getElementById('headerMenu')?.classList.contains('open'))closeHeaderMenu(true);
-});
-
-function closeSystemPanel(id){document.getElementById(id)?.classList.remove('open');}
 function systemOverlayClick(event,id){if(event.target===document.getElementById(id))closeSystemPanel(id);}
 
 function formatBytes(value){
@@ -2779,6 +2713,7 @@ async function updateStorageInfo(){
 }
 
 function openSettingsPanel(){
+  closeNavigationViews();setBottomNavActive('settings');
   const session=HitimAuth.getSession();
   document.getElementById('settingsEmail').textContent=currentAccess?.email||session?.user?.email||'';
   document.getElementById('legacyImportSection').hidden=!HitimAuth.isAdmin();
@@ -2846,6 +2781,7 @@ async function importLegacyGallery(button){
 
 function openAdminPanel(){
   if(!HitimAuth.isAdmin())return;
+  closeNavigationViews();setBottomNavActive('admin');
   document.getElementById('adminOverlay').classList.add('open');
   loadAdminUsers();
 }
@@ -2917,9 +2853,7 @@ function hitimIsInstalled(){
 function updateInstallButtons(){
   const installed=hitimIsInstalled();
   const settingsButton=document.getElementById('installBtn');
-  const menuButton=document.getElementById('installMenuBtn');
   if(settingsButton)settingsButton.hidden=installed;
-  if(menuButton)menuButton.hidden=installed;
 }
 
 function showInstallGuide(){
@@ -2955,7 +2889,7 @@ async function installHitim(){
   updateInstallButtons();
 }
 
-function closeModal(){document.getElementById('overlay').classList.remove('open');}
+function closeModal(){document.getElementById('overlay').classList.remove('open');setBottomNavActive('gallery');}
 function overlayClick(e){if(e.target===document.getElementById('overlay'))closeModal();}
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
 // resize listener removed — user controls cols manually
@@ -2969,7 +2903,7 @@ function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t
 initCols();initPanel();initPwa();
 HitimAuth.init(async access=>{
   currentAccess=access;
-  document.getElementById('adminMenuBtn').hidden=access.role!=='admin';
+  document.getElementById('navAdminBtn').hidden=access.role!=='admin';
   document.getElementById('legacyImportSection').hidden=access.role!=='admin';
   await load();
   HitimDB.requestPersistence().catch(()=>{});
