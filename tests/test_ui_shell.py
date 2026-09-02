@@ -10,6 +10,7 @@ class UiShellTests(unittest.TestCase):
     def setUpClass(cls):
         cls.html = (ROOT / "index.html").read_text(encoding="utf-8")
         cls.auth = (ROOT / "hitim-auth.js").read_text(encoding="utf-8")
+        cls.fantasy = (ROOT / "hitim-fantasy.js").read_text(encoding="utf-8")
 
     def test_holo_and_motion_code_are_completely_removed(self):
         self.assertNotIn("card-holo-effect", self.html)
@@ -219,6 +220,21 @@ class UiShellTests(unittest.TestCase):
         self.assertIn("'fantasyStudioOverlay'", self.html)
         self.assertIn('id="quickIdentifyOverlay"', self.html)
         self.assertIn('function identifyCoin()', self.html)
+
+    def test_fantasy_studio_generates_a_new_reference_based_ai_image(self):
+        self.assertIn('https://js.puter.com/v2/', self.html)
+        self.assertIn('puter.ai.txt2img', self.fantasy)
+        self.assertIn('input_images: [photoDataUrl]', self.fantasy)
+        self.assertIn("ratio: { w: 3, h: 4 }", self.fantasy)
+        self.assertIn('composeCard(illustration, concept, attempt)', self.fantasy)
+        self.assertNotIn('composeCard(photoDataUrl, concept', self.fantasy)
+
+    def test_fantasy_card_is_unique_hitim_full_art_and_never_fakes_generation(self):
+        self.assertIn('HITIM FULL ART', self.html)
+        self.assertIn('IMAGINATION SERIES', self.fantasy)
+        self.assertIn("style: 'hitim-full-art'", self.fantasy)
+        self.assertIn("source: 'ai-image'", self.fantasy)
+        self.assertIn('בלי החיבור לא נוצרת תמונה חדשה', self.fantasy)
 
 
 if __name__ == "__main__":

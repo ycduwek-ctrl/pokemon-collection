@@ -7,13 +7,14 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="fantasy-studio-v16.0">
+  <meta name="hitim-build" content="hitim-full-art-v17.0">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
   <link rel="apple-touch-icon" href="/hitim-icon-193.png">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/hitim-fantasy.css">
+  <script src="https://js.puter.com/v2/" async></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Heebo', sans-serif; background: #050a18; color: #fff; min-height: 100vh; overflow-x: hidden; }
@@ -1127,13 +1128,15 @@
     </div>
     <div class="system-body">
       <div class="fantasy-hero">
-        <strong>התמונה שלך הופכת לקלף פנטזיה</strong>
-        <span>צלם פנים, תן שם ורעיון. ה-AI יכתוב כוחות וסיפור, ו-Hitim יעצב קלף שאפשר לשמור ולשתף.</span>
+        <div class="fantasy-mode-pill">AI IMAGE · HITIM FULL ART</div>
+        <strong>הפנים שלך נכנסות לתמונה חדשה מהדמיון</strong>
+        <span>מצלמים פנים וכותבים סצנה. ה-AI יוצר איור חדש באמת, ו-HITIM הופך אותו לקלף Full Art מקורי.</span>
       </div>
 
       <div class="fantasy-upload" id="fantasyUpload">
         <img id="fantasyPhotoPreview" alt="התמונה שנבחרה לקלף">
-        <div class="fantasy-upload-empty"><b>🪄</b>בחר תמונה כדי להתחיל</div>
+        <span class="fantasy-source-label">תמונת מקור לפנים</span>
+        <div class="fantasy-upload-empty"><b>🪄</b>בחר תמונת פנים כדי להתחיל</div>
       </div>
       <div class="fantasy-photo-actions">
         <label class="fantasy-photo-button">
@@ -1152,7 +1155,8 @@
         <label for="fantasyPrompt">מה קורה בקלף?</label>
         <textarea id="fantasyPrompt" maxlength="500" placeholder="למשל: אני מחזיק כדור, לידי פיקאצ׳ו ויש סביבנו ברקים סגולים"></textarea>
       </div>
-      <button class="fantasy-generate" id="fantasyGenerateBtn" type="button" onclick="generateFantasyCard()">✨ צור לי קלף</button>
+      <button class="fantasy-generate" id="fantasyGenerateBtn" type="button" onclick="generateFantasyCard()">✨ צור קלף HITIM</button>
+      <div class="fantasy-engine-note">בפעם הראשונה ייפתח חיבור חינמי למחולל התמונות. אין צורך במפתח API או בכרטיס אשראי.</div>
       <div class="fantasy-status" id="fantasyStatus" role="status" aria-live="polite"></div>
 
       <section class="fantasy-result" id="fantasyResult" hidden>
@@ -1169,7 +1173,7 @@
         <div class="fantasy-gallery-title"><h3>גלריית קלפי הדמיון</h3><span class="fantasy-gallery-count" id="fantasyGalleryCount">0 קלפים</span></div>
         <div class="fantasy-gallery" id="fantasyGallery"><div class="fantasy-empty">הקלפים שתשמור יופיעו כאן.</div></div>
       </section>
-      <div class="fantasy-privacy">התמונה נשלחת לזמן קצר ל-AI רק כדי לכתוב את תוכן הקלף ואינה נשמרת בשרת. העיצוב והקלפים השמורים נשארים במכשיר. זהו FAN CARD לא רשמי.</div>
+      <div class="fantasy-privacy">תמונת המקור והפרומפט נשלחים ל-Puter ולספק ה-AI כדי ליצור איור חדש. HITIM שומר במכשיר רק קלפים שבחרת לשמור. קיימת מכסה חודשית חינמית; כשנגמרת היצירה נעצרת. זהו FAN CARD לא רשמי.</div>
     </div>
   </div>
 </div>

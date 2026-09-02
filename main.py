@@ -1221,7 +1221,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "fantasy-studio-v16.0",
+        "build": "hitim-full-art-v17.0",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1772,7 +1772,7 @@ async def fantasy_card_concept(
     attempt: int = Form(1),
     authorization: str = Header(None),
 ):
-    """Create card copy from a photo; final artwork is composed locally in the PWA."""
+    """Create compact Hebrew copy for an AI-illustrated HITIM full-art card."""
     await asyncio.to_thread(require_access, authorization)
     prompt = _fantasy_text(prompt, "", 500)
     card_name = _fantasy_text(card_name, "", 46)
@@ -1895,5 +1895,5 @@ Return only the requested JSON. The title must remain exactly as supplied by the
     return {
         "concept": concept,
         "source": "ai-text-vision",
-        "imageMode": "local-fantasy-design",
+        "imageMode": "external-ai-full-art",
     }

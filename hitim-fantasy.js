@@ -3,14 +3,15 @@
 
   const STORAGE_KEY = 'fantasyCardsV1';
   const MAX_SAVED_CARDS = 30;
+  const IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
   const TYPES = {
-    electric: { colors: ['#2e1065', '#6d28d9', '#fbbf24'], icon: '⚡' },
-    fire: { colors: ['#450a0a', '#dc2626', '#fbbf24'], icon: '🔥' },
-    water: { colors: ['#082f49', '#0369a1', '#67e8f9'], icon: '💧' },
-    grass: { colors: ['#052e16', '#15803d', '#bef264'], icon: '🍃' },
+    electric: { colors: ['#2e1065', '#7c3aed', '#fde047'], icon: '⚡' },
+    fire: { colors: ['#3f0712', '#e11d48', '#fbbf24'], icon: '🔥' },
+    water: { colors: ['#082f49', '#2563eb', '#67e8f9'], icon: '💧' },
+    grass: { colors: ['#052e16', '#16a34a', '#bef264'], icon: '🍃' },
     psychic: { colors: ['#2e1065', '#7c3aed', '#f0abfc'], icon: '✦' },
     dark: { colors: ['#020617', '#312e81', '#a78bfa'], icon: '☾' },
-    metal: { colors: ['#1e293b', '#64748b', '#e2e8f0'], icon: '◆' },
+    metal: { colors: ['#0f172a', '#64748b', '#e2e8f0'], icon: '◆' },
     fairy: { colors: ['#500724', '#db2777', '#fde68a'], icon: '✧' }
   };
   let photoFile = null;
@@ -59,7 +60,7 @@
       move1Text: 'הדמות צוברת כוח מכל חבר שנמצא לצידה.',
       move2Name: secondMoves[index], move2Damage: 130 + version * 10,
       move2Text: 'מתקפה מיוחדת שמגשימה את הרעיון שבתמונה.',
-      flavor: 'קלף חד-פעמי שנוצר במיוחד בסטודיו הדמיון של Hitim.',
+      flavor: 'קלף חד-פעמי שנוצר במיוחד בסטודיו הדמיון של HITIM.',
       rarity: version % 3 === 0 ? 'אגדי' : 'נדיר במיוחד'
     }, name);
   }
@@ -75,7 +76,7 @@
     const button = byId('fantasyGenerateBtn');
     if (button) {
       button.disabled = value;
-      button.textContent = value ? '✨ יוצר את הקלף...' : '✨ צור לי קלף';
+      button.textContent = value ? '✨ יוצר תמונת AI חדשה...' : '✨ צור קלף HITIM';
     }
   }
   async function photoSelected(input) {
@@ -87,12 +88,12 @@
     }
     try {
       photoFile = file;
-      photoDataUrl = await HitimDB.imageFileToDataUrl(file, { width: 1000, height: 760, quality: .88 });
+      photoDataUrl = await HitimDB.imageFileToDataUrl(file, { width: 768, height: 1024, quality: .9 });
       byId('fantasyPhotoPreview').src = photoDataUrl;
       byId('fantasyUpload').classList.add('has-photo');
       draft = null;
       byId('fantasyResult').hidden = true;
-      setStatus('התמונה מוכנה. עכשיו כתוב מה תרצה לראות בקלף.');
+      setStatus('תמונת המקור מוכנה. כתוב את הסצנה שה-AI ייצור ממנה.');
     } catch (error) {
       console.error(error); setStatus('לא הצלחנו לפתוח את התמונה.', true);
     }
@@ -146,62 +147,129 @@
     return () => { state = (state * 9301 + 49297) % 233280; return state / 233280; };
   }
   function drawMove(context, y, theme, name, damage, description) {
-    roundedPath(context, 42, y, 666, 126, 22);
-    context.fillStyle = 'rgba(5,10,24,.72)'; context.fill();
-    context.strokeStyle = `${theme.colors[2]}99`; context.lineWidth = 2; context.stroke();
-    context.fillStyle = theme.colors[2]; context.font = '900 27px Heebo, sans-serif';
-    context.textAlign = 'right'; context.fillText(name, 664, y + 38);
-    context.textAlign = 'left'; context.font = '900 30px Heebo, sans-serif'; context.fillText(String(damage), 70, y + 39);
-    context.fillStyle = '#e2e8f0'; context.font = '700 18px Heebo, sans-serif'; context.textAlign = 'right';
-    wrapLines(context, description, 570, 2).forEach((line, index) => context.fillText(line, 665, y + 75 + index * 24));
+    const line = context.createLinearGradient(56, y, 694, y);
+    line.addColorStop(0, 'rgba(255,255,255,0)');
+    line.addColorStop(.3, `${theme.colors[2]}bb`);
+    line.addColorStop(1, 'rgba(255,255,255,.72)');
+    context.fillStyle = line; context.fillRect(56, y - 12, 638, 2);
+    context.fillStyle = '#fff'; context.font = '900 27px Heebo, sans-serif';
+    context.textAlign = 'right'; context.fillText(name, 668, y + 22);
+    context.textAlign = 'left'; context.font = '900 30px Heebo, sans-serif';
+    context.fillStyle = theme.colors[2]; context.fillText(String(damage), 72, y + 22);
+    context.fillStyle = '#f8fafc'; context.font = '700 18px Heebo, sans-serif'; context.textAlign = 'right';
+    wrapLines(context, description, 570, 2).forEach((text, index) => context.fillText(text, 668, y + 54 + index * 23));
   }
-  async function composeCard(photo, concept, version) {
+
+  function imagePrompt(name, idea, version) {
+    return `Create a completely new vertical 3:4 full-art fantasy collectible illustration using the person in the input photo as the facial and identity reference. Keep the person clearly recognizable, with a natural face, but transform the whole photo into one cohesive premium animated fantasy scene. Do not paste, frame, or reuse the original background. Scene requested by the user: ${idea}. Hero name: ${name}. Use dynamic cinematic lighting, vivid energy, depth, expressive action and richly detailed surroundings. Keep every important requested character fully visible and integrated naturally with the person. Compose for a full-art trading card: the face and main action remain clear in the upper two thirds, while the lower quarter is slightly calmer and darker for an information overlay. Family-friendly. Variation ${version}: make a noticeably different pose, camera angle and lighting. Output illustration only: no card frame, no text, no letters, no logos, no numbers, no watermark.`;
+  }
+  async function ensureImageGenerator() {
+    if (!navigator.onLine) throw new Error('offline');
+    if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) throw new Error('sdk_missing');
+    if (window.puter.auth && window.puter.auth.isSignedIn && !window.puter.auth.isSignedIn()) {
+      await window.puter.auth.signIn({ attempt_temp_user_creation: true });
+    }
+  }
+  async function generateIllustration(name, idea, version) {
+    await ensureImageGenerator();
+    const image = await window.puter.ai.txt2img(imagePrompt(name, idea, version), {
+      model: IMAGE_MODEL,
+      provider: 'gemini',
+      quality: '1K',
+      ratio: { w: 3, h: 4 },
+      input_images: [photoDataUrl]
+    });
+    const source = image && typeof image.src === 'string' ? image.src : '';
+    if (!source) throw new Error('empty_image');
+    return source;
+  }
+  function generationErrorMessage(error) {
+    const code = String((error && (error.error || error.code || error.message)) || '').toLowerCase();
+    if (code.includes('offline')) return 'צריך חיבור לאינטרנט כדי ליצור תמונת AI.';
+    if (code.includes('sdk_missing')) return 'מחולל התמונות עדיין נטען. המתן רגע ולחץ שוב.';
+    if (code.includes('popup_blocked')) return 'הטלפון חסם את חלון החיבור ל-AI. אפשר חלונות קופצים ולחץ שוב.';
+    if (code.includes('auth_window_closed') || code.includes('cancel')) return 'החיבור ל-AI בוטל. בלי החיבור לא נוצרת תמונה חדשה.';
+    if (code.includes('insufficient') || code.includes('402') || code.includes('credit')) return 'המכסה החינמית של יצירת התמונות הסתיימה. אפשר לנסות שוב כשהיא מתחדשת.';
+    return 'מחולל התמונות לא הצליח ליצור איור חדש. נסה שוב או שנה מעט את הפרומפט.';
+  }
+
+  async function composeCard(illustration, concept, version) {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const image = await loadImage(photo);
+    const [art, logo] = await Promise.all([
+      loadImage(illustration),
+      loadImage('/hitim-icon-193.png').catch(() => null)
+    ]);
     const canvas = document.createElement('canvas');
     canvas.width = 750; canvas.height = 1050;
     const context = canvas.getContext('2d', { alpha: false });
     const theme = TYPES[concept.type] || TYPES.psychic;
-    const background = context.createLinearGradient(0, 0, 750, 1050);
-    background.addColorStop(0, theme.colors[0]); background.addColorStop(.58, theme.colors[1]); background.addColorStop(1, '#050a18');
-    context.fillStyle = background; context.fillRect(0, 0, 750, 1050);
+
+    context.fillStyle = '#050815'; context.fillRect(0, 0, 750, 1050);
+    roundedPath(context, 10, 10, 730, 1030, 48); context.save(); context.clip();
+    drawCover(context, art, 10, 10, 730, 1030);
+
+    const topShade = context.createLinearGradient(0, 10, 0, 245);
+    topShade.addColorStop(0, 'rgba(2,6,23,.9)');
+    topShade.addColorStop(.5, 'rgba(15,10,45,.48)');
+    topShade.addColorStop(1, 'rgba(15,10,45,0)');
+    context.fillStyle = topShade; context.fillRect(10, 10, 730, 250);
+    const lowerShade = context.createLinearGradient(0, 540, 0, 1040);
+    lowerShade.addColorStop(0, 'rgba(2,6,23,0)');
+    lowerShade.addColorStop(.22, 'rgba(8,5,25,.45)');
+    lowerShade.addColorStop(.55, 'rgba(8,5,25,.82)');
+    lowerShade.addColorStop(1, 'rgba(2,6,23,.97)');
+    context.fillStyle = lowerShade; context.fillRect(10, 530, 730, 510);
+
     const random = seededRandom(version + concept.title.length);
-    for (let i = 0; i < 34; i += 1) {
-      const x = random() * 750, y = random() * 1050, size = 1 + random() * 4;
-      context.globalAlpha = .18 + random() * .4; context.fillStyle = i % 3 ? theme.colors[2] : '#fff';
-      context.beginPath(); context.arc(x, y, size, 0, Math.PI * 2); context.fill();
+    for (let i = 0; i < 26; i += 1) {
+      const x = random() * 730 + 10, y = random() * 1010 + 20, radius = .8 + random() * 2.7;
+      context.globalAlpha = .22 + random() * .46;
+      context.fillStyle = i % 3 ? theme.colors[2] : '#fff';
+      context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill();
     }
-    context.globalAlpha = 1;
-    roundedPath(context, 18, 18, 714, 1014, 42);
-    context.strokeStyle = theme.colors[2]; context.lineWidth = 7; context.stroke();
-    roundedPath(context, 30, 30, 690, 990, 34);
-    context.strokeStyle = 'rgba(255,255,255,.34)'; context.lineWidth = 2; context.stroke();
+    context.globalAlpha = 1; context.restore();
 
-    context.fillStyle = '#fff'; context.font = '900 34px Heebo, sans-serif'; context.textAlign = 'right';
-    const titleLines = wrapLines(context, concept.title, 485, 1);
-    context.fillText(titleLines[0] || concept.title, 535, 80);
-    context.textAlign = 'left'; context.font = '900 25px Heebo, sans-serif';
-    context.fillStyle = theme.colors[2]; context.fillText(`${concept.hp} HP ${theme.icon}`, 55, 80);
-    context.textAlign = 'center'; context.fillStyle = '#cbd5e1'; context.font = '700 17px Heebo, sans-serif';
-    context.fillText(concept.subtitle, 375, 113);
+    const metal = context.createLinearGradient(0, 0, 750, 1050);
+    metal.addColorStop(0, '#fff7c2'); metal.addColorStop(.18, theme.colors[2]);
+    metal.addColorStop(.4, '#a78bfa'); metal.addColorStop(.62, '#67e8f9');
+    metal.addColorStop(.82, '#f0abfc'); metal.addColorStop(1, '#fde68a');
+    roundedPath(context, 10, 10, 730, 1030, 48); context.strokeStyle = metal; context.lineWidth = 12; context.stroke();
+    roundedPath(context, 24, 24, 702, 1002, 38); context.strokeStyle = 'rgba(255,255,255,.6)'; context.lineWidth = 2; context.stroke();
 
-    roundedPath(context, 42, 135, 666, 452, 28); context.save(); context.clip();
-    context.filter = 'saturate(1.25) contrast(1.07)'; drawCover(context, image, 42, 135, 666, 452); context.filter = 'none';
-    const wash = context.createLinearGradient(42, 135, 708, 587);
-    wash.addColorStop(0, `${theme.colors[1]}33`); wash.addColorStop(.62, 'transparent'); wash.addColorStop(1, `${theme.colors[2]}44`);
-    context.fillStyle = wash; context.fillRect(42, 135, 666, 452);
-    context.restore();
-    roundedPath(context, 42, 135, 666, 452, 28); context.strokeStyle = `${theme.colors[2]}bb`; context.lineWidth = 4; context.stroke();
-    context.font = '900 48px sans-serif'; context.textAlign = 'center'; context.fillStyle = '#fff';
-    context.globalAlpha = .9; context.fillText(theme.icon, 650, 550); context.globalAlpha = 1;
+    if (logo) {
+      roundedPath(context, 43, 43, 62, 62, 17); context.save(); context.clip();
+      context.drawImage(logo, 43, 43, 62, 62); context.restore();
+    } else {
+      context.fillStyle = theme.colors[2]; context.font = '900 35px Heebo, sans-serif';
+      context.textAlign = 'left'; context.fillText('H', 52, 88);
+    }
+    context.textAlign = 'left'; context.fillStyle = '#fff'; context.font = '900 15px Heebo, sans-serif';
+    context.fillText('HITIM', 118, 66);
+    context.fillStyle = '#fde68a'; context.font = '800 12px Heebo, sans-serif';
+    context.fillText('IMAGINATION SERIES', 118, 88);
 
-    drawMove(context, 608, theme, concept.move1Name, concept.move1Damage, concept.move1Text);
-    drawMove(context, 748, theme, concept.move2Name, concept.move2Damage, concept.move2Text);
-    context.textAlign = 'center'; context.fillStyle = '#dbeafe'; context.font = '700 17px Heebo, sans-serif';
-    wrapLines(context, concept.flavor, 630, 2).forEach((line, index) => context.fillText(line, 375, 914 + index * 23));
-    context.fillStyle = theme.colors[2]; context.font = '900 15px Heebo, sans-serif';
-    context.fillText(`HITIM FANTASY • ${concept.rarity} • FAN CARD לא רשמי`, 375, 991);
-    return canvas.toDataURL('image/webp', .9);
+    context.textAlign = 'right'; context.fillStyle = '#fff'; context.font = '900 34px Heebo, sans-serif';
+    context.shadowColor = 'rgba(0,0,0,.75)'; context.shadowBlur = 8;
+    context.fillText(wrapLines(context, concept.title, 430, 1)[0] || concept.title, 700, 84);
+    context.shadowBlur = 0;
+    context.fillStyle = '#e2e8f0'; context.font = '700 16px Heebo, sans-serif';
+    context.fillText(concept.subtitle, 700, 112);
+    context.textAlign = 'left'; context.fillStyle = theme.colors[2]; context.font = '900 23px Heebo, sans-serif';
+    context.fillText(`${concept.hp} HP  ${theme.icon}`, 45, 137);
+
+    drawMove(context, 704, theme, concept.move1Name, concept.move1Damage, concept.move1Text);
+    drawMove(context, 830, theme, concept.move2Name, concept.move2Damage, concept.move2Text);
+    context.textAlign = 'center'; context.fillStyle = '#e2e8f0'; context.font = '700 15px Heebo, sans-serif';
+    wrapLines(context, concept.flavor, 610, 1).forEach(text => context.fillText(text, 375, 951));
+
+    const footerLine = context.createLinearGradient(70, 0, 680, 0);
+    footerLine.addColorStop(0, theme.colors[2]); footerLine.addColorStop(.5, '#fff'); footerLine.addColorStop(1, '#c4b5fd');
+    context.fillStyle = footerLine; context.fillRect(65, 975, 620, 2);
+    context.fillStyle = '#fff'; context.font = '900 13px Heebo, sans-serif'; context.textAlign = 'left';
+    context.fillText(`HITIM • ${String(version).padStart(3, '0')}/999`, 65, 1007);
+    context.textAlign = 'right'; context.fillStyle = '#fde68a';
+    context.fillText(`${concept.rarity} • FULL ART • FAN CARD`, 685, 1007);
+    return canvas.toDataURL('image/webp', .92);
   }
 
   async function requestConcept(name, idea, version) {
@@ -211,32 +279,40 @@
     form.append('prompt', idea); form.append('card_name', name); form.append('attempt', String(version));
     const response = await HitimAuth.fetch('/fantasy-card/concept', { method: 'POST', body: form, timeoutMs: 46000 });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.detail || 'שירות ה-AI אינו זמין');
+    if (!response.ok) throw new Error(payload.detail || 'שירות כתיבת הקלף אינו זמין');
     return cleanConcept(payload.concept, name);
   }
   async function generateFantasyCard() {
     if (busy) return;
     const name = cleanText(byId('fantasyCardName').value, '', 46);
     const idea = cleanText(byId('fantasyPrompt').value, '', 500);
-    if (!photoDataUrl) { setStatus('קודם צריך לצלם או לבחור תמונה.', true); return; }
+    if (!photoDataUrl) { setStatus('קודם צריך לצלם או לבחור תמונת פנים.', true); return; }
     if (!name || !idea) { setStatus('נא למלא שם לקלף ורעיון קצר.', true); return; }
-    attempt += 1; setBusy(true); setStatus('ה-AI בונה כוחות וסיפור לפי הרעיון שלך...');
-    let concept; let source = 'ai';
-    try { concept = await requestConcept(name, idea, attempt); }
-    catch (error) {
-      console.debug('Fantasy AI fallback', error); source = 'local'; concept = fallbackConcept(name, idea, attempt);
+    if (!window.puter || !window.puter.ai || !window.puter.ai.txt2img) {
+      setStatus('מחולל התמונות עדיין נטען. המתן רגע ולחץ שוב.', true); return;
     }
+
+    attempt += 1; setBusy(true); setStatus('יוצר איור AI חדש מהפנים ומהפרומפט — זה יכול לקחת עד דקה...');
     try {
-      const imageDataUrl = await composeCard(photoDataUrl, concept, attempt);
-      draft = { id: '', name: concept.title, prompt: idea, concept, imageDataUrl, createdAt: new Date().toISOString(), source };
+      await ensureImageGenerator();
+      const conceptPromise = requestConcept(name, idea, attempt)
+        .catch(error => { console.debug('Fantasy copy fallback', error); return fallbackConcept(name, idea, attempt); });
+      const illustrationPromise = generateIllustration(name, idea, attempt);
+      const [concept, illustration] = await Promise.all([conceptPromise, illustrationPromise]);
+      setStatus('האיור נוצר. מרכיב עליו את קלף ה-Full Art של HITIM...');
+      const imageDataUrl = await composeCard(illustration, concept, attempt);
+      draft = {
+        id: '', name: concept.title, prompt: idea, concept, imageDataUrl,
+        createdAt: new Date().toISOString(), source: 'ai-image', style: 'hitim-full-art'
+      };
       byId('fantasyCardPreview').src = imageDataUrl;
       byId('fantasyResult').hidden = false;
       byId('fantasyRetryBtn').disabled = false;
       byId('fantasySaveBtn').textContent = '💾 שמור בגלריית AI';
-      setStatus(source === 'ai' ? 'הקלף מוכן ✨ אפשר לנסות גרסה אחרת או לשמור.' : 'שירות ה-AI היה עמוס, אז נוצרה גרסת ניסיון מקומית. אפשר לנסות שוב.');
+      setStatus('קלף ה-HITIM החדש מוכן ✨ אפשר לנסות תמונת AI אחרת או לשמור.');
       byId('fantasyResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } catch (error) {
-      console.error(error); setStatus('לא הצלחנו להרכיב את הקלף. נסה תמונה אחרת.', true);
+      console.error(error); setStatus(generationErrorMessage(error), true);
     } finally { setBusy(false); }
   }
 
@@ -263,7 +339,7 @@
     await HitimDB.setSetting(STORAGE_KEY, next);
     byId('fantasySaveBtn').textContent = '✅ נשמר בגלריית AI';
     await renderFantasyGallery();
-    toast('✨ קלף הדמיון נשמר במכשיר');
+    toast('✨ קלף ה-HITIM נשמר במכשיר');
   }
   async function viewFantasyCard(id) {
     const saved = (await getSavedCards()).find(card => card.id === id);
@@ -283,16 +359,16 @@
   function downloadFantasyCard() {
     if (!draft || !draft.imageDataUrl) return;
     const link = document.createElement('a'); link.href = draft.imageDataUrl;
-    link.download = `${cleanText(draft.name, 'hitim-fantasy-card', 40).replace(/[^\p{L}\p{N}_-]+/gu, '-')}.webp`;
+    link.download = `${cleanText(draft.name, 'hitim-full-art', 40).replace(/[^\p{L}\p{N}_-]+/gu, '-')}.webp`;
     document.body.appendChild(link); link.click(); link.remove();
   }
   async function shareFantasyCard() {
     if (!draft || !draft.imageDataUrl) return;
     try {
       const blob = await (await fetch(draft.imageDataUrl)).blob();
-      const file = new File([blob], 'hitim-fantasy-card.webp', { type: 'image/webp' });
+      const file = new File([blob], 'hitim-full-art.webp', { type: 'image/webp' });
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({ title: draft.name, text: 'קלף דמיון שיצרתי ב-Hitim', files: [file] });
+        await navigator.share({ title: draft.name, text: 'קלף Full Art שיצרתי ב-HITIM', files: [file] });
       } else downloadFantasyCard();
     } catch (error) { if (error.name !== 'AbortError') toast('לא הצלחנו לשתף — אפשר להוריד את הקלף'); }
   }

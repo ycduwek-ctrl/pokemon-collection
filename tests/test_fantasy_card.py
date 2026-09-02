@@ -56,7 +56,7 @@ class FantasyCardTests(unittest.TestCase):
         self.assertEqual(clean["type"], "psychic")
         self.assertEqual(clean["rarity"], "נדיר במיוחד")
 
-    def test_endpoint_uses_approved_auth_and_returns_local_design_mode(self):
+    def test_endpoint_uses_approved_auth_and_returns_full_art_mode(self):
         with patch.object(main, "require_access") as require_access, patch.object(
             main.requests, "post", return_value=FakeResponse()
         ), patch.dict(os.environ, {"OPENROUTER_KEY": "test-key"}):
@@ -71,7 +71,7 @@ class FantasyCardTests(unittest.TestCase):
         self.assertEqual(result["concept"]["title"], "יוסי ופיקאצ׳ו ex")
         self.assertEqual(result["concept"]["type"], "electric")
         self.assertEqual(result["source"], "ai-text-vision")
-        self.assertEqual(result["imageMode"], "local-fantasy-design")
+        self.assertEqual(result["imageMode"], "external-ai-full-art")
 
 
 if __name__ == "__main__":
