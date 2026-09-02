@@ -7,12 +7,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="native-camera-v15.2">
+  <meta name="hitim-build" content="fantasy-studio-v16.0">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
   <link rel="apple-touch-icon" href="/hitim-icon-193.png">
   <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/hitim-fantasy.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Heebo', sans-serif; background: #050a18; color: #fff; min-height: 100vh; overflow-x: hidden; }
@@ -957,9 +958,9 @@
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"></circle><path d="M3.5 19c.4-3.5 2.2-5.5 5.5-5.5s5.1 2 5.5 5.5M18 8v6M15 11h6"></path></svg>
     <span class="visually-hidden">ניהול משתמשים</span>
   </button>
-  <button class="bottom-nav-button" id="navShareBtn" type="button" onclick="shareHitimFromNav()" aria-label="שיתוף Hitim">
-    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="2.5"></circle><circle cx="6" cy="12" r="2.5"></circle><circle cx="18" cy="19" r="2.5"></circle><path d="m8.2 10.8 7.6-4.5M8.2 13.2l7.6 4.5"></path></svg>
-    <span class="visually-hidden">שיתוף Hitim</span>
+  <button class="bottom-nav-button" id="navStudioBtn" type="button" onclick="openFantasyStudio()" aria-label="סטודיו קלף מהדמיון">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 20 11-11"></path><path d="m12.8 6.2 5 5"></path><path d="M18 3v3M16.5 4.5h3M5 5v4M3 7h4M18.5 16v4M16.5 18h4"></path></svg>
+    <span class="visually-hidden">סטודיו קלף מהדמיון</span>
   </button>
   <button class="bottom-nav-button" id="navSettingsBtn" type="button" onclick="openSettingsPanel()" aria-label="הגדרות וגיבוי">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3v-.2h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1z"></path></svg>
@@ -1118,6 +1119,61 @@
   </div>
 </div>
 
+<div class="system-overlay fantasy-overlay" id="fantasyStudioOverlay" onclick="fantasyOverlayClick(event)">
+  <div class="system-panel fantasy-panel">
+    <div class="system-head">
+      <h2><span class="fantasy-wand-mark" aria-hidden="true">✦</span> סטודיו קלף מהדמיון</h2>
+      <button class="system-close" onclick="closeFantasyStudio()" aria-label="סגירה">✕</button>
+    </div>
+    <div class="system-body">
+      <div class="fantasy-hero">
+        <strong>התמונה שלך הופכת לקלף פנטזיה</strong>
+        <span>צלם פנים, תן שם ורעיון. ה-AI יכתוב כוחות וסיפור, ו-Hitim יעצב קלף שאפשר לשמור ולשתף.</span>
+      </div>
+
+      <div class="fantasy-upload" id="fantasyUpload">
+        <img id="fantasyPhotoPreview" alt="התמונה שנבחרה לקלף">
+        <div class="fantasy-upload-empty"><b>🪄</b>בחר תמונה כדי להתחיל</div>
+      </div>
+      <div class="fantasy-photo-actions">
+        <label class="fantasy-photo-button">
+          <input type="file" accept="image/*" capture="user" onchange="fantasyPhotoSelected(this)">📸 צילום פנים
+        </label>
+        <label class="fantasy-photo-button">
+          <input type="file" accept="image/*" onchange="fantasyPhotoSelected(this)">🖼️ בחירה מהגלריה
+        </label>
+      </div>
+
+      <div class="fantasy-field">
+        <label for="fantasyCardName">שם הקלף</label>
+        <input id="fantasyCardName" maxlength="46" placeholder="למשל: יוסי ופיקאצ׳ו ex" autocomplete="off">
+      </div>
+      <div class="fantasy-field">
+        <label for="fantasyPrompt">מה קורה בקלף?</label>
+        <textarea id="fantasyPrompt" maxlength="500" placeholder="למשל: אני מחזיק כדור, לידי פיקאצ׳ו ויש סביבנו ברקים סגולים"></textarea>
+      </div>
+      <button class="fantasy-generate" id="fantasyGenerateBtn" type="button" onclick="generateFantasyCard()">✨ צור לי קלף</button>
+      <div class="fantasy-status" id="fantasyStatus" role="status" aria-live="polite"></div>
+
+      <section class="fantasy-result" id="fantasyResult" hidden>
+        <img class="fantasy-card-preview" id="fantasyCardPreview" alt="קלף הפנטזיה שנוצר">
+        <div class="fantasy-actions">
+          <button class="fantasy-action" id="fantasyRetryBtn" type="button" onclick="retryFantasyCard()">🔄 נסה גרסה אחרת</button>
+          <button class="fantasy-action primary" id="fantasySaveBtn" type="button" onclick="saveFantasyCard()">💾 שמור בגלריית AI</button>
+          <button class="fantasy-action" type="button" onclick="downloadFantasyCard()">⬇️ הורד</button>
+          <button class="fantasy-action" type="button" onclick="shareFantasyCard()">↗️ שתף</button>
+        </div>
+      </section>
+
+      <section class="fantasy-gallery-section">
+        <div class="fantasy-gallery-title"><h3>גלריית קלפי הדמיון</h3><span class="fantasy-gallery-count" id="fantasyGalleryCount">0 קלפים</span></div>
+        <div class="fantasy-gallery" id="fantasyGallery"><div class="fantasy-empty">הקלפים שתשמור יופיעו כאן.</div></div>
+      </section>
+      <div class="fantasy-privacy">התמונה נשלחת לזמן קצר ל-AI רק כדי לכתוב את תוכן הקלף ואינה נשמרת בשרת. העיצוב והקלפים השמורים נשארים במכשיר. זהו FAN CARD לא רשמי.</div>
+    </div>
+  </div>
+</div>
+
 <div class="system-overlay" id="settingsOverlay" onclick="systemOverlayClick(event,'settingsOverlay')">
   <div class="system-panel">
     <div class="system-head">
@@ -1268,7 +1324,7 @@ function closePanel(resetNav=true){
 }
 function closeNavigationViews(){
   closePanel(false);
-  ['quickIdentifyOverlay','detailOverlay','overlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
+  ['quickIdentifyOverlay','detailOverlay','overlay','fantasyStudioOverlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
 }
 function showGalleryHome(){
   closeNavigationViews();setBottomNavActive('gallery');
@@ -3016,5 +3072,6 @@ setInterval(()=>{
   if(document.visibilityState==='visible'&&navigator.onLine)scheduleDailyPriceRefresh(5000);
 },60*60*1000);
 </script>
+<script src="/hitim-fantasy.js"></script>
 </body>
 </html>

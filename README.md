@@ -4,6 +4,12 @@ Hitim is a private, installable Pokémon card gallery. Google login and the
 administrator's access list are centralized; every user's cards, photos and
 notes are stored in that user's browser with IndexedDB.
 
+The optional Fantasy Studio creates unofficial fan cards for fun. A selected
+portrait is sent transiently to the existing free vision/text service only to
+write short Hebrew card copy; Hitim then composes the final artwork locally in
+the browser. It does not claim to generate a new AI illustration. Saved fantasy
+cards live in a separate on-device gallery and are included in Hitim backups.
+
 ## Local card catalog
 
 Hitim first reads the title and collector number locally in the browser and
@@ -44,6 +50,8 @@ The primary administrator is configured privately with the
 - Quick local OCR runs on the device. A selected photo is sent transiently to
   the AI fallback only when local catalog identification is inconclusive, and
   it is not persisted by Hitim's backend.
+- Fantasy Studio portraits are likewise processed transiently for card text;
+  only the finished fan card is saved locally when the user taps save.
 - Supabase stores authentication identity and the access status/role only.
 - Price and recognition requests require a valid, approved Google session.
 - A blocked user loses online access, but a website cannot remotely erase data

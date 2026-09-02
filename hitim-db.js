@@ -198,7 +198,8 @@
       version: 1,
       exportedAt: new Date().toISOString(),
       cards: await listCards(),
-      comments: await getSetting('comments', {})
+      comments: await getSetting('comments', {}),
+      fantasyCards: await getSetting('fantasyCardsV1', [])
     };
   }
 
@@ -225,6 +226,15 @@
     if (payload.comments && typeof payload.comments === 'object') {
       const existing = replace ? {} : await getSetting('comments', {});
       await setSetting('comments', { ...existing, ...payload.comments });
+    }
+    if (Array.isArray(payload.fantasyCards)) {
+      const existingFantasy = replace ? [] : await getSetting('fantasyCardsV1', []);
+      const byId = new Map(
+        [...payload.fantasyCards, ...existingFantasy]
+          .filter(card => card && card.id)
+          .map(card => [String(card.id), card])
+      );
+      await setSetting('fantasyCardsV1', [...byId.values()].slice(0, 30));
     }
     return payload.cards.length;
   }

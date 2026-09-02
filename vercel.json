@@ -3,6 +3,8 @@
     { "src": "index.html", "use": "@vercel/static" },
     { "src": "hitim-db.js", "use": "@vercel/static" },
     { "src": "hitim-auth.js", "use": "@vercel/static" },
+    { "src": "hitim-fantasy.css", "use": "@vercel/static" },
+    { "src": "hitim-fantasy.js", "use": "@vercel/static" },
     { "src": "sw.js", "use": "@vercel/static" },
     { "src": "manifest.webmanifest", "use": "@vercel/static" },
     { "src": "hitim-icon-02.svg", "use": "@vercel/static" },
@@ -14,7 +16,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "native-camera-v15.2"
+        "X-Hitim-Build": "fantasy-studio-v16.0"
       },
       "continue": true
     },
@@ -25,6 +27,8 @@
     },
     { "src": "/hitim-db.js", "dest": "/hitim-db.js" },
     { "src": "/hitim-auth.js", "dest": "/hitim-auth.js" },
+    { "src": "/hitim-fantasy.css", "dest": "/hitim-fantasy.css" },
+    { "src": "/hitim-fantasy.js", "dest": "/hitim-fantasy.js" },
     { "src": "/sw.js", "dest": "/sw.js" },
     { "src": "/manifest.webmanifest", "dest": "/manifest.webmanifest" },
     { "src": "/hitim-icon-02.svg", "dest": "/hitim-icon-02.svg" },

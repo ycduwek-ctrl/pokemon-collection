@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Header, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import gspread
 from google.oauth2.service_account import Credentials
@@ -1221,7 +1221,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hybrid-recognition-v10",
+        "build": "fantasy-studio-v16.0",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1718,3 +1718,182 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
         "identificationMode": mode,
     })
     return identified
+
+
+_FANTASY_CARD_TYPES = {
+    "electric", "fire", "water", "grass", "psychic", "dark", "metal", "fairy"
+}
+_FANTASY_RARITIES = {"נדיר", "נדיר במיוחד", "סודי", "אגדי"}
+
+
+def _fantasy_text(value, fallback, maximum):
+    value = re.sub(r"\s+", " ", str(value or "")).strip()
+    return (value or fallback)[:maximum]
+
+
+def _fantasy_number(value, fallback, minimum, maximum):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        number = fallback
+    return max(minimum, min(number, maximum))
+
+
+def _clean_fantasy_concept(value, requested_name=""):
+    """Keep model output compact and safe to draw into a fixed-size card."""
+    data = value if isinstance(value, dict) else {}
+    card_type = str(data.get("type") or "psychic").strip().lower()
+    if card_type not in _FANTASY_CARD_TYPES:
+        card_type = "psychic"
+    rarity = _fantasy_text(data.get("rarity"), "נדיר במיוחד", 20)
+    if rarity not in _FANTASY_RARITIES:
+        rarity = "נדיר במיוחד"
+    return {
+        "title": _fantasy_text(requested_name or data.get("title"), "גיבור הדמיון ex", 46),
+        "subtitle": _fantasy_text(data.get("subtitle"), "נולד מכוח הדמיון", 72),
+        "hp": _fantasy_number(data.get("hp"), 220, 60, 360),
+        "type": card_type,
+        "move1Name": _fantasy_text(data.get("move1Name"), "כוח החברות", 30),
+        "move1Damage": _fantasy_number(data.get("move1Damage"), 80, 0, 320),
+        "move1Text": _fantasy_text(data.get("move1Text"), "החברות מעניקה כוח לכל הצוות.", 92),
+        "move2Name": _fantasy_text(data.get("move2Name"), "פרץ הדמיון", 30),
+        "move2Damage": _fantasy_number(data.get("move2Damage"), 160, 0, 360),
+        "move2Text": _fantasy_text(data.get("move2Text"), "מתקפה מיוחדת שנולדה מהרעיון שלך.", 92),
+        "flavor": _fantasy_text(data.get("flavor"), "כשמדמיינים ביחד, הכול הופך לאפשרי.", 110),
+        "rarity": rarity,
+    }
+
+
+@app.post("/fantasy-card/concept")
+async def fantasy_card_concept(
+    photo: UploadFile = File(...),
+    prompt: str = Form(...),
+    card_name: str = Form(...),
+    attempt: int = Form(1),
+    authorization: str = Header(None),
+):
+    """Create card copy from a photo; final artwork is composed locally in the PWA."""
+    await asyncio.to_thread(require_access, authorization)
+    prompt = _fantasy_text(prompt, "", 500)
+    card_name = _fantasy_text(card_name, "", 46)
+    attempt = _fantasy_number(attempt, 1, 1, 20)
+    if not prompt or not card_name:
+        raise HTTPException(status_code=400, detail="נא להזין שם ורעיון לקלף")
+    if not os.environ.get("OPENROUTER_KEY"):
+        raise HTTPException(status_code=503, detail="שירות ה-AI אינו מוגדר כרגע")
+
+    try:
+        raw = await photo.read()
+        if not raw or len(raw) > 18 * 1024 * 1024:
+            raise ValueError("invalid image size")
+        image = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
+        image.thumbnail((896, 896), Image.LANCZOS)
+        buffer = io.BytesIO()
+        image.save(buffer, format="JPEG", quality=78, optimize=True)
+        photo_b64 = base64.b64encode(buffer.getvalue()).decode()
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail="התמונה אינה תקינה או גדולה מדי") from exc
+
+    instructions = f"""Create a playful, family-friendly fictional collectible fan-card concept in Hebrew.
+The requested title is: {card_name}
+The user's scene idea is: {prompt}
+This is variation number {attempt}; make its moves and wording different from earlier variations.
+Use only obvious, non-sensitive visual details from the attached photo, such as colors, clothing or pose.
+Never identify the person and never infer age, ethnicity, health, religion or other sensitive traits.
+This is an unofficial Hitim fan card, not a real Pokemon TCG product. Keep every field short enough for a phone-sized card.
+Return only the requested JSON. The title must remain exactly as supplied by the user."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "title": {"type": "string"},
+            "subtitle": {"type": "string"},
+            "hp": {"type": "integer", "minimum": 60, "maximum": 360},
+            "type": {"type": "string", "enum": sorted(_FANTASY_CARD_TYPES)},
+            "move1Name": {"type": "string"},
+            "move1Damage": {"type": "integer", "minimum": 0, "maximum": 320},
+            "move1Text": {"type": "string"},
+            "move2Name": {"type": "string"},
+            "move2Damage": {"type": "integer", "minimum": 0, "maximum": 360},
+            "move2Text": {"type": "string"},
+            "flavor": {"type": "string"},
+            "rarity": {"type": "string", "enum": sorted(_FANTASY_RARITIES)},
+        },
+        "required": [
+            "title", "subtitle", "hp", "type", "move1Name", "move1Damage",
+            "move1Text", "move2Name", "move2Damage", "move2Text", "flavor", "rarity"
+        ],
+        "additionalProperties": False,
+    }
+
+    def request_concept():
+        configured_model = os.environ.get("OPENROUTER_MODEL", "").strip()
+        supported_free_models = {
+            "google/gemma-3-12b-it:free",
+            "google/gemma-3-27b-it:free",
+            "openrouter/free",
+        }
+        primary_model = (
+            configured_model if configured_model in supported_free_models
+            else "google/gemma-3-12b-it:free"
+        )
+        body = {
+            "model": primary_model,
+            "messages": [{"role": "user", "content": [
+                {"type": "text", "text": instructions},
+                {"type": "image_url", "image_url": {
+                    "url": f"data:image/jpeg;base64,{photo_b64}"
+                }},
+            ]}],
+            "temperature": 0.75,
+            "max_tokens": 520,
+            "provider": {
+                "allow_fallbacks": True,
+                "require_parameters": True,
+                "sort": "latency",
+            },
+            "response_format": {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "hitim_fantasy_card",
+                    "strict": True,
+                    "schema": schema,
+                },
+            },
+        }
+        if primary_model != "openrouter/free":
+            body["models"] = ["openrouter/free"]
+        response = requests.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {os.environ['OPENROUTER_KEY']}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://pokemon-collection-ecru.vercel.app",
+                "X-Title": "Hitim Fantasy Studio",
+            },
+            json=body,
+            timeout=(6, 36),
+        )
+        response.raise_for_status()
+        result = response.json()
+        if result.get("error"):
+            raise ValueError(str((result.get("error") or {}).get("message") or "provider error"))
+        answer = result["choices"][0]["message"]["content"]
+        if not isinstance(answer, str):
+            raise ValueError("empty model response")
+        answer = re.sub(r"```json|```", "", answer).strip()
+        match = re.search(r"\{.*\}", answer, re.DOTALL)
+        return _clean_fantasy_concept(json.loads(match.group() if match else answer), card_name)
+
+    try:
+        concept = await asyncio.to_thread(request_concept)
+    except requests.Timeout as exc:
+        raise HTTPException(status_code=504, detail="ה-AI מתעכב כרגע — נסה שוב") from exc
+    except requests.RequestException as exc:
+        raise HTTPException(status_code=503, detail="שירות ה-AI אינו זמין כרגע") from exc
+    except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        raise HTTPException(status_code=422, detail="לא הצלחנו לבנות את רעיון הקלף") from exc
+    return {
+        "concept": concept,
+        "source": "ai-text-vision",
+        "imageMode": "local-fantasy-design",
+    }

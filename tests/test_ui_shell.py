@@ -48,7 +48,7 @@ class UiShellTests(unittest.TestCase):
             "navAddBtn",
             "navCameraBtn",
             "navAdminBtn",
-            "navShareBtn",
+            "navStudioBtn",
             "navSettingsBtn",
         ):
             self.assertIn(f'id="{button_id}"', self.html)
@@ -200,6 +200,25 @@ class UiShellTests(unittest.TestCase):
         self.assertNotIn("CONDITION_HE", detail)
         self.assertNotIn("LANGUAGE_HE", detail)
         self.assertNotIn('detail-meta-label">פוקימון', detail)
+
+    def test_fantasy_studio_is_separate_and_has_complete_actions(self):
+        studio = self.html.split('id="fantasyStudioOverlay"', 1)[1].split(
+            'id="settingsOverlay"', 1
+        )[0]
+        self.assertIn('סטודיו קלף מהדמיון', studio)
+        self.assertIn('capture="user"', studio)
+        self.assertIn('id="fantasyCardName"', studio)
+        self.assertIn('id="fantasyPrompt"', studio)
+        for action in ('נסה גרסה אחרת', 'שמור בגלריית AI', 'הורד', 'שתף'):
+            self.assertIn(action, studio)
+        self.assertIn('FAN CARD לא רשמי', studio)
+
+    def test_fantasy_assets_are_loaded_without_replacing_collection_code(self):
+        self.assertIn('/hitim-fantasy.css', self.html)
+        self.assertIn('/hitim-fantasy.js', self.html)
+        self.assertIn("'fantasyStudioOverlay'", self.html)
+        self.assertIn('id="quickIdentifyOverlay"', self.html)
+        self.assertIn('function identifyCoin()', self.html)
 
 
 if __name__ == "__main__":
