@@ -16,7 +16,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "hitim-full-art-v17.0"
+        "X-Hitim-Build": "hitim-card-design-v17.2"
       },
       "continue": true
     },
