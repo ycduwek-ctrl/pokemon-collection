@@ -254,6 +254,7 @@ class UiShellTests(unittest.TestCase):
         self.assertTrue(symbols.is_file())
         self.assertGreater(symbols.stat().st_size, 1000)
         self.assertIn("'/hitim-energy-symbols.png'", self.sw)
+        self.assertIn('"src": "hitim-energy-symbols.png"', (ROOT / 'vercel.json').read_text(encoding='utf-8'))
 
 
 if __name__ == "__main__":
