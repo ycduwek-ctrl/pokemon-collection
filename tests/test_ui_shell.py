@@ -11,6 +11,7 @@ class UiShellTests(unittest.TestCase):
         cls.html = (ROOT / "index.html").read_text(encoding="utf-8")
         cls.auth = (ROOT / "hitim-auth.js").read_text(encoding="utf-8")
         cls.fantasy = (ROOT / "hitim-fantasy.js").read_text(encoding="utf-8")
+        cls.sw = (ROOT / "sw.js").read_text(encoding="utf-8")
 
     def test_holo_and_motion_code_are_completely_removed(self):
         self.assertNotIn("card-holo-effect", self.html)
@@ -239,12 +240,20 @@ class UiShellTests(unittest.TestCase):
         self.assertIn("'Friendship Strike'", self.fantasy)
         self.assertIn("'Imagination Burst'", self.fantasy)
         self.assertIn("fillText('ex'", self.fantasy)
-        self.assertIn('const titleLeft = 140', self.fantasy)
-        self.assertIn('roundedPath(context, 38, 34, 674, 100', self.fantasy)
-        self.assertIn('drawMove(context, 834, theme, 2', self.fantasy)
-        self.assertIn('drawMove(context, 920, theme, 3', self.fantasy)
+        self.assertIn('const titleLeft = 136', self.fantasy)
+        self.assertIn('"Gill Sans MT"', self.fantasy)
+        self.assertIn('"Almoni DL AAA"', self.fantasy)
+        self.assertIn("loadImage('/hitim-energy-symbols.png')", self.fantasy)
+        self.assertIn('drawPrimaryMove(context, energySprite, concept, theme)', self.fantasy)
+        self.assertIn("strokeText('★ ★'", self.fantasy)
         for removed_copy in ('concept.subtitle', 'concept.move1Text', 'concept.move2Text', 'concept.flavor', 'IMAGINATION SERIES', 'FULL ART • FAN CARD'):
             self.assertNotIn(removed_copy, self.fantasy)
+
+    def test_fantasy_reference_asset_is_shipped_and_cached(self):
+        symbols = ROOT / 'hitim-energy-symbols.png'
+        self.assertTrue(symbols.is_file())
+        self.assertGreater(symbols.stat().st_size, 1000)
+        self.assertIn("'/hitim-energy-symbols.png'", self.sw)
 
 
 if __name__ == "__main__":

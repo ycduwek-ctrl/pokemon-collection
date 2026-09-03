@@ -4,6 +4,8 @@
   const STORAGE_KEY = 'fantasyCardsV1';
   const MAX_SAVED_CARDS = 30;
   const IMAGE_MODEL = 'gemini-3.1-flash-image-preview';
+  const NAME_FONT = '"Gill Sans MT", "Gill Sans", "Trebuchet MS", Arial, sans-serif';
+  const NUMBER_FONT = '"Almoni DL AAA", "Arial Narrow", Heebo, Arial, sans-serif';
   const TYPES = {
     electric: { colors: ['#2e1065', '#7c3aed', '#fde047'], icon: '⚡' },
     fire: { colors: ['#3f0712', '#e11d48', '#fbbf24'], icon: '🔥' },
@@ -13,6 +15,15 @@
     dark: { colors: ['#020617', '#312e81', '#a78bfa'], icon: '☾' },
     metal: { colors: ['#0f172a', '#64748b', '#e2e8f0'], icon: '◆' },
     fairy: { colors: ['#500724', '#db2777', '#fde68a'], icon: '✧' }
+  };
+  const ENERGY_SYMBOL_CROPS = {
+    grass: [0, 0, 126, 128], dark: [242, 0, 127, 128], fairy: [488, 0, 126, 128],
+    fire: [965, 0, 127, 128], electric: [126, 193, 121, 128], water: [366, 193, 121, 128],
+    psychic: [605, 193, 122, 128], metal: [846, 193, 121, 128]
+  };
+  const ENERGY_PARTNERS = {
+    electric: 'fire', fire: 'electric', water: 'psychic', grass: 'electric',
+    psychic: 'dark', dark: 'psychic', metal: 'electric', fairy: 'psychic'
   };
   let photoFile = null;
   let photoDataUrl = '';
@@ -140,10 +151,10 @@
     }
     return lines;
   }
-  function setFittedFont(context, text, maximumWidth, startingSize, minimumSize) {
+  function setFittedFont(context, text, maximumWidth, startingSize, minimumSize, family) {
     let size = startingSize;
     while (size > minimumSize) {
-      context.font = `900 ${size}px Heebo, sans-serif`;
+      context.font = `900 ${size}px ${family || 'Heebo, sans-serif'}`;
       if (context.measureText(text).width <= maximumWidth) break;
       size -= 1;
     }
@@ -159,19 +170,25 @@
     context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(theme.icon, x, y + 1);
     context.textBaseline = 'alphabetic';
   }
-  function drawMove(context, y, theme, energyCount, name, damage) {
-    roundedPath(context, 42, y - 39, 666, 74, 17);
-    context.fillStyle = 'rgba(3,7,18,.76)'; context.fill();
-    const edge = context.createLinearGradient(42, y, 708, y);
-    edge.addColorStop(0, theme.colors[2]); edge.addColorStop(.46, 'rgba(255,255,255,.75)');
-    edge.addColorStop(1, theme.colors[1]);
-    context.strokeStyle = edge; context.lineWidth = 2; context.stroke();
-    for (let index = 0; index < energyCount; index += 1) drawEnergyIcon(context, 72 + index * 43, y - 1, theme, 17);
-    context.fillStyle = '#fff'; context.font = '900 26px Heebo, sans-serif';
-    context.textAlign = 'left'; context.shadowColor = 'rgba(0,0,0,.92)'; context.shadowBlur = 7;
-    context.fillText(name, 72 + energyCount * 43 + 18, y + 9);
-    context.textAlign = 'right'; context.font = '900 32px Heebo, sans-serif';
-    context.fillText(String(damage), 682, y + 10); context.shadowBlur = 0;
+  function drawEnergySymbol(context, sprite, type, x, y, radius, theme) {
+    const crop = ENERGY_SYMBOL_CROPS[type];
+    if (!sprite || !crop) { drawEnergyIcon(context, x, y, theme, radius); return; }
+    context.save();
+    context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.clip();
+    context.drawImage(sprite, crop[0], crop[1], crop[2], crop[3], x - radius, y - radius, radius * 2, radius * 2);
+    context.restore();
+  }
+  function drawPrimaryMove(context, sprite, concept, theme) {
+    const y = 835;
+    const symbolTypes = [concept.type, ENERGY_PARTNERS[concept.type] || 'electric'];
+    symbolTypes.forEach((type, index) => drawEnergySymbol(context, sprite, type, 78 + index * 48, y, 20, theme));
+    context.lineJoin = 'round'; context.textBaseline = 'alphabetic';
+    context.font = `900 29px ${NAME_FONT}`; context.textAlign = 'left';
+    context.strokeStyle = '#fff'; context.lineWidth = 5; context.strokeText(concept.move1Name, 158, y + 10);
+    context.fillStyle = '#050505'; context.fillText(concept.move1Name, 158, y + 10);
+    context.font = `900 39px ${NUMBER_FONT}`; context.textAlign = 'right';
+    context.strokeStyle = '#fff'; context.lineWidth = 5; context.strokeText(`${concept.move1Damage}×`, 681, y + 12);
+    context.fillStyle = '#050505'; context.fillText(`${concept.move1Damage}×`, 681, y + 12);
   }
 
   function imagePrompt(name, idea, version) {
@@ -209,9 +226,10 @@
 
   async function composeCard(illustration, concept, version) {
     if (document.fonts && document.fonts.ready) await document.fonts.ready;
-    const [art, logo] = await Promise.all([
+    const [art, logo, energySprite] = await Promise.all([
       loadImage(illustration),
-      loadImage('/hitim-icon-193.png').catch(() => null)
+      loadImage('/hitim-icon-193.png').catch(() => null),
+      loadImage('/hitim-energy-symbols.png').catch(() => null)
     ]);
     const canvas = document.createElement('canvas');
     canvas.width = 750; canvas.height = 1050;
@@ -219,69 +237,64 @@
     context.direction = 'ltr';
     const theme = TYPES[concept.type] || TYPES.psychic;
 
+    const frame = context.createLinearGradient(0, 0, 750, 1050);
+    frame.addColorStop(0, '#fff0a3'); frame.addColorStop(.2, '#fff8bd');
+    frame.addColorStop(.42, '#65ddf4'); frame.addColorStop(.62, '#b9a1ff');
+    frame.addColorStop(.8, '#fff2a8'); frame.addColorStop(1, '#b996f4');
     context.fillStyle = '#050815'; context.fillRect(0, 0, 750, 1050);
-    roundedPath(context, 10, 10, 730, 1030, 48); context.save(); context.clip();
-    drawCover(context, art, 10, 10, 730, 1030);
+    roundedPath(context, 0, 0, 750, 1050, 48); context.fillStyle = frame; context.fill();
 
-    const topShade = context.createLinearGradient(0, 10, 0, 190);
-    topShade.addColorStop(0, 'rgba(2,6,23,.82)');
-    topShade.addColorStop(.48, 'rgba(15,10,45,.28)');
-    topShade.addColorStop(1, 'rgba(15,10,45,0)');
-    context.fillStyle = topShade; context.fillRect(10, 10, 730, 190);
-    const lowerShade = context.createLinearGradient(0, 690, 0, 1040);
+    roundedPath(context, 29, 30, 692, 990, 18); context.save(); context.clip();
+    drawCover(context, art, 29, 30, 692, 990);
+    const topShade = context.createLinearGradient(0, 30, 0, 150);
+    topShade.addColorStop(0, 'rgba(2,6,23,.6)'); topShade.addColorStop(1, 'rgba(2,6,23,0)');
+    context.fillStyle = topShade; context.fillRect(29, 30, 692, 150);
+    const lowerShade = context.createLinearGradient(0, 655, 0, 1020);
     lowerShade.addColorStop(0, 'rgba(2,6,23,0)');
-    lowerShade.addColorStop(.34, 'rgba(8,5,25,.24)');
-    lowerShade.addColorStop(.68, 'rgba(8,5,25,.66)');
-    lowerShade.addColorStop(1, 'rgba(2,6,23,.9)');
-    context.fillStyle = lowerShade; context.fillRect(10, 690, 730, 350);
+    lowerShade.addColorStop(.42, 'rgba(4,8,25,.38)');
+    lowerShade.addColorStop(1, 'rgba(2,6,23,.91)');
+    context.fillStyle = lowerShade; context.fillRect(29, 655, 692, 365);
     context.restore();
-
-    const metal = context.createLinearGradient(0, 0, 750, 1050);
-    metal.addColorStop(0, '#fff7c2'); metal.addColorStop(.18, theme.colors[2]);
-    metal.addColorStop(.4, '#a78bfa'); metal.addColorStop(.62, '#67e8f9');
-    metal.addColorStop(.82, '#f0abfc'); metal.addColorStop(1, '#fde68a');
-    roundedPath(context, 10, 10, 730, 1030, 48); context.strokeStyle = metal; context.lineWidth = 8; context.stroke();
-    roundedPath(context, 22, 22, 706, 1006, 39); context.strokeStyle = 'rgba(255,255,255,.5)'; context.lineWidth = 2; context.stroke();
-    context.strokeStyle = '#080b18'; context.lineWidth = 8;
-    context.beginPath(); context.moveTo(22, 175); context.lineTo(22, 63); context.quadraticCurveTo(22, 22, 64, 22); context.lineTo(178, 22); context.stroke();
-    context.beginPath(); context.moveTo(728, 875); context.lineTo(728, 987); context.quadraticCurveTo(728, 1028, 686, 1028); context.lineTo(572, 1028); context.stroke();
-
-    roundedPath(context, 38, 34, 674, 100, 22);
-    context.fillStyle = 'rgba(3,7,18,.76)'; context.fill();
-    context.strokeStyle = metal; context.lineWidth = 2; context.stroke();
+    roundedPath(context, 29, 30, 692, 990, 18);
+    context.strokeStyle = 'rgba(255,255,255,.74)'; context.lineWidth = 2; context.stroke();
 
     if (logo) {
-      roundedPath(context, 50, 47, 74, 74, 15); context.save(); context.clip();
-      context.drawImage(logo, 50, 47, 74, 74); context.restore();
+      roundedPath(context, 58, 42, 55, 55, 12); context.save(); context.clip();
+      context.drawImage(logo, 58, 42, 55, 55); context.restore();
     } else {
-      context.fillStyle = theme.colors[2]; context.font = '900 35px Heebo, sans-serif';
-      context.textAlign = 'left'; context.fillText('H', 66, 96);
+      context.fillStyle = theme.colors[2]; context.font = `900 35px ${NAME_FONT}`;
+      context.textAlign = 'left'; context.fillText('H', 68, 82);
     }
 
     const baseTitle = concept.title.replace(/\s+ex$/i, '').trim();
-    const titleLeft = 140;
-    const titleSize = setFittedFont(context, baseTitle, 345, 40, 23);
+    const titleLeft = 136;
+    const titleSize = setFittedFont(context, baseTitle, 342, 45, 24, NAME_FONT);
     const baseWidth = context.measureText(baseTitle).width;
-    context.textAlign = 'left'; context.fillStyle = '#fff';
-    context.shadowColor = 'rgba(0,0,0,.75)'; context.shadowBlur = 8;
-    context.fillText(baseTitle, titleLeft, 99);
-    context.font = `italic 900 ${Math.max(22, Math.round(titleSize * .72))}px Heebo, sans-serif`;
-    context.fillStyle = theme.colors[2];
-    context.fillText('ex', titleLeft + baseWidth + 9, 99); context.shadowBlur = 0;
+    context.lineJoin = 'round'; context.textAlign = 'left';
+    context.strokeStyle = '#fff'; context.lineWidth = 7; context.strokeText(baseTitle, titleLeft, 90);
+    context.fillStyle = '#050505'; context.fillText(baseTitle, titleLeft, 90);
+    const exSize = Math.max(27, Math.round(titleSize * .78));
+    context.font = `italic 900 ${exSize}px ${NAME_FONT}`;
+    const exLeft = titleLeft + baseWidth + 7;
+    context.strokeStyle = '#050505'; context.lineWidth = 6; context.strokeText('ex', exLeft, 90);
+    const exFill = context.createLinearGradient(exLeft, 55, exLeft + 56, 91);
+    exFill.addColorStop(0, theme.colors[2]); exFill.addColorStop(.55, '#f3c884'); exFill.addColorStop(1, theme.colors[1]);
+    context.fillStyle = exFill; context.fillText('ex', exLeft, 90);
 
-    context.font = '800 17px Heebo, sans-serif'; context.fillStyle = '#fff'; context.textAlign = 'right';
-    context.fillText('HP', 575, 98);
-    context.font = '900 31px Heebo, sans-serif'; context.fillText(String(concept.hp), 660, 100);
-    drawEnergyIcon(context, 687, 87, theme, 20);
+    context.font = `900 53px ${NUMBER_FONT}`; context.textAlign = 'right';
+    context.strokeStyle = '#fff'; context.lineWidth = 7; context.strokeText(String(concept.hp), 649, 91);
+    context.fillStyle = '#050505'; context.fillText(String(concept.hp), 649, 91);
+    drawEnergySymbol(context, energySprite, concept.type, 682, 70, 28, theme);
 
-    drawMove(context, 834, theme, 2, concept.move1Name, concept.move1Damage);
-    drawMove(context, 920, theme, 3, concept.move2Name, concept.move2Damage);
+    drawPrimaryMove(context, energySprite, concept, theme);
 
-    context.fillStyle = 'rgba(255,255,255,.5)'; context.fillRect(48, 972, 654, 2);
-    context.fillStyle = '#fff'; context.font = '900 14px Heebo, sans-serif'; context.textAlign = 'left';
-    context.fillText(`HITIM • ${String(version).padStart(3, '0')}/999`, 55, 1007);
-    context.fillStyle = theme.colors[2]; context.font = '900 22px sans-serif';
-    context.fillText('✦', 225, 1009);
+    const footerLine = context.createLinearGradient(65, 0, 686, 0);
+    footerLine.addColorStop(0, '#f9cf4a'); footerLine.addColorStop(.55, '#fff'); footerLine.addColorStop(1, '#c9b7ff');
+    context.fillStyle = footerLine; context.fillRect(65, 975, 621, 2);
+    context.fillStyle = '#fff'; context.font = `900 11px ${NAME_FONT}`; context.textAlign = 'left';
+    context.fillText(`HITIM • ${String(version).padStart(3, '0')}/999`, 65, 1005);
+    context.fillStyle = '#ffd21c'; context.strokeStyle = '#6b4300'; context.lineWidth = 2;
+    context.font = '900 26px sans-serif'; context.strokeText('★ ★', 178, 1008); context.fillText('★ ★', 178, 1008);
     return canvas.toDataURL('image/webp', .92);
   }
 

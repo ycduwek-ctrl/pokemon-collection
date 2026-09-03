@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hitim-shell-v24';
+const CACHE_NAME = 'hitim-shell-v25';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -9,7 +9,8 @@ const APP_SHELL = [
   '/hitim-db.js',
   '/hitim-auth.js',
   '/hitim-fantasy.css',
-  '/hitim-fantasy.js'
+  '/hitim-fantasy.js',
+  '/hitim-energy-symbols.png'
 ];
 
 self.addEventListener('install', event => {
