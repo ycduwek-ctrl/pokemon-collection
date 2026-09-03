@@ -29,39 +29,37 @@
     const parsed = Number.parseInt(value, 10);
     return Math.max(minimum, Math.min(Number.isFinite(parsed) ? parsed : fallback, maximum));
   }
+  function ensureExTitle(value) {
+    const title = cleanText(value, 'Fantasy Hero', 42).replace(/\s+ex$/i, '').trim();
+    return `${title} ex`;
+  }
+  function cleanEnglishMove(value, fallback) {
+    const move = cleanText(value, fallback, 30);
+    return /[A-Za-z]/.test(move) && !/[\u0590-\u05ff]/.test(move) ? move : fallback;
+  }
   function cleanConcept(value, requestedName) {
     const data = value && typeof value === 'object' ? value : {};
     const type = TYPES[data.type] ? data.type : 'psychic';
     return {
-      title: cleanText(requestedName || data.title, 'גיבור הדמיון ex', 46),
-      subtitle: cleanText(data.subtitle, 'נולד מכוח הדמיון', 72),
+      title: ensureExTitle(requestedName || data.title),
       hp: cleanNumber(data.hp, 220, 60, 360),
       type,
-      move1Name: cleanText(data.move1Name, 'כוח החברות', 30),
+      move1Name: cleanEnglishMove(data.move1Name, 'Friendship Strike'),
       move1Damage: cleanNumber(data.move1Damage, 80, 0, 320),
-      move1Text: cleanText(data.move1Text, 'החברות מעניקה כוח לכל הצוות.', 92),
-      move2Name: cleanText(data.move2Name, 'פרץ הדמיון', 30),
-      move2Damage: cleanNumber(data.move2Damage, 160, 0, 360),
-      move2Text: cleanText(data.move2Text, 'מתקפה מיוחדת שנולדה מהרעיון שלך.', 92),
-      flavor: cleanText(data.flavor, 'כשמדמיינים ביחד, הכול הופך לאפשרי.', 110),
-      rarity: cleanText(data.rarity, 'נדיר במיוחד', 20)
+      move2Name: cleanEnglishMove(data.move2Name, 'Imagination Burst'),
+      move2Damage: cleanNumber(data.move2Damage, 160, 0, 360)
     };
   }
-  function fallbackConcept(name, idea, version) {
+  function fallbackConcept(name, version) {
     const typeNames = Object.keys(TYPES);
     const type = typeNames[(version - 1) % typeNames.length];
-    const firstMoves = ['כוח החברות', 'קפיצת הכוכב', 'מגן האומץ', 'ברק של חיוך'];
-    const secondMoves = ['פרץ הדמיון', 'סערת גיבורים', 'מכת החלום', 'אנרגיית על'];
+    const firstMoves = ['Friendship Strike', 'Hero Spark', 'Brave Shield', 'Power Dash'];
+    const secondMoves = ['Imagination Burst', 'Dream Storm', 'Final Flash', 'Victory Pulse'];
     const index = (version - 1) % firstMoves.length;
     return cleanConcept({
-      subtitle: cleanText(idea, 'הרפתקה שנולדה מהדמיון', 72),
       hp: 180 + ((version * 20) % 160), type,
       move1Name: firstMoves[index], move1Damage: 60 + version * 10,
-      move1Text: 'הדמות צוברת כוח מכל חבר שנמצא לצידה.',
       move2Name: secondMoves[index], move2Damage: 130 + version * 10,
-      move2Text: 'מתקפה מיוחדת שמגשימה את הרעיון שבתמונה.',
-      flavor: 'קלף חד-פעמי שנוצר במיוחד בסטודיו הדמיון של HITIM.',
-      rarity: version % 3 === 0 ? 'אגדי' : 'נדיר במיוחד'
     }, name);
   }
 
@@ -142,22 +140,38 @@
     }
     return lines;
   }
-  function seededRandom(seed) {
-    let state = seed * 9301 + 49297;
-    return () => { state = (state * 9301 + 49297) % 233280; return state / 233280; };
+  function setFittedFont(context, text, maximumWidth, startingSize, minimumSize) {
+    let size = startingSize;
+    while (size > minimumSize) {
+      context.font = `900 ${size}px Heebo, sans-serif`;
+      if (context.measureText(text).width <= maximumWidth) break;
+      size -= 1;
+    }
+    return size;
   }
-  function drawMove(context, y, theme, name, damage, description) {
-    const line = context.createLinearGradient(56, y, 694, y);
-    line.addColorStop(0, 'rgba(255,255,255,0)');
-    line.addColorStop(.3, `${theme.colors[2]}bb`);
-    line.addColorStop(1, 'rgba(255,255,255,.72)');
-    context.fillStyle = line; context.fillRect(56, y - 12, 638, 2);
-    context.fillStyle = '#fff'; context.font = '900 27px Heebo, sans-serif';
-    context.textAlign = 'right'; context.fillText(name, 668, y + 22);
-    context.textAlign = 'left'; context.font = '900 30px Heebo, sans-serif';
-    context.fillStyle = theme.colors[2]; context.fillText(String(damage), 72, y + 22);
-    context.fillStyle = '#f8fafc'; context.font = '700 18px Heebo, sans-serif'; context.textAlign = 'right';
-    wrapLines(context, description, 570, 2).forEach((text, index) => context.fillText(text, 668, y + 54 + index * 23));
+  function drawEnergyIcon(context, x, y, theme, size) {
+    const glow = context.createRadialGradient(x - size * .2, y - size * .25, 1, x, y, size);
+    glow.addColorStop(0, '#fff7c2'); glow.addColorStop(.36, theme.colors[2]); glow.addColorStop(1, theme.colors[1]);
+    context.beginPath(); context.arc(x, y, size, 0, Math.PI * 2);
+    context.fillStyle = glow; context.fill();
+    context.strokeStyle = 'rgba(255,255,255,.8)'; context.lineWidth = 2; context.stroke();
+    context.fillStyle = '#111827'; context.font = `900 ${Math.round(size * 1.05)}px sans-serif`;
+    context.textAlign = 'center'; context.textBaseline = 'middle'; context.fillText(theme.icon, x, y + 1);
+    context.textBaseline = 'alphabetic';
+  }
+  function drawMove(context, y, theme, energyCount, name, damage) {
+    roundedPath(context, 42, y - 39, 666, 74, 17);
+    context.fillStyle = 'rgba(3,7,18,.76)'; context.fill();
+    const edge = context.createLinearGradient(42, y, 708, y);
+    edge.addColorStop(0, theme.colors[2]); edge.addColorStop(.46, 'rgba(255,255,255,.75)');
+    edge.addColorStop(1, theme.colors[1]);
+    context.strokeStyle = edge; context.lineWidth = 2; context.stroke();
+    for (let index = 0; index < energyCount; index += 1) drawEnergyIcon(context, 72 + index * 43, y - 1, theme, 17);
+    context.fillStyle = '#fff'; context.font = '900 26px Heebo, sans-serif';
+    context.textAlign = 'left'; context.shadowColor = 'rgba(0,0,0,.92)'; context.shadowBlur = 7;
+    context.fillText(name, 72 + energyCount * 43 + 18, y + 9);
+    context.textAlign = 'right'; context.font = '900 32px Heebo, sans-serif';
+    context.fillText(String(damage), 682, y + 10); context.shadowBlur = 0;
   }
 
   function imagePrompt(name, idea, version) {
@@ -202,73 +216,72 @@
     const canvas = document.createElement('canvas');
     canvas.width = 750; canvas.height = 1050;
     const context = canvas.getContext('2d', { alpha: false });
+    context.direction = 'ltr';
     const theme = TYPES[concept.type] || TYPES.psychic;
 
     context.fillStyle = '#050815'; context.fillRect(0, 0, 750, 1050);
     roundedPath(context, 10, 10, 730, 1030, 48); context.save(); context.clip();
     drawCover(context, art, 10, 10, 730, 1030);
 
-    const topShade = context.createLinearGradient(0, 10, 0, 245);
-    topShade.addColorStop(0, 'rgba(2,6,23,.9)');
-    topShade.addColorStop(.5, 'rgba(15,10,45,.48)');
+    const topShade = context.createLinearGradient(0, 10, 0, 190);
+    topShade.addColorStop(0, 'rgba(2,6,23,.82)');
+    topShade.addColorStop(.48, 'rgba(15,10,45,.28)');
     topShade.addColorStop(1, 'rgba(15,10,45,0)');
-    context.fillStyle = topShade; context.fillRect(10, 10, 730, 250);
-    const lowerShade = context.createLinearGradient(0, 540, 0, 1040);
+    context.fillStyle = topShade; context.fillRect(10, 10, 730, 190);
+    const lowerShade = context.createLinearGradient(0, 690, 0, 1040);
     lowerShade.addColorStop(0, 'rgba(2,6,23,0)');
-    lowerShade.addColorStop(.22, 'rgba(8,5,25,.45)');
-    lowerShade.addColorStop(.55, 'rgba(8,5,25,.82)');
-    lowerShade.addColorStop(1, 'rgba(2,6,23,.97)');
-    context.fillStyle = lowerShade; context.fillRect(10, 530, 730, 510);
-
-    const random = seededRandom(version + concept.title.length);
-    for (let i = 0; i < 26; i += 1) {
-      const x = random() * 730 + 10, y = random() * 1010 + 20, radius = .8 + random() * 2.7;
-      context.globalAlpha = .22 + random() * .46;
-      context.fillStyle = i % 3 ? theme.colors[2] : '#fff';
-      context.beginPath(); context.arc(x, y, radius, 0, Math.PI * 2); context.fill();
-    }
-    context.globalAlpha = 1; context.restore();
+    lowerShade.addColorStop(.34, 'rgba(8,5,25,.24)');
+    lowerShade.addColorStop(.68, 'rgba(8,5,25,.66)');
+    lowerShade.addColorStop(1, 'rgba(2,6,23,.9)');
+    context.fillStyle = lowerShade; context.fillRect(10, 690, 730, 350);
+    context.restore();
 
     const metal = context.createLinearGradient(0, 0, 750, 1050);
     metal.addColorStop(0, '#fff7c2'); metal.addColorStop(.18, theme.colors[2]);
     metal.addColorStop(.4, '#a78bfa'); metal.addColorStop(.62, '#67e8f9');
     metal.addColorStop(.82, '#f0abfc'); metal.addColorStop(1, '#fde68a');
-    roundedPath(context, 10, 10, 730, 1030, 48); context.strokeStyle = metal; context.lineWidth = 12; context.stroke();
-    roundedPath(context, 24, 24, 702, 1002, 38); context.strokeStyle = 'rgba(255,255,255,.6)'; context.lineWidth = 2; context.stroke();
+    roundedPath(context, 10, 10, 730, 1030, 48); context.strokeStyle = metal; context.lineWidth = 8; context.stroke();
+    roundedPath(context, 22, 22, 706, 1006, 39); context.strokeStyle = 'rgba(255,255,255,.5)'; context.lineWidth = 2; context.stroke();
+    context.strokeStyle = '#080b18'; context.lineWidth = 8;
+    context.beginPath(); context.moveTo(22, 175); context.lineTo(22, 63); context.quadraticCurveTo(22, 22, 64, 22); context.lineTo(178, 22); context.stroke();
+    context.beginPath(); context.moveTo(728, 875); context.lineTo(728, 987); context.quadraticCurveTo(728, 1028, 686, 1028); context.lineTo(572, 1028); context.stroke();
+
+    roundedPath(context, 38, 34, 674, 100, 22);
+    context.fillStyle = 'rgba(3,7,18,.76)'; context.fill();
+    context.strokeStyle = metal; context.lineWidth = 2; context.stroke();
 
     if (logo) {
-      roundedPath(context, 43, 43, 62, 62, 17); context.save(); context.clip();
-      context.drawImage(logo, 43, 43, 62, 62); context.restore();
+      roundedPath(context, 50, 47, 74, 74, 15); context.save(); context.clip();
+      context.drawImage(logo, 50, 47, 74, 74); context.restore();
     } else {
       context.fillStyle = theme.colors[2]; context.font = '900 35px Heebo, sans-serif';
-      context.textAlign = 'left'; context.fillText('H', 52, 88);
+      context.textAlign = 'left'; context.fillText('H', 66, 96);
     }
-    context.textAlign = 'left'; context.fillStyle = '#fff'; context.font = '900 15px Heebo, sans-serif';
-    context.fillText('HITIM', 118, 66);
-    context.fillStyle = '#fde68a'; context.font = '800 12px Heebo, sans-serif';
-    context.fillText('IMAGINATION SERIES', 118, 88);
 
-    context.textAlign = 'right'; context.fillStyle = '#fff'; context.font = '900 34px Heebo, sans-serif';
+    const baseTitle = concept.title.replace(/\s+ex$/i, '').trim();
+    const titleLeft = 140;
+    const titleSize = setFittedFont(context, baseTitle, 345, 40, 23);
+    const baseWidth = context.measureText(baseTitle).width;
+    context.textAlign = 'left'; context.fillStyle = '#fff';
     context.shadowColor = 'rgba(0,0,0,.75)'; context.shadowBlur = 8;
-    context.fillText(wrapLines(context, concept.title, 430, 1)[0] || concept.title, 700, 84);
-    context.shadowBlur = 0;
-    context.fillStyle = '#e2e8f0'; context.font = '700 16px Heebo, sans-serif';
-    context.fillText(concept.subtitle, 700, 112);
-    context.textAlign = 'left'; context.fillStyle = theme.colors[2]; context.font = '900 23px Heebo, sans-serif';
-    context.fillText(`${concept.hp} HP  ${theme.icon}`, 45, 137);
+    context.fillText(baseTitle, titleLeft, 99);
+    context.font = `italic 900 ${Math.max(22, Math.round(titleSize * .72))}px Heebo, sans-serif`;
+    context.fillStyle = theme.colors[2];
+    context.fillText('ex', titleLeft + baseWidth + 9, 99); context.shadowBlur = 0;
 
-    drawMove(context, 704, theme, concept.move1Name, concept.move1Damage, concept.move1Text);
-    drawMove(context, 830, theme, concept.move2Name, concept.move2Damage, concept.move2Text);
-    context.textAlign = 'center'; context.fillStyle = '#e2e8f0'; context.font = '700 15px Heebo, sans-serif';
-    wrapLines(context, concept.flavor, 610, 1).forEach(text => context.fillText(text, 375, 951));
+    context.font = '800 17px Heebo, sans-serif'; context.fillStyle = '#fff'; context.textAlign = 'right';
+    context.fillText('HP', 575, 98);
+    context.font = '900 31px Heebo, sans-serif'; context.fillText(String(concept.hp), 660, 100);
+    drawEnergyIcon(context, 687, 87, theme, 20);
 
-    const footerLine = context.createLinearGradient(70, 0, 680, 0);
-    footerLine.addColorStop(0, theme.colors[2]); footerLine.addColorStop(.5, '#fff'); footerLine.addColorStop(1, '#c4b5fd');
-    context.fillStyle = footerLine; context.fillRect(65, 975, 620, 2);
-    context.fillStyle = '#fff'; context.font = '900 13px Heebo, sans-serif'; context.textAlign = 'left';
-    context.fillText(`HITIM • ${String(version).padStart(3, '0')}/999`, 65, 1007);
-    context.textAlign = 'right'; context.fillStyle = '#fde68a';
-    context.fillText(`${concept.rarity} • FULL ART • FAN CARD`, 685, 1007);
+    drawMove(context, 834, theme, 2, concept.move1Name, concept.move1Damage);
+    drawMove(context, 920, theme, 3, concept.move2Name, concept.move2Damage);
+
+    context.fillStyle = 'rgba(255,255,255,.5)'; context.fillRect(48, 972, 654, 2);
+    context.fillStyle = '#fff'; context.font = '900 14px Heebo, sans-serif'; context.textAlign = 'left';
+    context.fillText(`HITIM • ${String(version).padStart(3, '0')}/999`, 55, 1007);
+    context.fillStyle = theme.colors[2]; context.font = '900 22px sans-serif';
+    context.fillText('✦', 225, 1009);
     return canvas.toDataURL('image/webp', .92);
   }
 
@@ -296,7 +309,7 @@
     try {
       await ensureImageGenerator();
       const conceptPromise = requestConcept(name, idea, attempt)
-        .catch(error => { console.debug('Fantasy copy fallback', error); return fallbackConcept(name, idea, attempt); });
+        .catch(error => { console.debug('Fantasy copy fallback', error); return fallbackConcept(name, attempt); });
       const illustrationPromise = generateIllustration(name, idea, attempt);
       const [concept, illustration] = await Promise.all([conceptPromise, illustrationPromise]);
       setStatus('האיור נוצר. מרכיב עליו את קלף ה-Full Art של HITIM...');
