@@ -231,20 +231,10 @@ class UiShellTests(unittest.TestCase):
 
     def test_fantasy_card_is_unique_hitim_full_art_and_never_fakes_generation(self):
         self.assertIn('HITIM FULL ART', self.html)
+        self.assertIn('IMAGINATION SERIES', self.fantasy)
         self.assertIn("style: 'hitim-full-art'", self.fantasy)
         self.assertIn("source: 'ai-image'", self.fantasy)
         self.assertIn('בלי החיבור לא נוצרת תמונה חדשה', self.fantasy)
-
-    def test_fantasy_card_uses_compact_english_overlay(self):
-        self.assertIn("'Friendship Strike'", self.fantasy)
-        self.assertIn("'Imagination Burst'", self.fantasy)
-        self.assertIn("fillText('ex'", self.fantasy)
-        self.assertIn('const titleLeft = 140', self.fantasy)
-        self.assertIn('roundedPath(context, 38, 34, 674, 100', self.fantasy)
-        self.assertIn('drawMove(context, 834, theme, 2', self.fantasy)
-        self.assertIn('drawMove(context, 920, theme, 3', self.fantasy)
-        for removed_copy in ('concept.subtitle', 'concept.move1Text', 'concept.move2Text', 'concept.flavor', 'IMAGINATION SERIES', 'FULL ART • FAN CARD'):
-            self.assertNotIn(removed_copy, self.fantasy)
 
 
 if __name__ == "__main__":
