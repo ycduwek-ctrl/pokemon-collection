@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="hitim-card-variants-v18.0">
+  <meta name="hitim-build" content="hitim-card-variants-v18.1">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -782,6 +782,20 @@
     .system-action.primary { color: #160929; border-color: #f59e0b; background: linear-gradient(135deg,#fbbf24,#f59e0b); }
     .system-action.danger { color: #fecaca; border-color: #7f1d1d; background: rgba(127,29,29,.28); }
     .system-action:disabled { opacity: .55; cursor: wait; }
+    /* Keep the whole picker above the persistent navigation and raised camera. */
+    #variantPickerOverlay {
+      padding-top: calc(18px + env(safe-area-inset-top));
+      padding-bottom: calc(116px + env(safe-area-inset-bottom));
+    }
+    #variantPickerOverlay .system-panel {
+      display: flex; flex-direction: column; overflow: hidden;
+      max-height: min(760px, calc(100vh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+      max-height: min(760px, calc(100dvh - 134px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    }
+    #variantPickerOverlay .system-head { flex-shrink: 0; }
+    #variantPickerOverlay .system-body {
+      min-height: 0; overflow-y: auto; overscroll-behavior-y: contain;
+    }
     .variant-list { display: grid; gap: 9px; }
     .variant-option {
       width: 100%; display: grid; grid-template-columns: 54px minmax(0,1fr) auto;
