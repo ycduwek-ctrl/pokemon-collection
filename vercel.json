@@ -17,7 +17,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "hitim-photoshop-card-v17.3"
+        "X-Hitim-Build": "hitim-card-variants-v18.0"
       },
       "continue": true
     },

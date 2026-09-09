@@ -203,6 +203,26 @@ class UiShellTests(unittest.TestCase):
         self.assertNotIn("LANGUAGE_HE", detail)
         self.assertNotIn('detail-meta-label">פוקימון', detail)
 
+    def test_card_variant_picker_is_available_after_every_identification(self):
+        self.assertIn('id="variantPickerOverlay"', self.html)
+        self.assertIn('id="editorVariantBtn"', self.html)
+        quick = self.html.split("function renderQuickScans", 1)[1].split(
+            "function confirmQuickCandidate", 1
+        )[0]
+        self.assertIn("openQuickVariants", quick)
+        self.assertIn("variantDisplayName(scan.data)", quick)
+        for variant in ("Stamped", "Reverse Holo", "Poké Ball", "Master Ball", "Prize Pack", "Jumbo"):
+            self.assertIn(variant, self.html)
+
+    def test_selected_market_variant_is_persisted_and_used_for_price_refresh(self):
+        selector = self.html.split("async function selectCardVariant", 1)[1].split(
+            "function closeVariantPicker", 1
+        )[0]
+        for field in ("tcgplayerProductId", "marketPrinting", "variantLabel", "variantKind", "variantSet"):
+            self.assertIn(field, selector)
+        self.assertIn("requestCardVariants", self.html)
+        self.assertIn("HitimDB.putCard(card)", selector)
+
     def test_fantasy_studio_is_separate_and_has_complete_actions(self):
         studio = self.html.split('id="fantasyStudioOverlay"', 1)[1].split(
             'id="settingsOverlay"', 1

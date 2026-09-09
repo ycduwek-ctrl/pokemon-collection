@@ -49,6 +49,7 @@ CARD_COLUMNS = [
     "id", "name", "pokemon", "set", "number", "year", "condition",
     "language", "rarity", "value", "images", "comments", "setCode",
     "catalogCardId", "catalogImage", "tcgplayerProductId", "finish", "priceSource",
+    "marketPrinting", "variantLabel", "variantKind", "variantSet",
     "priceUpdatedAt",
     "priceCheckedAt"
 ]
@@ -848,6 +849,166 @@ def _tcgplayer_name(value):
         flags=re.IGNORECASE
     ).strip()
 
+def _tcgplayer_variant_kind(product_name, set_name, printing):
+    text = " ".join(
+        str(value or "").casefold()
+        for value in (product_name, set_name, printing)
+    )
+    if "master ball" in text:
+        return "master-ball"
+    if "poke ball" in text or "poké ball" in text:
+        return "poke-ball"
+    if "jumbo" in text or "oversize" in text:
+        return "jumbo"
+    if "prize pack" in text:
+        return "prize-pack"
+    if "stamp" in text:
+        return "stamped"
+    if "reverse" in text:
+        return "reverse-holofoil"
+    if "1st edition" in text or "first edition" in text:
+        return "first-edition"
+    if "holo" in text:
+        return "holofoil"
+    return "normal"
+
+def _tcgplayer_product_matches(product_name, card_name):
+    product = re.sub(r"[^a-z0-9]", "", _tcgplayer_name(product_name).casefold())
+    card = re.sub(r"[^a-z0-9]", "", _tcgplayer_name(card_name).casefold())
+    if not product or not card:
+        return False
+    return product.startswith(card) or SequenceMatcher(None, product, card).ratio() >= 0.72
+
+_tcgplayer_variant_cache = {}
+_tcgplayer_variant_cache_lock = threading.Lock()
+
+def _tcgplayer_variant_options(card_info):
+    """Return priced marketplace printings for one identified English card."""
+    language = str(card_info.get("language") or "English").strip().lower()
+    if language not in ("", "english"):
+        return {"options": [], "status": "language-not-supported"}
+
+    english_name = _tcgplayer_name(card_info.get("name") or card_info.get("pokemon"))
+    card_number, printed_set_count = _card_number_parts(card_info.get("number"))
+    if not english_name or not card_number:
+        return {"options": [], "status": "missing-identifiers"}
+
+    cache_key = "|".join((
+        english_name.casefold(), card_number, printed_set_count,
+        str(card_info.get("setCode") or "").casefold(),
+        str(card_info.get("set") or "").casefold(),
+        str(card_info.get("tcgplayerProductId") or "").casefold(),
+        str(card_info.get("marketPrinting") or "").casefold(),
+    ))
+    now = time.monotonic()
+    with _tcgplayer_variant_cache_lock:
+        cached = _tcgplayer_variant_cache.get(cache_key)
+        if cached and now - cached[0] < 30 * 60:
+            return dict(cached[1])
+
+    try:
+        sets = _tcgplayer_sets(3)
+        set_code = re.sub(r"[^A-Z0-9]", "", str(card_info.get("setCode") or "").upper())
+        set_name = str(card_info.get("set") or "").strip()
+        selected = []
+        for item in sets:
+            abbreviation = re.sub(r"[^A-Z0-9]", "", str(item.get("abbreviation") or "").upper())
+            name = str(item.get("name") or "")
+            exact = bool(set_code and abbreviation == set_code)
+            if not exact and set_name:
+                exact = name.casefold() == set_name.casefold()
+            special_markers = (
+                "battle academy", "prize pack", "jumbo", "league & championship",
+                "trainer kit", "promotional", "promo card",
+            )
+            marker_index = next((index for index, marker in enumerate(special_markers) if marker in name.casefold()), None)
+            special = marker_index is not None
+            if exact or special:
+                selected.append((0 if exact else marker_index + 1, item))
+        if not any(priority == 0 for priority, _ in selected) and set_name:
+            scored = sorted(
+                ((SequenceMatcher(None, set_name.casefold(), str(item.get("name") or "").casefold()).ratio(), item) for item in sets),
+                key=lambda pair: pair[0], reverse=True,
+            )
+            if scored and scored[0][0] >= 0.72:
+                selected.insert(0, (0, scored[0][1]))
+
+        unique_sets = []
+        seen_set_ids = set()
+        for priority, item in sorted(selected, key=lambda pair: pair[0]):
+            set_id = str(item.get("setNameId") or "")
+            if set_id and set_id not in seen_set_ids:
+                seen_set_ids.add(set_id)
+                unique_sets.append((priority, item))
+            if len(unique_sets) >= 18:
+                break
+
+        def load_set(entry):
+            priority, item = entry
+            return priority, item, _tcgplayer_price_guide(int(item["setNameId"]), 1)
+
+        loaded = []
+        with ThreadPoolExecutor(max_workers=min(6, max(1, len(unique_sets)))) as executor:
+            futures = [executor.submit(load_set, entry) for entry in unique_sets]
+            for future in as_completed(futures):
+                try:
+                    loaded.append(future.result())
+                except (requests.RequestException, ValueError, TypeError, KeyError):
+                    continue
+
+        options = []
+        seen = set()
+        stored_product_id = str(card_info.get("tcgplayerProductId") or "").removesuffix(".0")
+        stored_printing = str(card_info.get("marketPrinting") or "").casefold()
+        for priority, item, rows in loaded:
+            market_set = str(item.get("name") or "")
+            for row in rows:
+                row_number, row_count = _card_number_parts(row.get("number"))
+                if row_number != card_number:
+                    continue
+                if priority == 0 and printed_set_count and row_count and row_count != printed_set_count:
+                    continue
+                if not _tcgplayer_product_matches(row.get("productName"), english_name):
+                    continue
+                if row.get("marketPrice") is None or not str(row.get("condition") or "").lower().startswith("near mint"):
+                    continue
+                product_id = str(row.get("productID") or "").removesuffix(".0")
+                printing = str(row.get("printing") or "Normal")
+                key = (product_id, printing.casefold())
+                if not product_id or key in seen:
+                    continue
+                seen.add(key)
+                price = float(row["marketPrice"])
+                label = str(row.get("productName") or english_name).strip()
+                kind = _tcgplayer_variant_kind(label, market_set, printing)
+                options.append({
+                    "id": f"{product_id}:{printing}",
+                    "tcgplayerProductId": product_id,
+                    "label": label,
+                    "set": market_set,
+                    "printing": printing,
+                    "variantKind": kind,
+                    "value": f"{price:.2f}".rstrip("0").rstrip("."),
+                    "catalogImage": _tcgplayer_image_url(product_id),
+                    "priceSource": "TCGplayer",
+                    "priceUpdatedAt": datetime.now(timezone.utc).isoformat(),
+                    "recommended": priority == 0 and kind == "normal",
+                    "selected": product_id == stored_product_id and (not stored_printing or printing.casefold() == stored_printing),
+                })
+
+        options.sort(key=lambda option: (
+            0 if option["selected"] else 1,
+            0 if option["recommended"] else 1,
+            float(option["value"]) * -1,
+            option["label"].casefold(),
+        ))
+        result = {"options": options[:30], "status": "matched" if options else "not-found"}
+        with _tcgplayer_variant_cache_lock:
+            _tcgplayer_variant_cache[cache_key] = (now, result)
+        return dict(result)
+    except (requests.RequestException, ValueError, TypeError, KeyError):
+        return {"options": [], "status": "service-unavailable"}
+
 def _tcgplayer_marketplace_price(card_info):
     """Fallback to TCGplayer's public marketplace data without an API key."""
     language = str(card_info.get("language") or "").strip().lower()
@@ -873,7 +1034,8 @@ def _tcgplayer_marketplace_price(card_info):
         ).strip()
         if stored_product_id.endswith(".0"):
             stored_product_id = stored_product_id[:-2]
-        if stored_product_id.isdigit():
+        stored_printing = str(card_info.get("marketPrinting") or "").strip()
+        if stored_product_id.isdigit() and not stored_printing:
             response = requests.get(
                 "https://mp-search-api.tcgplayer.com/v2/product/"
                 f"{stored_product_id}/details",
@@ -913,12 +1075,13 @@ def _tcgplayer_marketplace_price(card_info):
                         "tcgplayerProductId": stored_product_id
                     }, _tcgplayer_image_url(stored_product_id))
 
+        variant_set = str(card_info.get("variantSet") or "").strip()
         set_code = re.sub(
             r"[^A-Z0-9]",
             "",
-            str(card_info.get("setCode") or "").upper()
+            str(card_info.get("setCode") or "").upper() if not variant_set else ""
         )
-        set_name = str(card_info.get("set") or "").strip()
+        set_name = variant_set or str(card_info.get("set") or "").strip()
         sets = _tcgplayer_sets(category_id)
         set_candidates = []
         if set_code:
@@ -1021,7 +1184,9 @@ def _tcgplayer_marketplace_price(card_info):
             key=lambda item: item[1]["score"],
             reverse=True
         )
-        if not ranked or ranked[0][1]["score"] < 0.72:
+        if stored_product_id and stored_product_id in products:
+            ranked = [(stored_product_id, products[stored_product_id])]
+        if not ranked or (not stored_product_id and ranked[0][1]["score"] < 0.72):
             return {"value": "", "priceStatus": "not-found"}
         if len(ranked) > 1 and (
             ranked[0][1]["score"] - ranked[1][1]["score"] < 0.08
@@ -1045,7 +1210,9 @@ def _tcgplayer_marketplace_price(card_info):
 
         finish = str(card_info.get("finish") or "").lower()
         rarity = str(card_info.get("rarity") or "").lower()
-        if "reverse" in finish:
+        if stored_printing:
+            preferred_printings = [stored_printing.casefold()]
+        elif "reverse" in finish:
             preferred_printings = ["reverse holofoil"]
         elif "holo" in finish or "holo" in rarity:
             preferred_printings = ["holofoil"]
@@ -1081,7 +1248,11 @@ def _tcgplayer_marketplace_price(card_info):
             "priceSource": "TCGplayer",
             "priceVariant": chosen.get("printing", "market"),
             "priceUpdatedAt": datetime.now(timezone.utc).isoformat(),
-            "tcgplayerProductId": product_id
+            "tcgplayerProductId": product_id,
+            "marketPrinting": chosen.get("printing", ""),
+            "variantLabel": card_info.get("variantLabel") or selected["rows"][0].get("productName", ""),
+            "variantKind": card_info.get("variantKind") or _tcgplayer_variant_kind(selected["rows"][0].get("productName"), set_name, chosen.get("printing")),
+            "variantSet": card_info.get("variantSet") or selected_set.get("name", "")
         }, _tcgplayer_image_url(product_id))
     except (requests.RequestException, ValueError, TypeError, KeyError):
         return {"value": "", "priceStatus": "service-unavailable"}
@@ -1101,6 +1272,9 @@ def _price_cache_key(card_info):
         card_info.get("language"),
         card_info.get("finish"),
         card_info.get("rarity"),
+        card_info.get("tcgplayerProductId"),
+        card_info.get("marketPrinting"),
+        card_info.get("variantSet"),
     )
     return "|".join(str(value or "").strip().casefold() for value in values)
 
@@ -1145,6 +1319,13 @@ def _market_price_for_card(card_info):
         or (card_info.get("setCode") and card_number)
     )
     direct_result = None
+
+    # A manually selected marketplace printing must win over the generic card.
+    if card_info.get("tcgplayerProductId") and language in ("", "english"):
+        selected_result = _tcgplayer_marketplace_price(card_info)
+        catalog_image = selected_result.get("catalogImage") or catalog_image
+        if selected_result.get("priceStatus") == "matched":
+            return _remember_market_price(cache_key, _with_catalog_image(selected_result, catalog_image))
 
     # A set code plus collector number resolves to one TCGdex card and already
     # contains TCGplayer/Cardmarket pricing. This is the fastest and safest path.
@@ -1221,7 +1402,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-full-art-v17.0",
+        "build": "hitim-card-variants-v18.0",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1467,6 +1648,11 @@ def refresh_all_prices_status(authorization: str = Header(None)):
 def refresh_market_price(data: dict, authorization: str = Header(None)):
     require_access(authorization)
     return _market_price_for_card(data)
+
+@app.post("/variants")
+def card_market_variants(data: dict, authorization: str = Header(None)):
+    require_access(authorization)
+    return _tcgplayer_variant_options(data)
 
 @app.post("/upload")
 async def upload_image(file: UploadFile = File(...), authorization: str = Header(None)):
