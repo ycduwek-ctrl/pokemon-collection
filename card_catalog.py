@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import gzip
+import hashlib
+import json
 import os
 from pathlib import Path
 import re
@@ -18,6 +20,7 @@ LANGUAGE_CODES = {
     "english": "en",
     "japanese": "ja",
     "chinese": "zh-tw",
+    "chinese (simplified)": "zh-cn",
     "korean": "ko",
     "french": "fr",
     "german": "de",
@@ -53,6 +56,8 @@ _OCR_SEVEN_PAIR = re.compile(
 
 ROOT = Path(__file__).resolve().parent
 ARCHIVE_PATH = ROOT / "data" / "card_catalog.sqlite3.gz"
+SUPPLEMENT_PATH = ROOT / "data" / "catalog_supplements.json"
+_supplements = json.loads(SUPPLEMENT_PATH.read_text(encoding="utf-8")) if SUPPLEMENT_PATH.exists() else []
 DATABASE_PATH = Path(
     os.environ.get("HITIM_CARD_CATALOG_PATH", "/tmp/hitim-card-catalog.sqlite3")
 )
@@ -60,6 +65,40 @@ _catalog_lock = threading.Lock()
 _catalog_ready = False
 _name_index_lock = threading.Lock()
 _name_index_cache: tuple[str, list[tuple[str, str, str, int]], dict[str, set[int]]] | None = None
+
+
+def catalog_supplement(card_info: dict) -> dict | None:
+    language = LANGUAGE_CODES.get(str(card_info.get("language") or "").strip().lower())
+    card_id = str(card_info.get("catalogCardId") or "").casefold()
+    for item in _supplements:
+        if item["language"] != language:
+            continue
+        if card_id:
+            matches = card_id == item["cardId"].casefold()
+        else:
+            matches = (
+                normalize_text(card_info.get("setCode")) == normalize_text(item["setCode"])
+                and normalize_number(card_info.get("number")) == normalize_number(item["localId"])
+            )
+        if matches:
+            return item
+    return None
+
+
+def _catalog_version() -> str:
+    supplement_hash = hashlib.sha256(SUPPLEMENT_PATH.read_bytes()).hexdigest() if SUPPLEMENT_PATH.exists() else ""
+    return f"{int(ARCHIVE_PATH.stat().st_mtime)}:{supplement_hash}"
+
+
+def _english_catalog_name(connection, language, card_id) -> str:
+    english = connection.execute(
+        "SELECT printed_name FROM cards WHERE language = 'en' AND card_id = ? LIMIT 1",
+        (card_id,),
+    ).fetchone()
+    if english:
+        return str(english[0])
+    return next((item["englishName"] for item in _supplements
+                 if item["language"] == language and item["cardId"] == card_id), "")
 
 
 def normalize_text(value: object) -> str:
@@ -129,7 +168,7 @@ def _database_is_current() -> bool:
             row = connection.execute(
                 "SELECT value FROM metadata WHERE key = 'catalog_version'"
             ).fetchone()
-        archive_version = str(int(ARCHIVE_PATH.stat().st_mtime))
+        archive_version = _catalog_version()
         return bool(row and row[0] == archive_version)
     except (OSError, sqlite3.Error, ValueError):
         return False
@@ -151,9 +190,19 @@ def ensure_catalog() -> bool:
             with gzip.open(ARCHIVE_PATH, "rb") as source, temporary.open("wb") as target:
                 shutil.copyfileobj(source, target)
             with sqlite3.connect(temporary) as connection:
+                for item in _supplements:
+                    connection.execute(
+                        "INSERT OR IGNORE INTO sets(language,set_id,name,name_norm,official_count,total_count) VALUES(?,?,?,?,?,?)",
+                        (item["language"], item["setCode"], item["setName"], normalize_text(item["setName"]), item["officialCount"], ""),
+                    )
+                    connection.execute(
+                        "INSERT OR IGNORE INTO cards(language,card_id,set_id,local_id,local_id_norm,printed_name,name_norm,image_url) VALUES(?,?,?,?,?,?,?,?)",
+                        (item["language"], item["cardId"], item["setCode"], item["localId"], normalize_number(item["localId"]), item["printedName"], normalize_text(item["printedName"]), item["image"]),
+                    )
+                connection.execute("INSERT OR REPLACE INTO metadata(key,value) VALUES('card_count',(SELECT COUNT(*) FROM cards))")
                 connection.execute(
                     "INSERT OR REPLACE INTO metadata(key, value) VALUES('catalog_version', ?)",
-                    (str(int(ARCHIVE_PATH.stat().st_mtime)),),
+                    (_catalog_version(),),
                 )
                 connection.commit()
             temporary.replace(DATABASE_PATH)
@@ -225,6 +274,11 @@ def lookup_card(card_info: dict) -> dict | None:
     try:
         with _connection() as connection:
             candidates = list(connection.execute(query, parameters))
+            # Explicit printed identifiers must never resolve to another set.
+            if set_code:
+                candidates = [row for row in candidates if normalize_text(row["set_id"]) == set_code]
+            if denominator:
+                candidates = [row for row in candidates if normalize_number(row["official_count"]) == denominator]
             if not candidates:
                 return None
             scored = []
@@ -257,10 +311,7 @@ def lookup_card(card_info: dict) -> dict | None:
             if not safe_match:
                 return None
 
-            english = connection.execute(
-                "SELECT printed_name FROM cards WHERE language = 'en' AND card_id = ? LIMIT 1",
-                (best["card_id"],),
-            ).fetchone()
+            english_name = _english_catalog_name(connection, language, best["card_id"])
     except (FileNotFoundError, OSError, sqlite3.Error):
         return None
 
@@ -276,7 +327,7 @@ def lookup_card(card_info: dict) -> dict | None:
         "set": str(best["set_name"] or card_info.get("set") or ""),
         "number": f"{local_id}/{official_count}" if official_count else local_id,
         "printedName": str(best["printed_name"] or card_info.get("printedName") or ""),
-        "catalogEnglishName": str(english["printed_name"] if english else ""),
+        "catalogEnglishName": english_name,
         "catalogMatch": "local",
     }
 
@@ -289,9 +340,10 @@ def _image_url(value: object) -> str:
 
 
 def search_catalog(
-    name: object = "", number: object = "", limit: int = 6, offset: int = 0
+    name: object = "", number: object = "", limit: int = 6, offset: int = 0,
+    language: object = "English", set_code: object = "",
 ) -> dict:
-    """Search English catalogue printings without applying OCR heuristics."""
+    """Search with explicit language/set/number constraints, never relax them."""
     name_norm = normalize_text(name)
     number_text = str(number or "").strip()
     number_parts = number_text.split("/", 1)
@@ -302,8 +354,18 @@ def search_catalog(
     if not name_norm and not local_id:
         return {"candidates": [], "candidateTotal": 0, "candidateOffset": 0, "hasMoreCandidates": False}
 
-    base_conditions = ["c.language = 'en'", "TRIM(c.image_url) <> ''"]
+    base_conditions = ["TRIM(c.image_url) <> ''"]
     base_parameters: list[object] = []
+    language_name = str(language or "").strip().lower()
+    language_code = LANGUAGE_CODES.get(language_name)
+    if language_name not in ("", "auto"):
+        if not language_code:
+            return {"candidates": [], "candidateTotal": 0, "candidateOffset": page_offset, "hasMoreCandidates": False}
+        base_conditions.append("c.language = ?")
+        base_parameters.append(language_code)
+    if normalize_text(set_code):
+        base_conditions.append("LOWER(REPLACE(REPLACE(c.set_id, '.', ''), '-', '')) = ?")
+        base_parameters.append(normalize_text(set_code))
     if local_id:
         base_conditions.append("c.local_id_norm = ?")
         base_parameters.append(local_id)
@@ -340,12 +402,17 @@ def search_catalog(
                         [*base_parameters, f"{name_norm}%"],
                     ).fetchall()
                     name_values = [str(row["name_norm"]) for row in prefix_rows]
-                    if not name_values and len(name_norm) >= 4:
+                    if not name_values and len(name_norm) >= 4 and language_code == "en":
                         name_values = [
                             candidate_name for language, candidate_name, _printed, _count, score
                             in _find_ocr_names(str(name or ""))
                             if language == "en" and score >= .82
                         ][:4]
+                name_values.extend(
+                    normalize_text(item["printedName"]) for item in _supplements
+                    if normalize_text(item["englishName"]) == name_norm
+                    and (not language_code or item["language"] == language_code)
+                )
                 if not name_values:
                     return {"candidates": [], "candidateTotal": 0, "candidateOffset": page_offset, "hasMoreCandidates": False}
                 placeholders = ",".join("?" for _ in name_values)
@@ -432,6 +499,8 @@ def _ocr_title_fragments(raw_text: str) -> list[tuple[str, int]]:
     fragments: dict[str, int] = {}
     nonempty_lines = [line.strip() for line in raw_text.splitlines() if line.strip()]
     for line_index, line in enumerate(nonempty_lines[:18]):
+        # AS5a/SV2a are set identifiers, not fragments of an English name.
+        line = re.sub(r"\b[A-Za-z]+\d+[A-Za-z0-9]*\b", " ", line)
         line_words = re.sub(r"[^A-Z]+", " ", line.upper())
         if "EVOLVES FROM" in line_words or "PUT " in line_words and " STAGE " in f" {line_words} ":
             continue
@@ -545,13 +614,9 @@ def _ocr_candidate_payload(
     image_row: sqlite3.Row,
     score: float,
 ) -> dict:
-    english = connection.execute(
-        "SELECT printed_name FROM cards WHERE language = 'en' AND card_id = ? LIMIT 1",
-        (row["card_id"],),
-    ).fetchone()
     official_count = str(row["official_count"] or "")
     local_id = str(row["local_id"] or "")
-    english_name = str(english["printed_name"] if english else "").strip()
+    english_name = _english_catalog_name(connection, row["language"], row["card_id"]).strip()
     printed_name = str(row["printed_name"] or "").strip()
     display_name = english_name or printed_name
     language = LANGUAGE_NAMES.get(str(row["language"]), "Other")
@@ -588,6 +653,7 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
 
     token_text = re.sub(r"[^A-Z0-9.]+", " ", raw_text.upper())
     tokens = {token for token in token_text.split() if len(token) >= 2}
+    traditional_set_codes = {token for token in tokens if re.fullmatch(r"AS\d{1,2}[A-Z]?", token)}
     printed_years = {
         int(value) for value in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", raw_text)
         if 1996 <= int(value) <= 2100
@@ -641,6 +707,8 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
                 default=0,
             )
             for row in rows.values():
+                if traditional_set_codes and str(row["set_id"]).upper() not in traditional_set_codes:
+                    continue
                 name_score, printing_count = name_scores.get(
                     (str(row["language"]), str(row["name_norm"])), (0.0, 0)
                 )
@@ -660,6 +728,9 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
                         best_denominator_similarity = denominator_similarity
                     if numerator_similarity == 1 and denominator_similarity == 1:
                         exact_pair = True
+
+                if pairs and not exact_pair and not exact_set and name_score < .80:
+                    continue
 
                 score = 48 * name_score
                 if exact_pair:

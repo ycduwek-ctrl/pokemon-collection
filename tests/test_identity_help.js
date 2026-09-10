@@ -1,0 +1,21 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const html=fs.readFileSync('index.html','utf8');
+const nodes=new Map();
+const document={getElementById(id){if(!nodes.has(id))nodes.set(id,{value:'',hidden:false,textContent:'',innerHTML:'',style:{},replaceChildren(){this.innerHTML='';},classList:{add(){},remove(){},contains(){return true;}}});return nodes.get(id);}};
+const pending=[];
+const ctx=vm.createContext({document,console,quickScans:[],quickSessionToken:1,editId:null,editorPriceToken:0,quickPriceQueue:[],quickPriceInFlight:0,renderQuickScans(){},requestMarketPrice:()=>new Promise(resolve=>pending.push(resolve)),escapeHtml:String});
+vm.runInContext(html.slice(html.indexOf('function queueQuickScanPrice('),html.indexOf('async function processQuickQueue(')),ctx);
+vm.runInContext(fs.readFileSync('hitim-identity.js','utf8'),ctx);
+(async()=>{
+const file={photo:true},scan={id:'test',status:'done',file,url:'blob:original',data:{name:'Wrong',value:'100',tcgplayerProductId:'wrong'}};ctx.quickScans.push(scan);
+vm.runInContext('queueQuickScanPrice(quickScans[0],quickSessionToken);openIdentityHelp("test");applyHelpIdentity({name:"Blastoise",catalogCardId:"AS5a-035",identityConfidence:"catalog"});',ctx);
+assert.equal(scan.file,file);assert.equal(scan.url,'blob:original');assert.equal(scan.data.tcgplayerProductId,undefined);
+pending[0]({value:'100',priceStatus:'matched'});await new Promise(setImmediate);assert.equal(scan.value,null);
+pending[1]({value:'',priceStatus:'price-unavailable'});await new Promise(setImmediate);assert.equal(scan.value,null);
+vm.runInContext('openIdentityHelp("test");applyHelpIdentity({name:"Manual",identityConfidence:"manual"});',ctx);
+assert.equal(scan.priceStatus,'unverified');assert.equal(pending.length,2);assert.equal(scan.data.catalogCardId,undefined);
+ctx.requestCatalogSearch=async()=>({candidates:[{name:'Blastoise',catalogImage:'https://example.com/card',number:'035/184',setCode:'AS5a',language:'Chinese'}],hasMoreCandidates:true});
+vm.runInContext('openIdentityHelp("test");',ctx);document.getElementById('identityNumber').value='035/184';await vm.runInContext('searchIdentityHelp()',ctx);
+assert.equal(document.getElementById('identityMore').hidden,false);
+console.log('Assisted identification: photo preserved, stale price rejected, manual price skipped, pagination passed');
+})().catch(e=>{console.error(e);process.exitCode=1;});

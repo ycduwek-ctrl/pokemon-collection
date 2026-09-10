@@ -1,41 +1,117 @@
 {
   "builds": [
-    { "src": "index.html", "use": "@vercel/static" },
-    { "src": "hitim-db.js", "use": "@vercel/static" },
-    { "src": "hitim-auth.js", "use": "@vercel/static" },
-    { "src": "hitim-fantasy.css", "use": "@vercel/static" },
-    { "src": "hitim-fantasy.js", "use": "@vercel/static" },
-    { "src": "hitim-energy-symbols.png", "use": "@vercel/static" },
-    { "src": "sw.js", "use": "@vercel/static" },
-    { "src": "manifest.webmanifest", "use": "@vercel/static" },
-    { "src": "hitim-icon-02.svg", "use": "@vercel/static" },
-    { "src": "hitim-icon-193.png", "use": "@vercel/static" },
-    { "src": "hitim-icon-513.png", "use": "@vercel/static" }
+    {
+      "src": "index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-db.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-auth.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-identity.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-fantasy.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-fantasy.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-energy-symbols.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sw.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.webmanifest",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-icon-02.svg",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-icon-193.png",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-icon-513.png",
+      "use": "@vercel/static"
+    }
   ],
   "routes": [
     {
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "hitim-card-variants-v18.1"
+        "X-Hitim-Build": "hitim-assisted-identify-v18.2"
       },
       "continue": true
     },
     {
       "src": "^/(?:sw\\.js|hitim-auth\\.js)$",
-      "headers": { "Cache-Control": "public, max-age=0, must-revalidate" },
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      },
       "continue": true
     },
-    { "src": "/hitim-db.js", "dest": "/hitim-db.js" },
-    { "src": "/hitim-auth.js", "dest": "/hitim-auth.js" },
-    { "src": "/hitim-fantasy.css", "dest": "/hitim-fantasy.css" },
-    { "src": "/hitim-fantasy.js", "dest": "/hitim-fantasy.js" },
-    { "src": "/hitim-energy-symbols.png", "dest": "/hitim-energy-symbols.png" },
-    { "src": "/sw.js", "dest": "/sw.js" },
-    { "src": "/manifest.webmanifest", "dest": "/manifest.webmanifest" },
-    { "src": "/hitim-icon-02.svg", "dest": "/hitim-icon-02.svg" },
-    { "src": "/hitim-icon-193.png", "dest": "/hitim-icon-193.png" },
-    { "src": "/hitim-icon-513.png", "dest": "/hitim-icon-513.png" },
-    { "src": "/(.*)", "dest": "index.html" }
+    {
+      "src": "/hitim-identity.js",
+      "dest": "/hitim-identity.js"
+    },
+    {
+      "src": "/hitim-db.js",
+      "dest": "/hitim-db.js"
+    },
+    {
+      "src": "/hitim-auth.js",
+      "dest": "/hitim-auth.js"
+    },
+    {
+      "src": "/hitim-fantasy.css",
+      "dest": "/hitim-fantasy.css"
+    },
+    {
+      "src": "/hitim-fantasy.js",
+      "dest": "/hitim-fantasy.js"
+    },
+    {
+      "src": "/hitim-energy-symbols.png",
+      "dest": "/hitim-energy-symbols.png"
+    },
+    {
+      "src": "/sw.js",
+      "dest": "/sw.js"
+    },
+    {
+      "src": "/manifest.webmanifest",
+      "dest": "/manifest.webmanifest"
+    },
+    {
+      "src": "/hitim-icon-02.svg",
+      "dest": "/hitim-icon-02.svg"
+    },
+    {
+      "src": "/hitim-icon-193.png",
+      "dest": "/hitim-icon-193.png"
+    },
+    {
+      "src": "/hitim-icon-513.png",
+      "dest": "/hitim-icon-513.png"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "index.html"
+    }
   ]
 }

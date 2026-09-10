@@ -13,6 +13,14 @@ class CardVariantTests(unittest.TestCase):
         main._tcgplayer_variant_cache.clear()
         main._price_result_cache.clear()
 
+    def test_supplement_and_manual_identity_never_borrow_price(self):
+        with patch.object(main, "_cached_market_price", side_effect=AssertionError("must not price an unpriced printing")):
+            result = main._market_price_for_card({"language": "Chinese", "catalogCardId": "AS5a-035", "number": "035/184"})
+            self.assertEqual(result["priceStatus"], "price-unavailable")
+            self.assertEqual(result["value"], "")
+            result = main._market_price_for_card({"name": "Blastoise", "identityConfidence": "manual"})
+            self.assertEqual(result["priceStatus"], "unverified")
+
     @staticmethod
     def sets():
         return [

@@ -17,6 +17,24 @@ class CardCatalogTests(unittest.TestCase):
     def tearDownClass(cls):
         cls.temporary.cleanup()
 
+    def test_traditional_chinese_supplement(self):
+        match = card_catalog.lookup_card({"language": "Chinese", "number": "035/184", "setCode": "AS5a", "name": "Blastoise"})
+        self.assertEqual(match["catalogCardId"], "AS5a-035")
+        result = card_catalog.lookup_ocr_result("AS5a C 035/184 水箭龜 HP 160")
+        self.assertEqual(result["match"]["catalogCardId"], "AS5a-035")
+
+    def test_assisted_chinese_search_preserves_printing(self):
+        result = card_catalog.search_catalog(name="Blastoise", number="035/184", language="Chinese", set_code="AS5a")
+        self.assertEqual([c["catalogCardId"] for c in result["candidates"]], ["AS5a-035"])
+        for language, code in [("Chinese (Simplified)", "AS5a"), ("Chinese", "AS99a")]:
+            self.assertEqual(card_catalog.search_catalog(number="035/184", language=language, set_code=code)["candidates"], [])
+
+    def test_missing_chinese_set_does_not_return_unrelated_cards(self):
+        self.assertIsNone(card_catalog.lookup_card({"language": "Chinese", "number": "035/184", "setCode": "AS99a", "name": "Blastoise"}))
+        result = card_catalog.lookup_ocr_result("AS99a C 035/184 水箭龜 HP 160")
+        self.assertFalse(result.get("candidates"))
+        self.assertFalse(result.get("match"))
+
     def test_catalog_has_multilingual_coverage(self):
         status = card_catalog.catalog_status()
         self.assertTrue(status["ready"])

@@ -24,6 +24,7 @@ from hitim_auth import (
     remove_access_user,
 )
 from card_catalog import (
+    catalog_supplement,
     catalog_status,
     ensure_catalog,
     lookup_card,
@@ -1305,6 +1306,11 @@ def _remember_market_price(cache_key, result):
 
 def _market_price_for_card(card_info):
     """Return the first verified exact price instead of waiting for every source."""
+    supplement = catalog_supplement(card_info)
+    if supplement:
+        return {"value": "", "priceStatus": "price-unavailable", "catalogImage": supplement["image"]}
+    if card_info.get("identityConfidence") == "manual":
+        return {"value": "", "priceStatus": "unverified"}
     cache_key = _price_cache_key(card_info)
     cached = _cached_market_price(cache_key)
     if cached is not None:
@@ -1402,7 +1408,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-card-variants-v18.0",
+        "build": "hitim-assisted-identify-v18.2",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1700,7 +1706,7 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
 
 @app.post("/catalog/search")
 async def search_catalog_cards(data: dict, authorization: str = Header(None)):
-    """Search catalogue printings by an optional English name and/or number."""
+    """Search by user-supplied identifiers without changing their language/set."""
     await asyncio.to_thread(require_access, authorization)
     name = str(data.get("name") or "").strip()
     number = str(data.get("number") or "").strip()
@@ -1711,7 +1717,9 @@ async def search_catalog_cards(data: dict, authorization: str = Header(None)):
         offset = max(0, min(int(data.get("offset") or 0), 120))
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="בקשת החיפוש אינה תקינה")
-    result = await asyncio.to_thread(search_catalog, name, number, limit, offset)
+    language = str(data.get("language") or "English").strip()
+    set_code = str(data.get("setCode") or "").strip()
+    result = await asyncio.to_thread(search_catalog, name, number, limit, offset, language, set_code)
     if not result["candidates"]:
         raise HTTPException(status_code=404, detail="לא נמצאה התאמה בקטלוג")
     return result
