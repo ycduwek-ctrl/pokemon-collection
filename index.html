@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="hitim-assisted-identify-v18.2">
+  <meta name="hitim-build" content="hitim-guided-scan-v19.0">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -846,6 +846,7 @@
       .system-panel { border-radius: 22px; }
     }
   </style>
+<link rel="stylesheet" href="/hitim-camera.css">
 </head>
 <body>
 
@@ -1031,6 +1032,13 @@
       </div>
     </div>
   </div>
+</div>
+
+<div id="scanCaptureOverlay" role="dialog" aria-modal="true" aria-labelledby="scanCameraTitle">
+ <div class="scan-camera-head"><h2 id="scanCameraTitle">סריקת קלף</h2><button class="system-close" onclick="HitimCamera.close()" aria-label="סגירה">✕</button></div>
+ <div class="scan-camera-stage"><video id="scanVideo" autoplay muted playsinline></video><div id="scanGuide"></div></div>
+ <p id="scanCameraStatus" role="status"></p>
+ <div class="scan-camera-actions"><button class="system-action" onclick="HitimCamera.gallery()">גלריה</button><button id="scanCaptureBtn" onclick="HitimCamera.capture()" aria-label="צלם קלף" disabled></button><button class="system-action" onclick="HitimCamera.native()">מצלמת מכשיר</button></div>
 </div>
 
 <div class="system-overlay" id="identityHelpOverlay" onclick="if(event.target===this)closeIdentityHelp()">
@@ -1391,6 +1399,7 @@ function closePanel(resetNav=true){
   if(resetNav)setBottomNavActive('gallery');
 }
 function closeNavigationViews(){
+  if(typeof HitimCamera!=='undefined')HitimCamera.close();
   if(typeof closeIdentityHelp==='function')closeIdentityHelp();
   closePanel(false);
   ['identityHelpOverlay','quickIdentifyOverlay','detailOverlay','overlay','variantPickerOverlay','fantasyStudioOverlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
@@ -1690,6 +1699,7 @@ function openQuickCamera(){
   triggerQuickCamera();
 }
 function triggerQuickCamera(){
+  if(typeof HitimCamera!=='undefined'){HitimCamera.open();return;}
   const camera=document.getElementById('quickFrontCamera');
   camera.value='';
   camera.click();
@@ -2156,7 +2166,7 @@ async function prepareIdentificationImage(file){
     let bitmap;
     try{
       bitmap=await createImageBitmap(file,{imageOrientation:'from-image'});
-      const maxEdge=1152;
+      const maxEdge=1800;
       const scale=Math.min(1,maxEdge/Math.max(bitmap.width,bitmap.height));
       if(scale===1&&file.size<1200000)return file;
       const canvas=document.createElement('canvas');
@@ -2165,7 +2175,7 @@ async function prepareIdentificationImage(file){
       const context=canvas.getContext('2d',{alpha:false});
       context.imageSmoothingEnabled=true;context.imageSmoothingQuality='high';
       context.drawImage(bitmap,0,0,canvas.width,canvas.height);
-      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.84));
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));
       if(!blob)return file;
       return new File([blob],'hitim-scan.jpg',{type:'image/jpeg',lastModified:Date.now()});
     }catch(error){
@@ -2354,48 +2364,25 @@ async function identifyWithLocalCatalog(file){
 
 async function requestIdentification(frontFile,backFile=null,mode='quick',forceAi=false){
   const [preparedFront,preparedBack]=await Promise.all([
-    prepareIdentificationImage(frontFile),
-    backFile?prepareIdentificationImage(backFile):Promise.resolve(null)
+    prepareIdentificationImage(frontFile),backFile?prepareIdentificationImage(backFile):Promise.resolve(null)
   ]);
   identificationInFlight++;
   try{
-    let localError=null;
-    let localResult=null;
-    if(mode==='quick'&&!forceAi){
-      try{
-        localResult=await identifyWithLocalCatalog(preparedFront);
-        // Foreign-language catalogue rows often have no English translation.
-        // Ask vision for an English name before showing or saving them.
-        if(!cardNeedsEnglishName(localResult))return localResult;
-      }catch(error){localError=error;console.debug('Local catalog OCR needs AI fallback',error);}
-    }
-
-    const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
-    try{
-      const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{
-        method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000
-      });
-      const data=await response.json().catch(()=>({}));
-      if(!response.ok||data.error){
-        const error=new Error(data.detail||data.error||'הזיהוי לא הצליח');
-        error.status=response.status;
-        throw error;
-      }
-      return localResult?candidateWithEnglishResult(localResult,data):data;
-    }catch(aiError){
-      if(localResult)return sanitizeForeignIdentification(localResult);
-      if(mode==='deep'){
-        try{return await identifyWithLocalCatalog(preparedFront);}
-        catch(error){localError=error;}
-      }
-      const detail=localError?.message&&aiError?.message
-        ?`${aiError.message}. גם המספר המודפס לא נקרא בוודאות.`
-        :(aiError?.message||localError?.message||'הזיהוי לא הצליח');
-      throw new Error(detail);
-    }
-  }finally{
-    identificationInFlight=Math.max(0,identificationInFlight-1);
-  }
+    return await HitimScanStrategy.identify({
+      mode,forceAi,
+      local:()=>identifyWithLocalCatalog(preparedFront),
+      vision:async()=>{
+        const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
+        const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000});
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok||data.error)throw new Error(data.detail||data.error||'הזיהוי לא הצליח');
+        return data;
+      },
+      needsName:cardNeedsEnglishName,
+      translate:candidateWithEnglishResult,
+      sanitize:sanitizeForeignIdentification
+    });
+  }finally{identificationInFlight=Math.max(0,identificationInFlight-1);}
 }
 
 function queueQuickScanPrice(scan,token){
@@ -3251,6 +3238,8 @@ setInterval(()=>{
   if(document.visibilityState==='visible'&&navigator.onLine)scheduleDailyPriceRefresh(5000);
 },60*60*1000);
 </script>
+<script src="/hitim-camera.js"></script>
+<script src="/hitim-scan-strategy.js"></script>
 <script src="/hitim-identity.js"></script>
 <script src="/hitim-fantasy.js"></script>
 </body>

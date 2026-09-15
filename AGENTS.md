@@ -30,10 +30,12 @@ coding chats.
 
 ## Identification and pricing
 
-- Quick identification first runs Tesseract OCR locally in the browser and
+- The owner now prefers whichever camera works best. Guided browser capture crops to the visible card frame with no forced zoom; device capture and gallery remain available.
+- Quick identification gives Tesseract OCR a 5-second head start locally and
   sends only the read text to `/catalog/identify-text`. Collector number,
   denominator, set code, and printed name are resolved against the bundled
   catalog.
+- Ambiguous OCR choices must reach vision before showing choices; a slow local task must not block vision indefinitely.
 - If local OCR cannot produce one safe match, `/identify` uses the current free
   OpenRouter vision model and then verifies its hints against the same catalog.
 - Do not make live TCGdex search a blocking part of identification.

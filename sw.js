@@ -1,4 +1,4 @@
-const CACHE_NAME = 'hitim-shell-v29';
+const CACHE_NAME = 'hitim-shell-v30';
 const APP_SHELL = [
   '/',
   '/index.html',
@@ -9,6 +9,10 @@ const APP_SHELL = [
   '/hitim-db.js',
   '/hitim-auth.js',
   '/hitim-identity.js',
+  '/hitim-camera.js',
+  '/hitim-camera.css',
+  '/hitim-scan-strategy.js',
+
   '/hitim-fantasy.css',
   '/hitim-fantasy.js',
   '/hitim-energy-symbols.png'

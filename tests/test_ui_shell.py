@@ -179,7 +179,7 @@ class UiShellTests(unittest.TestCase):
         self.assertIn("triggerQuickCamera()", nav_camera)
         self.assertNotIn("resetQuickIdentify()", nav_camera)
 
-    def test_native_phone_camera_handles_zoom_and_tap_focus(self):
+    def test_guided_camera_keeps_native_capture_fallback(self):
         camera_input = self.html.split('id="quickFrontCamera"', 1)[1].split(
             ">", 1
         )[0]
@@ -188,9 +188,8 @@ class UiShellTests(unittest.TestCase):
             "function closeQuickIdentify", 1
         )[0]
         self.assertIn("camera.click()", trigger)
-        self.assertNotIn("getUserMedia", self.html)
-        self.assertNotIn("quickCameraOverlay", self.html)
-        self.assertNotIn("applyConstraints", self.html)
+        self.assertIn("HitimCamera.open()", trigger)
+        self.assertIn('id="scanCaptureOverlay"', self.html)
 
     def test_card_detail_shows_one_name_and_only_essential_metadata(self):
         detail = self.html.split("function openDetail", 1)[1].split(

@@ -1408,7 +1408,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-assisted-identify-v18.2",
+        "build": "hitim-guided-scan-v19.0",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1738,9 +1738,9 @@ async def identify(
         if not raw or len(raw) > 18 * 1024 * 1024:
             raise ValueError("invalid image size")
         img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
-        img.thumbnail((960, 960), Image.LANCZOS)
+        img.thumbnail((1800, 1800), Image.LANCZOS)
         buf = io.BytesIO()
-        img.save(buf, format="JPEG", quality=80, optimize=True)
+        img.save(buf, format="JPEG", quality=92, optimize=True)
         return base64.b64encode(buf.getvalue()).decode()
 
     try:
@@ -1755,7 +1755,8 @@ async def identify(
     prompt = """Identify this exact Pokemon TCG card. Be fast and literal.
 The printed collector number is the primary identifier. Copy the complete number exactly as printed near the bottom, preserving leading zeros, letters and the denominator. Never invent an unreadable value. Read the printed set code/symbol and official set name as supporting identifiers.
 For every language, return the official English card name in `name`, the original printed name in `printedName`, and a Hebrew transliteration of only the card name in `hebrewName`. Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex.
-Classify `finish` only when visible. Do not estimate a price."""
+Use the illustration to cross-check the printed identity. Ignore phone UI, price stickers and other cards outside the main subject. If multiple cards are equally prominent, leave uncertain identifiers empty rather than combining them.
+Classify `finish` only when visible. If a special stamp or pattern cannot be represented by the supported finish values, leave finish empty rather than claiming it is normal. Do not infer a stamp from the artwork or guess an unreadable mark. Chinese means Traditional Chinese; use Chinese (Simplified) for Simplified Chinese. Do not estimate a price."""
     if mode == "deep":
         prompt += """
 This is an optional deep pass. Also read the release year, rarity, and visible physical condition. Use Near Mint unless visible wear clearly supports another condition."""
@@ -1779,7 +1780,7 @@ This is an optional deep pass. Also read the release year, rarity, and visible p
         "language": {
             "type": "string",
             "enum": [
-                "English", "Japanese", "Chinese", "Korean", "French",
+                "English", "Japanese", "Chinese", "Chinese (Simplified)", "Korean", "French",
                 "German", "Spanish", "Italian", "Portuguese", "Thai",
                 "Indonesian", "Hebrew", "Other"
             ]
