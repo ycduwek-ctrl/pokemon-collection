@@ -58,6 +58,26 @@ ROOT = Path(__file__).resolve().parent
 ARCHIVE_PATH = ROOT / "data" / "card_catalog.sqlite3.gz"
 SUPPLEMENT_PATH = ROOT / "data" / "catalog_supplements.json"
 _supplements = json.loads(SUPPLEMENT_PATH.read_text(encoding="utf-8")) if SUPPLEMENT_PATH.exists() else []
+ENRICHMENT_PATH = ROOT / "data" / "catalog_enrichment.json.gz"
+_enrichment = json.loads(gzip.decompress(ENRICHMENT_PATH.read_bytes())) if ENRICHMENT_PATH.exists() else {}
+_card_details = _enrichment.get("cards", {})
+_set_details = _enrichment.get("sets", {})
+IMAGE_OVERRIDES_PATH = ROOT / "data" / "catalog_image_overrides.json"
+if IMAGE_OVERRIDES_PATH.exists():
+    for _identifier, _detail in json.loads(IMAGE_OVERRIDES_PATH.read_text()).get('cards', {}).items():
+        _card_details[_identifier] = {**_card_details.get(_identifier, {}), **_detail}
+
+
+def canonical_set_code(value: object) -> str:
+    """Map printed McDonald's abbreviations to their exact catalogue edition."""
+    raw = str(value or "").strip()
+    token = re.sub(r"[^a-z0-9]", "", raw.lower())
+    match = re.fullmatch(r"(?:m|mcd)(\d{2})(?:en)?", token)
+    if match:
+        year = int(match[1])
+        suffix = "bw" if year <= 12 else "xy" if year <= 16 else "sm" if year <= 19 else "swsh" if year <= 22 else "sv"
+        return f"20{year:02d}{suffix}"
+    return raw
 DATABASE_PATH = Path(
     os.environ.get("HITIM_CARD_CATALOG_PATH", "/tmp/hitim-card-catalog.sqlite3")
 )
@@ -87,7 +107,9 @@ def catalog_supplement(card_info: dict) -> dict | None:
 
 def _catalog_version() -> str:
     supplement_hash = hashlib.sha256(SUPPLEMENT_PATH.read_bytes()).hexdigest() if SUPPLEMENT_PATH.exists() else ""
-    return f"{int(ARCHIVE_PATH.stat().st_mtime)}:{supplement_hash}"
+    enrichment_hash = hashlib.sha256(ENRICHMENT_PATH.read_bytes()).hexdigest() if ENRICHMENT_PATH.exists() else ""
+    overrides_hash = hashlib.sha256(IMAGE_OVERRIDES_PATH.read_bytes()).hexdigest() if IMAGE_OVERRIDES_PATH.exists() else ""
+    return f"{int(ARCHIVE_PATH.stat().st_mtime)}:{supplement_hash}:{enrichment_hash}:{overrides_hash}"
 
 
 def _english_catalog_name(connection, language, card_id) -> str:
@@ -199,6 +221,15 @@ def ensure_catalog() -> bool:
                         "INSERT OR IGNORE INTO cards(language,card_id,set_id,local_id,local_id_norm,printed_name,name_norm,image_url) VALUES(?,?,?,?,?,?,?,?)",
                         (item["language"], item["cardId"], item["setCode"], item["localId"], normalize_number(item["localId"]), item["printedName"], normalize_text(item["printedName"]), item["image"]),
                     )
+                # Verified set + number + printed-name matches only. Never use
+                # the artwork from an earlier printing to fill a promo image.
+                for identifier, detail in _card_details.items():
+                    language, card_id = identifier.split("|", 1)
+                    if detail.get("image"):
+                        connection.execute(
+                            "UPDATE cards SET image_url=? WHERE language=? AND card_id=? AND TRIM(image_url)=''",
+                            (detail["image"], language, card_id),
+                        )
                 connection.execute("INSERT OR REPLACE INTO metadata(key,value) VALUES('card_count',(SELECT COUNT(*) FROM cards))")
                 connection.execute(
                     "INSERT OR REPLACE INTO metadata(key, value) VALUES('catalog_version', ?)",
@@ -239,7 +270,7 @@ def lookup_card(card_info: dict) -> dict | None:
         return None
 
     number = normalize_number(card_info.get("number"))
-    set_code = normalize_text(card_info.get("setCode"))
+    set_code = normalize_text(canonical_set_code(card_info.get("setCode")))
     set_name = normalize_text(card_info.get("set"))
     printed_name = normalize_text(card_info.get("printedName"))
     english_name = normalize_text(card_info.get("name") or card_info.get("pokemon"))
@@ -316,7 +347,7 @@ def lookup_card(card_info: dict) -> dict | None:
         return None
 
     image_url = str(best["image_url"] or "").rstrip("/")
-    if image_url and not re.search(r"\.(?:webp|png|jpe?g)$", image_url, re.IGNORECASE):
+    if image_url.startswith("https://assets.tcgdex.net/") and not re.search(r"\.(?:webp|png|jpe?g|avif)$", image_url, re.IGNORECASE):
         image_url += "/high.webp"
     official_count = str(best["official_count"] or "")
     local_id = str(best["local_id"] or "")
@@ -334,9 +365,27 @@ def lookup_card(card_info: dict) -> dict | None:
 
 def _image_url(value: object) -> str:
     image_url = str(value or "").rstrip("/")
-    if image_url and not re.search(r"\.(?:webp|png|jpe?g)$", image_url, re.IGNORECASE):
+    if image_url.startswith("https://assets.tcgdex.net/") and not re.search(r"\.(?:webp|png|jpe?g|avif)$", image_url, re.IGNORECASE):
         image_url += "/high.webp"
     return image_url
+
+
+def reference_image_sources(language: str, card_id: str) -> list[str]:
+    code = LANGUAGE_CODES.get(str(language).lower())
+    if not code:
+        return []
+    with _connection() as connection:
+        row = connection.execute('SELECT image_url FROM cards WHERE language=? AND card_id=?', (code, card_id)).fetchone()
+    if not row:
+        return []
+    image = _image_url(row['image_url'])
+    detail = _card_details.get(code + '|' + card_id, {})
+    urls = [image]
+    if image.startswith('https://assets.tcgdex.net/'):
+        urls.append(image.replace('/high.webp', '/low.webp'))
+    urls.extend([detail.get('image', ''), detail.get('thumbnail', '')])
+    urls.extend(detail.get('fallbackImages', []))
+    return list(dict.fromkeys(u for u in urls if u))
 
 
 def search_catalog(
@@ -345,6 +394,7 @@ def search_catalog(
 ) -> dict:
     """Search with explicit language/set/number constraints, never relax them."""
     name_norm = normalize_text(name)
+    set_code = canonical_set_code(set_code)
     number_text = str(number or "").strip()
     number_parts = number_text.split("/", 1)
     local_id = normalize_number(number_parts[0])
@@ -600,6 +650,9 @@ def _set_recency_key(set_id: object) -> tuple[int, int, str]:
 def _estimated_set_year(set_id: object) -> int:
     """Estimate modern set year only as a candidate-ordering hint."""
     value = str(set_id or "").casefold()
+    promo = re.fullmatch(r"(20\d{2})(?:bw|xy|sm|swsh|sv)", value)
+    if promo:
+        return int(promo[1])
     match = re.match(r"(sv|swsh|sm|xy|bw)(\d+)(\.\d+)?", value)
     if not match:
         return 0
@@ -631,7 +684,7 @@ def _ocr_candidate_payload(
         "finish": "",
         "year": "",
         "condition": "",
-        "rarity": "",
+        "rarity": _card_details.get(str(row["language"]) + "|" + str(row["card_id"]), {}).get("rarity", ""),
         "catalogCardId": str(row["card_id"] or ""),
         "catalogImage": _image_url(image_row["image_url"]),
         "catalogMatch": "local-ocr",
@@ -654,6 +707,8 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
     token_text = re.sub(r"[^A-Z0-9.]+", " ", raw_text.upper())
     tokens = {token for token in token_text.split() if len(token) >= 2}
     traditional_set_codes = {token for token in tokens if re.fullmatch(r"AS\d{1,2}[A-Z]?", token)}
+    mcd_codes = {canonical_set_code(token) for token in tokens if re.fullmatch(r"M(?:CD)?\d{2}(?:EN)?", token)}
+    mcd_hint = bool(re.search(r"mcdonald|מק[דט]ונלד", raw_text, re.IGNORECASE))
     printed_years = {
         int(value) for value in re.findall(r"(?<!\d)((?:19|20)\d{2})(?!\d)", raw_text)
         if 1996 <= int(value) <= 2100
@@ -709,11 +764,16 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
             for row in rows.values():
                 if traditional_set_codes and str(row["set_id"]).upper() not in traditional_set_codes:
                     continue
+                if mcd_codes and str(row["set_id"]) not in mcd_codes:
+                    continue
+                if mcd_hint and "mcdonald" not in str(row["set_name"]).lower():
+                    continue
                 name_score, printing_count = name_scores.get(
                     (str(row["language"]), str(row["name_norm"])), (0.0, 0)
                 )
                 set_token = re.sub(r"[^A-Z0-9.]", "", str(row["set_id"] or "").upper())
                 exact_set = bool(len(set_token) >= 3 and set_token in tokens)
+                exact_set = exact_set or str(row["set_id"]) in mcd_codes
                 exact_pair = False
                 number_quality = 0.0
                 best_numerator_similarity = 0.0
@@ -901,14 +961,45 @@ def list_download_sets(language: str = "English") -> list[dict]:
     result = []
     for row in rows:
         preview = str(row['preview'] or '')
+        detail = _set_details.get(code + '|' + row['set_id'], {})
         logo = preview.rsplit('/', 1)[0] + '/logo.webp' if preview.startswith('https://assets.tcgdex.net/') and not re.search(r'\.(png|webp|jpg)$', preview) else ''
         result.append({'id': row['set_id'], 'name': row['name'], 'language': language,
                        'available': row['available'], 'imageCount': row['images'],
-                       'logo': logo, 'preview': _image_url(preview) if preview else ''})
+                       'logo': detail.get('logo') or logo,
+                       'releaseDate': detail.get('releaseDate', ''),
+                       'preview': _image_url(preview) if preview else ''})
     return result
 
 
+def _hit_rank(card: dict) -> int:
+    rarity = re.sub(r'[_ -]+', ' ', str(card.get('rarity', '')).lower())
+    ranks = {'mega hyper rare': 100, 'special illustration rare': 95,
+             'rare holo vmax': 65, 'rare holo vstar': 65,
+             'rare rainbow': 90, 'rare secret': 90, 'hyper rare': 90,
+             'mega attack rare': 88, 'illustration rare': 85,
+             'rare shiny gx': 85, 'rare ultra': 80, 'ultra rare': 80,
+             'rare shiny': 75, 'shiny ultra rare': 80, 'shiny rare': 75,
+             'rare holo star': 95, 'rare shining': 90, 'black white rare': 95,
+             'trainer gallery rare holo': 80, 'rare holo lv.x': 65,
+             'legend': 70, 'rare prime': 65, 'rare break': 60,
+             'rare prism star': 60, 'ace spec rare': 60, 'rare ace': 60,
+             'radiant rare': 65, 'amazing rare': 65, 'promo': 25,
+             'double rare': 60, 'rare holo ex': 60, 'rare holo gx': 60,
+             'rare holo v': 60, 'rare holo': 40, 'rare': 30,
+             'uncommon': 10, 'common': 0}
+    if rarity in ranks:
+        return ranks[rarity]
+    # A number outside the printed main set is a useful fallback, not a price.
+    parts = str(card.get('number', '')).split('/')
+    if len(parts) == 2 and all(p.isdigit() for p in parts) and int(parts[0]) > int(parts[1]):
+        return 80
+    if re.search(r'\b(?:ex|gx|v|vmax|vstar|lv\.x)\s*$', str(card.get('name', '')), re.I):
+        return 60
+    return 0
+
+
 def download_set_cards(language: str, set_id: str) -> dict:
+    set_id = canonical_set_code(set_id)
     code = LANGUAGE_CODES.get(str(language).lower())
     if not code:
         return {'cards': []}
@@ -923,4 +1014,16 @@ def download_set_cards(language: str, set_id: str) -> dict:
     for card in cards:
         card.pop('candidateScore', None)
         card['catalogMatch'] = 'downloaded-set'
-    return {'id': set_id, 'language': language, 'cards': cards}
+        detail = _card_details.get(code + '|' + card['catalogCardId'], {})
+        urls = [card['catalogImage']]
+        if card['catalogImage'].startswith('https://assets.tcgdex.net/'):
+            urls.append(card['catalogImage'].replace('/high.webp', '/low.webp'))
+        urls.extend([detail.get('image', ''), detail.get('thumbnail', '')])
+        urls.extend(detail.get('fallbackImages', []))
+        card['imageSources'] = list(dict.fromkeys(u for u in urls if u))
+        card['thumbnail'] = (card['catalogImage'].replace('/high.webp', '/low.webp')
+                             if card['catalogImage'].startswith('https://assets.tcgdex.net/')
+                             else detail.get('thumbnail') or card['catalogImage'])
+        card['hitRank'] = _hit_rank(card)
+    return {'id': set_id, 'language': language, 'cards': cards,
+            'imageCount': sum(bool(c['catalogImage']) for c in cards), 'version': 2}

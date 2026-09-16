@@ -1,5 +1,8 @@
 from fastapi import FastAPI, UploadFile, File, Form, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
+from urllib.parse import urlsplit
+from functools import lru_cache
 import gspread
 from google.oauth2.service_account import Credentials
 from PIL import Image, ImageOps
@@ -27,6 +30,7 @@ from card_catalog import (
     catalog_supplement,
     list_download_sets,
     download_set_cards,
+    reference_image_sources,
     catalog_status,
     ensure_catalog,
     lookup_card,
@@ -1410,7 +1414,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-set-library-v20.0",
+        "build": "hitim-set-library-v20.1",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1709,7 +1713,7 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
 @app.get("/catalog/sets")
 async def catalog_sets(language: str = "English", authorization: str = Header(None)):
     await asyncio.to_thread(require_access, authorization)
-    return {"sets": await asyncio.to_thread(list_download_sets, language)}
+    return {"sets": await asyncio.to_thread(list_download_sets, language), "version": 2}
 
 
 @app.get("/catalog/set-cards")
@@ -1719,6 +1723,50 @@ async def catalog_set_cards(set_id: str, language: str = "English", authorizatio
     if not result["cards"]:
         raise HTTPException(status_code=404, detail="הסדרה אינה זמינה בקטלוג")
     return result
+
+
+@lru_cache(maxsize=16)
+def _download_reference_image(url):
+    # Only bundled public catalogue URLs are accepted. No client-supplied URLs,
+    # redirects, cookies or authorization headers are forwarded to image hosts.
+    parsed = urlsplit(url)
+    if parsed.scheme != 'https' or parsed.hostname not in {
+        'assets.tcgdex.net', 'images.pokemontcg.io', 'images.scrydex.com',
+        'pkmncards.com', 'tcgplayer-cdn.tcgplayer.com',
+    }:
+        raise ValueError('unsupported image host')
+    if parsed.username or parsed.password or parsed.port not in (None, 443):
+        raise ValueError('invalid image address')
+    with requests.get(url, timeout=(10, 15), stream=True, allow_redirects=False) as response:
+        if response.status_code != 200:
+            raise ValueError('image unavailable')
+        data = bytearray()
+        started = time.monotonic()
+        for chunk in response.iter_content(65536):
+            data.extend(chunk)
+            if len(data) > 4 * 1024 * 1024 or time.monotonic() - started > 20:
+                raise ValueError('image too large or slow')
+    with Image.open(io.BytesIO(data)) as image:
+        if image.width * image.height > 16_000_000:
+            raise ValueError('image too large')
+        image.thumbnail((1200, 1680), Image.Resampling.LANCZOS)
+        out = io.BytesIO()
+        image.convert('RGB').save(out, format='JPEG', quality=90)
+    return out.getvalue()
+
+
+@app.get('/catalog/reference-image')
+async def catalog_reference_image(card_id: str, language: str = 'English', source: int = 0,
+                                  authorization: str = Header(None)):
+    await asyncio.to_thread(require_access, authorization)
+    sources = await asyncio.to_thread(reference_image_sources, language, card_id)
+    if source < 0 or source >= len(sources):
+        raise HTTPException(status_code=404, detail='תמונת הקלף אינה זמינה')
+    try:
+        data = await asyncio.to_thread(_download_reference_image, sources[source])
+    except (requests.RequestException, OSError, ValueError):
+        raise HTTPException(status_code=502, detail='מקור התמונה אינו זמין כרגע')
+    return Response(data, media_type='image/jpeg', headers={'Cache-Control': 'private, max-age=86400'})
 
 
 @app.post("/catalog/search")
@@ -1773,6 +1821,7 @@ async def identify(
 The printed collector number is the primary identifier. Copy the complete number exactly as printed near the bottom, preserving leading zeros, letters and the denominator. Never invent an unreadable value. Read the printed set code/symbol and official set name as supporting identifiers.
 For every language, return the official English card name in `name`, the original printed name in `printedName`, and a Hebrew transliteration of only the card name in `hebrewName`. Preserve suffixes such as V, VMAX, VSTAR, GX, EX and ex.
 Use the illustration to cross-check the printed identity. Ignore phone UI, price stickers and other cards outside the main subject. If multiple cards are equally prominent, leave uncertain identifiers empty rather than combining them.
+McDonald's promos often reuse artwork from an earlier expansion. Read the promo collector number, denominator, small printed code such as M23/M24, and set symbol before selecting the edition. Return the visible M code in setCode when present. Never identify the original expansion just because its artwork matches, and never infer a McDonald's edition from artwork alone.
 Classify `finish` only when visible. If a special stamp or pattern cannot be represented by the supported finish values, leave finish empty rather than claiming it is normal. Do not infer a stamp from the artwork or guess an unreadable mark. Chinese means Traditional Chinese; use Chinese (Simplified) for Simplified Chinese. Do not estimate a price."""
     if mode == "deep":
         prompt += """
