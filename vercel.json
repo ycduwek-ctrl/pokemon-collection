@@ -78,7 +78,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "hitim-set-library-v20.0"
+        "X-Hitim-Build": "hitim-set-library-v20.1"
       },
       "continue": true
     },

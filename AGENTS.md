@@ -35,6 +35,17 @@ coding chats.
 - Public reference packs, image blobs and compact visual descriptors live in a
   separate IndexedDB database (`hitim-public-set-references`), never in the
   user's gallery. Downloads resume per successfully stored image.
+- Pack manifests refresh on version changes, after 24 hours, or on explicit
+  refresh; an offline cached manifest remains usable. Missing source images
+  are distinguished from failed downloads and never counted as completed.
+- `catalog_enrichment.json.gz` contains exact English set/number/name matches
+  from PokemonTCG's public data. `catalog_image_overrides.json` documents extra
+  printing-specific McDonald's image sources; keep these separate from the
+  original multilingual archive. Never substitute a reprint's original artwork.
+- The authenticated reference-image endpoint accepts catalogue IDs, not URLs,
+  for image hosts without CORS. It enforces a host allowlist and image limits.
+- Default hits-first sorting uses rarity (not live monetary value). Number
+  sorting remains available. McDonald's M23/M24EN codes map to catalogue IDs.
 - Selecting a downloaded set explicitly enables experimental aligned-image
   comparison. It returns choices for human confirmation, never automatic variant
   identification. The regular OCR/vision path remains the fallback.

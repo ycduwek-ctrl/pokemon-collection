@@ -8,6 +8,7 @@ import card_catalog
 class CardCatalogTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.original_path = card_catalog.DATABASE_PATH
         cls.temporary = tempfile.TemporaryDirectory(prefix="hitim-test-catalog-")
         card_catalog.DATABASE_PATH = Path(cls.temporary.name) / "catalog.sqlite3"
         card_catalog._catalog_ready = False
@@ -15,6 +16,8 @@ class CardCatalogTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        card_catalog.DATABASE_PATH = cls.original_path
+        card_catalog._catalog_ready = False
         cls.temporary.cleanup()
 
     def test_traditional_chinese_supplement(self):
@@ -210,6 +213,36 @@ class CardCatalogTests(unittest.TestCase):
         result = card_catalog.search_catalog(number="043/185")
         self.assertEqual(len(result["candidates"]), 1)
         self.assertEqual(result["candidates"][0]["catalogCardId"], "swsh4-43")
+
+
+class EnrichedSetTests(unittest.TestCase):
+    def test_all_mcdonalds_english_editions_have_printing_images(self):
+        sets = [s for s in card_catalog.list_download_sets('English') if "McDonald" in s['name']]
+        self.assertEqual(len(sets), 12)
+        for item in sets:
+            self.assertEqual(item['imageCount'], item['available'], item['name'])
+            cards = card_catalog.download_set_cards('English', item['id'])['cards']
+            self.assertTrue(all(c['catalogImage'] and c['setCode'] == item['id'] for c in cards))
+
+    def test_printed_mcdonalds_codes_override_reused_artwork(self):
+        for text, identifier in [('Charizard M24EN 001/015', '2024sv-1'),
+                                 ('Sprigatito M23 EN 001/015', '2023sv-1'),
+                                 ('Pikachu MCD21 25/25', '2021swsh-25')]:
+            result = card_catalog.lookup_ocr_result(text)
+            self.assertEqual(result['match']['catalogCardId'], identifier)
+        result = card_catalog.search_catalog('Charizard', '001/015', language='English', set_code='M24EN')
+        self.assertEqual([c['catalogCardId'] for c in result['candidates']], ['2024sv-1'])
+        self.assertFalse(card_catalog.search_catalog('Charizard', '001/015', language='English', set_code='M23')['candidates'])
+
+    def test_hit_rank_uses_rarity_and_image_urls_keep_their_provider_format(self):
+        cards = card_catalog.download_set_cards('English', 'me02.5')['cards']
+        highest = sorted(cards, key=lambda c: c['hitRank'], reverse=True)[0]
+        self.assertEqual(highest['rarity'], 'Mega Hyper Rare')
+        self.assertGreater(highest['hitRank'], cards[0]['hitRank'])
+        self.assertTrue(all(not u.endswith('/large/high.webp') for c in cards for u in c['imageSources']))
+        self.assertEqual(card_catalog._image_url('https://images.scrydex.com/pokemon/x/large'), 'https://images.scrydex.com/pokemon/x/large')
+        self.assertEqual(card_catalog.reference_image_sources('Japanese', '2024sv-1'), [])
+        self.assertEqual(card_catalog.reference_image_sources('English', 'https://localhost/secret'), [])
 
 
 if __name__ == "__main__":
