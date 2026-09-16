@@ -11,6 +11,7 @@ const HitimScanStrategy=(()=>{
       if(mode==='quick'&&!forceAi){
         await Promise.race([startLocal(),new Promise(resolve=>{timer=setTimeout(resolve,localBudgetMs);})]);
         clearTimeout(timer);
+        if(localResult?.identificationMode==='visual-reference'&&localResult.needsConfirmation)return localResult;
         if(localResult&&!localResult.needsConfirmation&&!needsName(localResult))return localResult;
       }
       try{

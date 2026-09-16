@@ -5,6 +5,8 @@ const base={needsName:c=>!!c.needsEnglishName,translate:(a,b)=>({...a,name:b.nam
 (async()=>{
 let calls=0;const exact={catalogCardId:'AS5a-035',language:'Chinese',name:'Blastoise'};
 assert.equal(await ctx.strategy.identify({...base,local:async()=>exact,vision:async()=>{calls++;return exact;}}),exact);assert.equal(calls,0);
+const visual={needsConfirmation:true,matchCandidates:[exact],identificationMode:'visual-reference'};
+assert.equal(await ctx.strategy.identify({...base,local:async()=>visual,vision:async()=>{throw Error('visual choices should not call AI');}}),visual);
 const choices={needsConfirmation:true,matchCandidates:[exact]};
 assert.equal(await ctx.strategy.identify({...base,local:async()=>choices,vision:async()=>{calls++;return exact;}}),exact);assert.equal(calls,1);
 assert.equal(await ctx.strategy.identify({...base,local:async()=>choices,vision:async()=>{throw Error('offline');}}),choices);

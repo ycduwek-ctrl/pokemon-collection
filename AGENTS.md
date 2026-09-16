@@ -28,6 +28,20 @@ coding chats.
 - `card_catalog.py` opens `data/card_catalog.sqlite3.gz`, a local multilingual
   TCGdex-derived catalog with more than 130,000 searchable printings.
 
+## Downloaded series
+
+- Search and Settings open the set library. English Ascended Heroes (`me02.5`)
+  is featured first. Counts are catalog cards/images, not all foil printings.
+- Public reference packs, image blobs and compact visual descriptors live in a
+  separate IndexedDB database (`hitim-public-set-references`), never in the
+  user's gallery. Downloads resume per successfully stored image.
+- Selecting a downloaded set explicitly enables experimental aligned-image
+  comparison. It returns choices for human confirmation, never automatic variant
+  identification. The regular OCR/vision path remains the fallback.
+- Test downloaded-pack transactions with fake-indexeddb 6: install it in a
+  temporary directory and set NODE_PATH to that directory's node_modules before
+  running `node tests/test_downloaded_sets.js`.
+
 ## Identification and pricing
 
 - The owner now prefers whichever camera works best. Guided browser capture crops to the visible card frame with no forced zoom; device capture and gallery remain available.

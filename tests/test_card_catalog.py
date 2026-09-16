@@ -35,6 +35,23 @@ class CardCatalogTests(unittest.TestCase):
         self.assertFalse(result.get("candidates"))
         self.assertFalse(result.get("match"))
 
+    def test_downloadable_ascended_heroes_is_complete_and_sorted(self):
+        sets = card_catalog.list_download_sets("English")
+        featured = sets[0]
+        self.assertEqual(featured["id"], "me02.5")
+        self.assertEqual(featured["available"], 295)
+        result = card_catalog.download_set_cards("English", "me02.5")
+        self.assertEqual(len(result["cards"]), 295)
+        self.assertEqual(result["cards"][0]["number"], "001/217")
+        self.assertEqual(result["cards"][-1]["number"], "295/217")
+        self.assertTrue(all(c["language"] == "English" and c["setCode"] == "me02.5" for c in result["cards"]))
+        self.assertEqual(len({c["catalogCardId"] for c in result["cards"]}), 295)
+
+    def test_downloadable_sets_do_not_cross_languages_or_accept_sql(self):
+        self.assertEqual(card_catalog.download_set_cards("Japanese", "me02.5")["cards"], [])
+        self.assertEqual(card_catalog.download_set_cards("English", "' OR 1=1 --")["cards"], [])
+        self.assertEqual(card_catalog.list_download_sets("unsupported"), [])
+
     def test_catalog_has_multilingual_coverage(self):
         status = card_catalog.catalog_status()
         self.assertTrue(status["ready"])

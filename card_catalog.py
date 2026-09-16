@@ -883,3 +883,44 @@ def lookup_ocr_text(text: object) -> dict | None:
 def lookup_ocr_candidates(text: object, limit: int = 6) -> list[dict]:
     """Return ranked catalogue choices when OCR cannot safely choose one."""
     return lookup_ocr_result(text, limit=limit)["candidates"]
+
+
+def list_download_sets(language: str = "English") -> list[dict]:
+    code = LANGUAGE_CODES.get(str(language).lower())
+    if not code:
+        return []
+    with _connection() as connection:
+        rows = connection.execute('''
+            SELECT s.set_id,s.name,s.official_count,COUNT(c.card_id) AS available,
+                   SUM(CASE WHEN c.image_url <> '' THEN 1 ELSE 0 END) AS images,
+                   MIN(NULLIF(c.image_url,'')) AS preview
+            FROM sets s JOIN cards c ON c.language=s.language AND c.set_id=s.set_id
+            WHERE s.language=? GROUP BY s.set_id
+            ORDER BY CASE WHEN s.set_id='me02.5' THEN 0 ELSE 1 END,s.set_id DESC
+        ''', (code,)).fetchall()
+    result = []
+    for row in rows:
+        preview = str(row['preview'] or '')
+        logo = preview.rsplit('/', 1)[0] + '/logo.webp' if preview.startswith('https://assets.tcgdex.net/') and not re.search(r'\.(png|webp|jpg)$', preview) else ''
+        result.append({'id': row['set_id'], 'name': row['name'], 'language': language,
+                       'available': row['available'], 'imageCount': row['images'],
+                       'logo': logo, 'preview': _image_url(preview) if preview else ''})
+    return result
+
+
+def download_set_cards(language: str, set_id: str) -> dict:
+    code = LANGUAGE_CODES.get(str(language).lower())
+    if not code:
+        return {'cards': []}
+    with _connection() as connection:
+        rows = connection.execute('''
+            SELECT c.*,s.name AS set_name,s.official_count FROM cards c
+            JOIN sets s ON s.language=c.language AND s.set_id=c.set_id
+            WHERE c.language=? AND c.set_id=?
+            ORDER BY CAST(c.local_id_norm AS INTEGER),c.local_id_norm
+        ''', (code, set_id)).fetchall()
+        cards = [_ocr_candidate_payload(connection, row, row, 0) for row in rows]
+    for card in cards:
+        card.pop('candidateScore', None)
+        card['catalogMatch'] = 'downloaded-set'
+    return {'id': set_id, 'language': language, 'cards': cards}

@@ -25,6 +25,8 @@ from hitim_auth import (
 )
 from card_catalog import (
     catalog_supplement,
+    list_download_sets,
+    download_set_cards,
     catalog_status,
     ensure_catalog,
     lookup_card,
@@ -1408,7 +1410,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-guided-scan-v19.0",
+        "build": "hitim-set-library-v20.0",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1702,6 +1704,21 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
             "priceStatus": "pending",
         }
     raise HTTPException(status_code=404, detail="לא נמצאה התאמה בקטלוג המקומי")
+
+
+@app.get("/catalog/sets")
+async def catalog_sets(language: str = "English", authorization: str = Header(None)):
+    await asyncio.to_thread(require_access, authorization)
+    return {"sets": await asyncio.to_thread(list_download_sets, language)}
+
+
+@app.get("/catalog/set-cards")
+async def catalog_set_cards(set_id: str, language: str = "English", authorization: str = Header(None)):
+    await asyncio.to_thread(require_access, authorization)
+    result = await asyncio.to_thread(download_set_cards, language, set_id)
+    if not result["cards"]:
+        raise HTTPException(status_code=404, detail="הסדרה אינה זמינה בקטלוג")
+    return result
 
 
 @app.post("/catalog/search")

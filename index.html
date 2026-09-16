@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="description" content="Hitim — אוסף קלפי פוקימון אישי">
-  <meta name="hitim-build" content="hitim-guided-scan-v19.0">
+  <meta name="hitim-build" content="hitim-set-library-v20.0">
   <title>Hitim</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/hitim-icon-193.png" type="image/png">
@@ -847,6 +847,7 @@
     }
   </style>
 <link rel="stylesheet" href="/hitim-camera.css">
+<link rel="stylesheet" href="/hitim-sets.css">
 </head>
 <body>
 
@@ -932,6 +933,7 @@
     <button class="panel-close" onclick="closePanel()">✕</button>
   </div>
   <div class="panel-section">
+    <button class="system-action primary" onclick="HitimSets.open()">סדרות וקלפים להורדה</button>
     <h4>מציאה בקטלוג המלא</h4>
     <div class="catalog-search-note">אפשר לחפש לפי שם באנגלית, מספר קלף, או שניהם יחד לקבלת תוצאה מדויקת יותר. החיפוש כולל גם קלפים שעדיין אינם בגלריה.</div>
     <form onsubmit="event.preventDefault();searchCatalogCards(false)">
@@ -1016,6 +1018,7 @@
         <div class="quick-summary-total" id="quickScanTotal">סה״כ: $0.00</div>
       </div>
 
+      <button class="variant-chip" id="downloadedSetScanMode" onclick="HitimSets.open()" hidden></button>
       <div class="quick-scan-list" id="quickScanList"></div>
 
       <div class="quick-capture-actions">
@@ -1248,6 +1251,13 @@
   </div>
 </div>
 
+<div class="system-overlay" id="setsOverlay" onclick="if(event.target===this)HitimSets.close()">
+ <div class="system-panel"><div class="system-head"><button id="setsBack" class="system-close" onclick="HitimSets.back()" aria-label="חזרה לסדרות" hidden>→</button><h2 id="setsTitle">סדרות להורדה</h2><button class="system-close" onclick="HitimSets.close()" aria-label="סגירה">✕</button></div>
+ <div class="system-body"><div class="set-controls"><input id="setsSearch" type="search" placeholder="חפש סדרה" aria-label="חיפוש סדרה" oninput="HitimSets.render()"><select id="setsLanguage" aria-label="שפת סדרות" onchange="HitimSets.loadLanguage(this.value)"><option value="English">אנגלית</option><option value="Japanese">יפנית</option><option value="Chinese">סינית מסורתית</option><option value="Chinese (Simplified)">סינית מפושטת</option></select></div>
+ <p id="setsNote" class="system-note"></p><div id="setsStatus" role="status"></div><div id="setsActions"></div><div id="setsContent"></div></div></div>
+</div>
+<dialog id="setPreview"><button class="system-close" onclick="document.getElementById('setPreview').close()" aria-label="סגירה">✕</button><img id="setPreviewImage" alt="קלף מהסדרה"><div id="setPreviewName"></div></dialog>
+
 <div class="system-overlay" id="settingsOverlay" onclick="systemOverlayClick(event,'settingsOverlay')">
   <div class="system-panel">
     <div class="system-head">
@@ -1255,6 +1265,7 @@
       <button class="system-close" onclick="closeSystemPanel('settingsOverlay')">✕</button>
     </div>
     <div class="system-body">
+      <button class="system-action primary" onclick="HitimSets.open()">סדרות וקלפים להורדה</button>
       <button class="system-action primary" id="installBtn" onclick="installHitim()">📲 התקן את Hitim בטלפון</button>
       <button class="system-action danger" onclick="HitimAuth.signOut()">↪ יציאה מהאפליקציה</button>
 
@@ -1402,7 +1413,7 @@ function closeNavigationViews(){
   if(typeof HitimCamera!=='undefined')HitimCamera.close();
   if(typeof closeIdentityHelp==='function')closeIdentityHelp();
   closePanel(false);
-  ['identityHelpOverlay','quickIdentifyOverlay','detailOverlay','overlay','variantPickerOverlay','fantasyStudioOverlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
+  ['setsOverlay','identityHelpOverlay','quickIdentifyOverlay','detailOverlay','overlay','variantPickerOverlay','fantasyStudioOverlay','settingsOverlay','adminOverlay','installOverlay'].forEach(id=>document.getElementById(id)?.classList.remove('open'));
 }
 function showGalleryHome(){
   closeNavigationViews();setBottomNavActive('gallery');
@@ -2032,7 +2043,7 @@ function renderQuickScans(){
           ${escapeHtml(safeCardDisplayName(candidate,index))}<br>
           <span>${escapeHtml(safeCardSetName(candidate))} ${candidate.number?'#'+escapeHtml(candidate.number):''}</span>
         </button>`).join('');
-      body=`<div class="match-choice-note">מצאנו כמה אפשרויות — בחר את הקלף הזהה:</div>
+      body=`<div class="match-choice-note">בחר את התמונה הזהה לקלף שלך; בדוק גם מספר ושפה:</div>
         <div class="match-choices">${choices}</div>
         <div class="match-choice-tools">
           <button type="button" class="match-tool-btn precise" onclick="refineQuickScan('${scan.id}')" ${scan.refining||scan.loadingMore?'disabled':''}>${scan.refining?'⏳ מחפש מדויק...':'🔎 חיפוש מדויק יותר'}</button>
@@ -2370,7 +2381,7 @@ async function requestIdentification(frontFile,backFile=null,mode='quick',forceA
   try{
     return await HitimScanStrategy.identify({
       mode,forceAi,
-      local:()=>identifyWithLocalCatalog(preparedFront),
+      local:()=>typeof HitimSets!=='undefined'?HitimSets.localIdentify(preparedFront,()=>identifyWithLocalCatalog(preparedFront)):identifyWithLocalCatalog(preparedFront),
       vision:async()=>{
         const fd=new FormData();fd.append('front',preparedFront);if(preparedBack)fd.append('back',preparedBack);
         const response=await HitimAuth.fetch(`/identify?mode=${encodeURIComponent(mode)}`,{method:'POST',body:fd,timeoutMs:mode==='deep'?45000:32000});
@@ -3239,6 +3250,8 @@ setInterval(()=>{
 },60*60*1000);
 </script>
 <script src="/hitim-camera.js"></script>
+<script src="/hitim-set-vision.js"></script>
+<script src="/hitim-sets.js"></script>
 <script src="/hitim-scan-strategy.js"></script>
 <script src="/hitim-identity.js"></script>
 <script src="/hitim-fantasy.js"></script>

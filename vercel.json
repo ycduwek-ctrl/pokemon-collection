@@ -59,6 +59,18 @@
     {
       "src": "hitim-scan-strategy.js",
       "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-set-vision.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-sets.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "hitim-sets.css",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -66,7 +78,7 @@
       "src": "^/(?:index\\.html)?$",
       "headers": {
         "Cache-Control": "public, max-age=0, must-revalidate",
-        "X-Hitim-Build": "hitim-guided-scan-v19.0"
+        "X-Hitim-Build": "hitim-set-library-v20.0"
       },
       "continue": true
     },
@@ -76,6 +88,18 @@
         "Cache-Control": "public, max-age=0, must-revalidate"
       },
       "continue": true
+    },
+    {
+      "src": "/hitim-set-vision.js",
+      "dest": "/hitim-set-vision.js"
+    },
+    {
+      "src": "/hitim-sets.js",
+      "dest": "/hitim-sets.js"
+    },
+    {
+      "src": "/hitim-sets.css",
+      "dest": "/hitim-sets.css"
     },
     {
       "src": "/hitim-camera.js",
