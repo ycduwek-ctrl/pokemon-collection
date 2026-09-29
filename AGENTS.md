@@ -75,3 +75,15 @@ coding chats.
   ready catalog. Also verify the Vercel shell contains the new build marker.
 - The service worker uses a versioned shell cache. Bump it when changing the app
   shell so installed phones receive the new release immediately.
+
+## Asian reference enrichment
+
+- `data/catalog_asian_enrichment.json.gz` independently supplements the weekly
+  TCGdex archive: exact Japanese set/number image matches, SMH starter deck,
+  and 115 Simplified Chinese CBB1C printings. Never replace it with cross-language
+  artwork. Sources are recorded; build script consumes cached public galleries.
+- CBB1C uses a composite collector number (e.g. `07 03/09`); preserve both
+  numerator parts and validate the per-card denominator. The set has no single
+  shared denominator. Its variants must have distinct catalogue IDs/images.
+- Coverage remains incomplete, particularly Chinese editions. Do not claim
+  all sets are covered or confuse catalogue lookup tests with phone photo QA.

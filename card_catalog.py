@@ -68,6 +68,16 @@ if IMAGE_OVERRIDES_PATH.exists():
         _card_details[_identifier] = {**_card_details.get(_identifier, {}), **_detail}
 
 
+ASIAN_ENRICHMENT_PATH = ROOT / "data" / "catalog_asian_enrichment.json.gz"
+if ASIAN_ENRICHMENT_PATH.exists():
+    _asian = json.loads(gzip.decompress(ASIAN_ENRICHMENT_PATH.read_bytes()))
+    _supplements.extend(_asian.get("supplements", []))
+    for _identifier, _detail in _asian.get("cards", {}).items():
+        _card_details[_identifier] = {**_card_details.get(_identifier, {}), **_detail}
+    for _identifier, _detail in _asian.get("sets", {}).items():
+        _set_details[_identifier] = {**_set_details.get(_identifier, {}), **_detail}
+
+
 def canonical_set_code(value: object) -> str:
     """Map printed McDonald's abbreviations to their exact catalogue edition."""
     raw = str(value or "").strip()
@@ -109,7 +119,8 @@ def _catalog_version() -> str:
     supplement_hash = hashlib.sha256(SUPPLEMENT_PATH.read_bytes()).hexdigest() if SUPPLEMENT_PATH.exists() else ""
     enrichment_hash = hashlib.sha256(ENRICHMENT_PATH.read_bytes()).hexdigest() if ENRICHMENT_PATH.exists() else ""
     overrides_hash = hashlib.sha256(IMAGE_OVERRIDES_PATH.read_bytes()).hexdigest() if IMAGE_OVERRIDES_PATH.exists() else ""
-    return f"{int(ARCHIVE_PATH.stat().st_mtime)}:{supplement_hash}:{enrichment_hash}:{overrides_hash}"
+    asian_hash = hashlib.sha256(ASIAN_ENRICHMENT_PATH.read_bytes()).hexdigest() if ASIAN_ENRICHMENT_PATH.exists() else ""
+    return f"{int(ARCHIVE_PATH.stat().st_mtime)}:{supplement_hash}:{enrichment_hash}:{overrides_hash}:{asian_hash}"
 
 
 def _english_catalog_name(connection, language, card_id) -> str:
@@ -130,9 +141,8 @@ def normalize_text(value: object) -> str:
 
 def normalize_number(value: object) -> str:
     text = unquote(str(value or "")).split("/", 1)[0].strip().upper()
-    if text.isdigit():
-        return str(int(text))
-    return re.sub(r"[^A-Z0-9!?]", "", text)
+    text = re.sub(r"[^A-Z0-9!?]", "", text)
+    return str(int(text)) if text.isdigit() else text
 
 
 def _repair_ocr_number(value: object) -> str:
@@ -309,7 +319,7 @@ def lookup_card(card_info: dict) -> dict | None:
             if set_code:
                 candidates = [row for row in candidates if normalize_text(row["set_id"]) == set_code]
             if denominator:
-                candidates = [row for row in candidates if normalize_number(row["official_count"]) == denominator]
+                candidates = [row for row in candidates if normalize_number(_card_details.get(language + "|" + row["card_id"], {}).get("number", "/" + row["official_count"]).split("/")[-1]) == denominator]
             if not candidates:
                 return None
             scored = []
@@ -356,7 +366,7 @@ def lookup_card(card_info: dict) -> dict | None:
         "catalogImage": image_url,
         "setCode": str(best["set_id"] or ""),
         "set": str(best["set_name"] or card_info.get("set") or ""),
-        "number": f"{local_id}/{official_count}" if official_count else local_id,
+        "number": _card_details.get(language + "|" + str(best["card_id"]), {}).get("number") or (f"{local_id}/{official_count}" if official_count else local_id),
         "printedName": str(best["printed_name"] or card_info.get("printedName") or ""),
         "catalogEnglishName": english_name,
         "catalogMatch": "local",
@@ -419,6 +429,11 @@ def search_catalog(
     if local_id:
         base_conditions.append("c.local_id_norm = ?")
         base_parameters.append(local_id)
+    if official_count and normalize_text(set_code) == 'cbb1c' and local_id:
+        matching = [item for item in _supplements if item['setCode'] == 'CBB1C' and normalize_number(item['localId']) == local_id]
+        if not matching or _card_details.get('zh-cn|' + matching[0]['cardId'], {}).get('number', '').split('/')[-1].lstrip('0') != official_count:
+            return {"candidates": [], "candidateTotal": 0, "candidateOffset": page_offset, "hasMoreCandidates": False}
+        official_count = ''
     if official_count:
         if official_count.isdigit():
             base_conditions.append("CAST(s.official_count AS INTEGER) = ?")
@@ -679,7 +694,7 @@ def _ocr_candidate_payload(
         "printedName": printed_name,
         "set": str(row["set_name"] or ""),
         "setCode": str(row["set_id"] or ""),
-        "number": f"{local_id}/{official_count}" if official_count else local_id,
+        "number": _card_details.get(str(row["language"]) + "|" + str(row["card_id"]), {}).get("number") or (f"{local_id}/{official_count}" if official_count else local_id),
         "language": language,
         "finish": "",
         "year": "",
@@ -700,6 +715,10 @@ def _ocr_candidate_payload(
 def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
     raw_text = unicodedata.normalize("NFKC", str(text or ""))
     pairs = extract_ocr_number_pairs(raw_text)
+    if re.search(r'CBB1C', raw_text, re.I):
+        compound = re.search(r'(?<!\d)(\d{2})\s+(\d{2})\s*/\s*(\d{2})(?!\d)', raw_text)
+        if compound:
+            pairs = [(normalize_number(compound[1]+compound[2]), normalize_number(compound[3]))]
     name_matches = _find_ocr_names(raw_text)
     if not pairs and not name_matches:
         return []
@@ -780,7 +799,8 @@ def _rank_ocr_candidates(text: object, limit: int = 80) -> list[dict]:
                 best_denominator_similarity = 0.0
                 for numerator, denominator in pairs:
                     numerator_similarity = _number_similarity(row["local_id"], numerator)
-                    denominator_similarity = _number_similarity(row["official_count"], denominator)
+                    printed_denominator = _card_details.get(str(row["language"]) + "|" + str(row["card_id"]), {}).get("number", "/" + str(row["official_count"])).split("/")[-1]
+                    denominator_similarity = _number_similarity(printed_denominator, denominator)
                     quality = .45 * numerator_similarity + .55 * denominator_similarity
                     if quality > number_quality:
                         number_quality = quality
@@ -963,7 +983,7 @@ def list_download_sets(language: str = "English") -> list[dict]:
         preview = str(row['preview'] or '')
         detail = _set_details.get(code + '|' + row['set_id'], {})
         logo = preview.rsplit('/', 1)[0] + '/logo.webp' if preview.startswith('https://assets.tcgdex.net/') and not re.search(r'\.(png|webp|jpg)$', preview) else ''
-        result.append({'id': row['set_id'], 'name': row['name'], 'language': language,
+        result.append({'id': row['set_id'], 'name': detail.get('displayName') or row['name'], 'language': language,
                        'available': row['available'], 'imageCount': row['images'],
                        'logo': detail.get('logo') or logo,
                        'releaseDate': detail.get('releaseDate', ''),
@@ -1007,7 +1027,7 @@ def download_set_cards(language: str, set_id: str) -> dict:
         rows = connection.execute('''
             SELECT c.*,s.name AS set_name,s.official_count FROM cards c
             JOIN sets s ON s.language=c.language AND s.set_id=c.set_id
-            WHERE c.language=? AND c.set_id=?
+            WHERE c.language=? AND c.set_id=? COLLATE NOCASE
             ORDER BY CAST(c.local_id_norm AS INTEGER),c.local_id_norm
         ''', (code, set_id)).fetchall()
         cards = [_ocr_candidate_payload(connection, row, row, 0) for row in rows]
@@ -1026,4 +1046,4 @@ def download_set_cards(language: str, set_id: str) -> dict:
                              else detail.get('thumbnail') or card['catalogImage'])
         card['hitRank'] = _hit_rank(card)
     return {'id': set_id, 'language': language, 'cards': cards,
-            'imageCount': sum(bool(c['catalogImage']) for c in cards), 'version': 2}
+            'imageCount': sum(bool(c['catalogImage']) for c in cards), 'version': 3}

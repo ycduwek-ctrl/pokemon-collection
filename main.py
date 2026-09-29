@@ -1414,7 +1414,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-set-library-v20.1",
+        "build": "hitim-asian-catalog-v20.2",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
@@ -1713,7 +1713,7 @@ async def identify_catalog_text(data: dict, authorization: str = Header(None)):
 @app.get("/catalog/sets")
 async def catalog_sets(language: str = "English", authorization: str = Header(None)):
     await asyncio.to_thread(require_access, authorization)
-    return {"sets": await asyncio.to_thread(list_download_sets, language), "version": 2}
+    return {"sets": await asyncio.to_thread(list_download_sets, language), "version": 3}
 
 
 @app.get("/catalog/set-cards")
@@ -1733,6 +1733,7 @@ def _download_reference_image(url):
     if parsed.scheme != 'https' or parsed.hostname not in {
         'assets.tcgdex.net', 'images.pokemontcg.io', 'images.scrydex.com',
         'pkmncards.com', 'tcgplayer-cdn.tcgplayer.com',
+        'limitlesstcg.nyc3.cdn.digitaloceanspaces.com', 'simplifiedcollector.com',
     }:
         raise ValueError('unsupported image host')
     if parsed.username or parsed.password or parsed.port not in (None, 443):
