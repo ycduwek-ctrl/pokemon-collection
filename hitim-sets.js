@@ -2,7 +2,7 @@
 const HitimSets=(()=>{
   let dbPromise,language='English',sets=[],pack=null,features=[],job=null,viewToken=0,shown=60;
   let urls=[],activeKey='',message='',sortMode='hits',showUnavailable=false,renderToken=0;
-  const CACHE_VERSION=2,CACHE_AGE=24*60*60*1000;
+  const CACHE_VERSION=3,CACHE_AGE=24*60*60*1000;
   const el=id=>document.getElementById(id),esc=s=>escapeHtml(String(s??''));
   const key=(lang,id)=>lang+'|'+id;
   function db(){
