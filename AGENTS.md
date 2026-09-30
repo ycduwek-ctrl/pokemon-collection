@@ -87,3 +87,12 @@ coding chats.
   shared denominator. Its variants must have distinct catalogue IDs/images.
 - Coverage remains incomplete, particularly Chinese editions. Do not claim
   all sets are covered or confuse catalogue lookup tests with phone photo QA.
+
+## Supplemental prices
+
+- `supplemental_prices.py` maps verified supplemental printings to exact
+  PriceCharting product pages, currently CBB1C-0703 Stars and SMH-013 Normal.
+  Fetch only the USD ungraded cell; verify canonical URL, title, product ID and
+  currency. Never use a graded value or another finish. Prices are not bundled.
+- Unmapped supplemental printings remain unpriced. Manual/unverified identities
+  must not trigger pricing. Network failures preserve identity and allow retry.

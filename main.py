@@ -26,6 +26,7 @@ from hitim_auth import (
     update_access_user,
     remove_access_user,
 )
+from supplemental_prices import PRINTINGS as SUPPLEMENTAL_PRICE_PRINTINGS, supplemental_price
 from card_catalog import (
     catalog_supplement,
     list_download_sets,
@@ -1312,11 +1313,18 @@ def _remember_market_price(cache_key, result):
 
 def _market_price_for_card(card_info):
     """Return the first verified exact price instead of waiting for every source."""
-    supplement = catalog_supplement(card_info)
-    if supplement:
-        return {"value": "", "priceStatus": "price-unavailable", "catalogImage": supplement["image"]}
     if card_info.get("identityConfidence") == "manual":
         return {"value": "", "priceStatus": "unverified"}
+    supplement = catalog_supplement(card_info)
+    if supplement:
+        if (supplement['language'], supplement['cardId']) not in SUPPLEMENTAL_PRICE_PRINTINGS:
+            return {"value": "", "priceStatus": "price-unavailable", "catalogImage": supplement["image"]}
+        key = _price_cache_key(card_info)
+        cached = _cached_market_price(key)
+        if cached is not None:
+            return cached
+        result = _with_catalog_image(supplemental_price(supplement, card_info), supplement['image'])
+        return _remember_market_price(key, result)
     cache_key = _price_cache_key(card_info)
     cached = _cached_market_price(cache_key)
     if cached is not None:
@@ -1414,7 +1422,7 @@ def health():
     return {
         "ok": True,
         "app": "Hitim",
-        "build": "hitim-asian-catalog-v20.2",
+        "build": "hitim-supplement-prices-v20.3",
         "authConfigured": public_auth_config()["configured"],
         "catalog": catalog_status(),
     }
