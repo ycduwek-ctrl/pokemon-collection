@@ -1,5 +1,5 @@
 {
-  "cards": 137727,
+  "cards": 139251,
   "languages": [
     "en",
     "fr",
@@ -13,8 +13,8 @@
     "th",
     "ko"
   ],
-  "builtAt": "2026-11-02T11:19:44+00:00",
-  "databaseBytes": 21696512,
-  "archiveBytes": 5729037,
-  "sha256": "b272f0803461ba612a4dc84d097c916e1799ae27da297d1a16e980f04cd6aba4"
+  "builtAt": "2026-11-09T11:42:45+00:00",
+  "databaseBytes": 21897216,
+  "archiveBytes": 5784771,
+  "sha256": "4ac9df6ee0883d8bacedac122342ef193986495189b22fb90369d11736946569"
 }
